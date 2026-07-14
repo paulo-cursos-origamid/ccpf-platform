@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "use-case",
+  "description": "Generates a NestJS Use Case.",
+  "platform": "nestjs",
+  "type": "use-case",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "use-case.ts.hbs",
+      "destination": "application/use-cases/{{kebabCase name}}.use-case.ts"
+    }
+  ]
+}

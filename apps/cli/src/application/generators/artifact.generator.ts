@@ -20,8 +20,6 @@ export class ArtifactGenerator implements GeneratorContract {
     this.logger.info(`Generating ${blueprint.type}: ${blueprint.name}`);
 
     for (const file of blueprint.files) {
-      this.logger.info(`Creating file: ${file.destination}`);
-
       /**
        * 1. Resolver caminho do template
        */
@@ -31,43 +29,55 @@ export class ArtifactGenerator implements GeneratorContract {
         file.template,
       );
 
+      /**
+       * 2. Ler template
+       */
       const templateContent = await this.fileSystem.readFile(templatePath);
 
       /**
-       * 2. Renderizar template
+       * 3. Renderizar conteúdo do template
        */
       const generatedContent = this.templateEngine.render(templateContent, {
         name: blueprint.name,
       });
 
       /**
-       * 3. Resolver destino final
+       * 4. Renderizar destino do arquivo
        *
        * Exemplo:
        *
-       * blueprint.destination
-       * ./apps/api
+       * application/dto/{{kebabCase name}}.dto.ts
        *
-       * +
+       * =>
        *
-       * file.destination
-       * expenses.module.ts
-       *
-       * =
-       *
-       * ./apps/api/expenses.module.ts
+       * application/dto/create-user.dto.ts
        */
-      const outputPath = path.join(blueprint.destination, file.destination);
+      const renderedDestination = this.templateEngine.render(
+        file.destination,
+        {
+          name: blueprint.name,
+        },
+      );
+
+      this.logger.info(`Creating file: ${renderedDestination}`);
 
       /**
-       * 4. Criar diretório
+       * 5. Resolver caminho absoluto do arquivo
+       */
+      const outputPath = path.join(
+        blueprint.destination,
+        renderedDestination,
+      );
+
+      /**
+       * 6. Criar diretório de destino
        */
       const directory = path.dirname(outputPath);
 
       await this.fileSystem.createDirectory(directory);
 
       /**
-       * 5. Escrever arquivo
+       * 7. Escrever arquivo
        */
       await this.fileSystem.writeFile(outputPath, generatedContent);
 

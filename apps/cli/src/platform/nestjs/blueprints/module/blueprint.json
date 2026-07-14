@@ -1,5 +1,10 @@
 {
+  "$schema": "1.0",
+  "name": "module",
+  "description": "Generates a complete NestJS module.",
+  "platform": "nestjs",
   "type": "module",
+  "variables": ["name"],
   "files": [
     {
       "template": "module.ts.hbs",

@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "value-object",
+  "description": "Generates a Domain Value Object.",
+  "platform": "nestjs",
+  "type": "value-object",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "value-object.ts.hbs",
+      "destination": "domain/value-objects/{{kebabCase name}}.value-object.ts"
+    }
+  ]
+}

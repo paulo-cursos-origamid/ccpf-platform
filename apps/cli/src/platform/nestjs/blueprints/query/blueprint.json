@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "query",
+  "description": "Generates a CQRS Query.",
+  "platform": "nestjs",
+  "type": "query",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "query.ts.hbs",
+      "destination": "application/queries/{{kebabCase name}}.query.ts"
+    }
+  ]
+}

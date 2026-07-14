@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "domain-service",
+  "description": "Generates a Domain Service.",
+  "platform": "nestjs",
+  "type": "domain-service",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "domain-service.ts.hbs",
+      "destination": "domain/services/{{kebabCase name}}.service.ts"
+    }
+  ]
+}

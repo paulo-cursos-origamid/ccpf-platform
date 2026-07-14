@@ -1,0 +1,22 @@
+{
+  "$schema": "1.0",
+
+  "name": "service",
+
+  "description": "Generates a NestJS service.",
+
+  "platform": "nestjs",
+
+  "type": "service",
+
+  "variables": [
+    "name"
+  ],
+
+  "files": [
+    {
+      "template": "application/services/service.ts.hbs",
+      "destination": "application/services/{{kebabCase name}}.service.ts"
+    }
+  ]
+}
