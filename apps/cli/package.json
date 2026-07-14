@@ -1,0 +1,33 @@
+{
+  "name": "ccpf-cli",
+  "version": "0.1.0",
+  "description": "CCPF Project Automation CLI",
+  "main": "dist/index.js",
+  "bin": {
+    "ccpf": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc"
+  },
+  "keywords": [
+    "ccpf",
+    "cli",
+    "automation",
+    "nestjs",
+    "nextjs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "handlebars": "^4.7.9"
+  },
+  "devDependencies": {
+    "@types/handlebars": "^4.0.40",
+    "@types/node": "^26.1.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}

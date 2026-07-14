@@ -1,0 +1,17 @@
+{
+  "type": "module",
+  "files": [
+    {
+      "template": "module.ts.hbs",
+      "destination": "{{name}}.module.ts"
+    },
+    {
+      "template": "application/services/service.ts.hbs",
+      "destination": "application/services/{{name}}.service.ts"
+    },
+    {
+      "template": "presentation/controllers/controller.ts.hbs",
+      "destination": "presentation/controllers/{{name}}.controller.ts"
+    }
+  ]
+}

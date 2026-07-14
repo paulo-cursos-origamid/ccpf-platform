@@ -1,0 +1,257 @@
+# ADR-006 — Organização dos Blueprints por Plataforma
+
+* **Status:** Aceito
+* **Data:** 2026-07-10
+* **Decisão:** Organizar os blueprints da CLI por plataforma e tecnologia.
+
+---
+
+# Contexto
+
+A CLI da CCPF Platform utiliza **blueprints** para gerar arquivos, estruturas e artefatos de forma padronizada.
+
+Inicialmente, todos os blueprints estavam concentrados em uma única estrutura. Entretanto, com a evolução da plataforma e a necessidade de suportar múltiplas tecnologias, essa abordagem tornaria a organização mais complexa e dificultaria a manutenção.
+
+A plataforma deverá oferecer suporte a diferentes ecossistemas, como NestJS, Next.js, Prisma, Docker, GitHub e outros que poderão ser incorporados futuramente.
+
+Diante desse cenário, tornou-se necessário definir uma organização que facilite a localização, manutenção e expansão dos blueprints.
+
+---
+
+# Decisão
+
+Os blueprints serão organizados por **plataforma**.
+
+Cada plataforma possuirá seu próprio diretório contendo exclusivamente os templates relacionados àquela tecnologia.
+
+Essa organização estabelece um limite claro de responsabilidades e facilita a evolução independente de cada conjunto de blueprints.
+
+---
+
+# Estrutura oficial
+
+```text
+src/platform/
+
+├── nestjs/
+│   └── blueprints/
+│       ├── module/
+│       ├── controller/
+│       ├── service/
+│       ├── repository/
+│       └── resource/
+│
+├── nextjs/
+│   └── blueprints/
+│       ├── page/
+│       ├── component/
+│       ├── hook/
+│       └── layout/
+│
+├── prisma/
+│   └── blueprints/
+│
+├── docker/
+│   └── blueprints/
+│
+├── github/
+│   └── blueprints/
+│
+└── documentation/
+    └── blueprints/
+```
+
+---
+
+# Objetivos
+
+Esta organização tem como objetivos:
+
+* separar responsabilidades por tecnologia;
+* facilitar a manutenção dos templates;
+* permitir a evolução independente de cada plataforma;
+* simplificar a descoberta de novos blueprints;
+* tornar a arquitetura extensível.
+
+---
+
+# Responsabilidades
+
+Cada plataforma é responsável apenas pelos blueprints relacionados ao seu domínio.
+
+## NestJS
+
+Responsável pelos templates da aplicação backend.
+
+Exemplos:
+
+* módulos;
+* controllers;
+* services;
+* repositories;
+* resources;
+* DTOs;
+* entidades;
+* casos de uso.
+
+---
+
+## Next.js
+
+Responsável pelos templates da aplicação frontend.
+
+Exemplos:
+
+* páginas;
+* componentes;
+* hooks;
+* layouts;
+* formulários;
+* tabelas;
+* páginas administrativas.
+
+---
+
+## Prisma
+
+Responsável pelos templates relacionados ao banco de dados.
+
+Exemplos:
+
+* schemas;
+* migrations;
+* seeds;
+* configurações.
+
+---
+
+## Docker
+
+Responsável pelos arquivos de infraestrutura.
+
+Exemplos:
+
+* Dockerfile;
+* docker-compose;
+* configurações de ambiente.
+
+---
+
+## GitHub
+
+Responsável pelos arquivos de integração com o GitHub.
+
+Exemplos:
+
+* GitHub Actions;
+* templates de Issues;
+* Pull Requests;
+* configurações de workflows.
+
+---
+
+## Documentation
+
+Responsável pelos templates de documentação.
+
+Exemplos:
+
+* ADRs;
+* READMEs;
+* guias;
+* documentação técnica;
+* documentação de APIs.
+
+---
+
+# Benefícios
+
+A organização por plataforma proporciona:
+
+* maior clareza estrutural;
+* facilidade de navegação;
+* isolamento entre tecnologias;
+* menor acoplamento;
+* melhor escalabilidade;
+* manutenção simplificada.
+
+---
+
+# Extensibilidade
+
+Novas plataformas poderão ser adicionadas sem necessidade de alterar a estrutura existente.
+
+Exemplo:
+
+```text
+src/platform/
+
+angular/
+flutter/
+react-native/
+terraform/
+aws/
+kubernetes/
+```
+
+Cada nova plataforma deverá possuir seu próprio diretório contendo seus respectivos blueprints.
+
+---
+
+# Consequências
+
+## Positivas
+
+* Estrutura altamente organizada.
+* Escalabilidade para novas tecnologias.
+* Facilidade para localizar templates.
+* Evolução independente de cada plataforma.
+* Menor risco de conflitos entre blueprints.
+
+## Negativas
+
+* Maior quantidade de diretórios.
+* Necessidade de manter convenções consistentes entre plataformas.
+
+---
+
+# Alternativas consideradas
+
+## Todos os blueprints em um único diretório
+
+Não adotado.
+
+Essa abordagem aumenta o acoplamento entre tecnologias, dificulta a navegação e torna a manutenção mais complexa conforme a quantidade de templates cresce.
+
+---
+
+## Separação por tipo de artefato
+
+Exemplo:
+
+```text
+blueprints/
+
+module/
+page/
+docker/
+workflow/
+```
+
+Não adotado.
+
+Embora simples inicialmente, essa organização mistura tecnologias diferentes no mesmo local e reduz a clareza da arquitetura.
+
+---
+
+# Impacto
+
+Esta decisão estabelece uma organização modular e escalável para os blueprints da CLI, permitindo que a plataforma suporte múltiplas tecnologias mantendo uma estrutura consistente, previsível e de fácil manutenção.
+
+---
+
+# ADRs Relacionadas
+
+* ADR-001 — Estrutura da CCPF Platform como Monorepo
+* ADR-002 — Estratégia de Compartilhamento entre Apps e Packages
+* ADR-005 — Arquitetura da CLI da CCPF Platform
