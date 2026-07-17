@@ -1,0 +1,25 @@
+{
+  "directories": [
+    "src/core/entities",
+    "src/core/repositories",
+    "src/core/services",
+    "src/core/value-objects",
+
+    "src/application/dto",
+    "src/application/use-cases",
+    "src/application/services",
+
+    "src/infrastructure/database/prisma",
+    "src/infrastructure/repositories",
+    "src/infrastructure/config",
+
+    "src/presentation/controllers",
+    "src/presentation/presenters",
+    "src/presentation/modules",
+
+    "src/shared/constants",
+    "src/shared/decorators",
+    "src/shared/exceptions",
+    "src/shared/utils"
+  ]
+}

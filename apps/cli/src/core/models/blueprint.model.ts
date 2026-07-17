@@ -1,4 +1,5 @@
 import type { GeneratedFileModel } from "./generated-file.model.js";
+import type { TemplateContextModel } from "./template-context.model.js";
 
 export interface BlueprintModel {
   /**
@@ -20,6 +21,11 @@ export interface BlueprintModel {
    * Diretório onde os arquivos serão gerados.
    */
   destination: string;
+
+  /**
+ * Dados disponíveis para renderização dos templates.
+ */
+context?: TemplateContextModel;
 
   /**
    * Arquivos pertencentes ao blueprint.

@@ -37,9 +37,12 @@ export class ArtifactGenerator implements GeneratorContract {
       /**
        * 3. Renderizar conteúdo do template
        */
-      const generatedContent = this.templateEngine.render(templateContent, {
-        name: blueprint.name,
-      });
+      const generatedContent = this.templateEngine.render(
+        templateContent,
+        blueprint.context ?? {
+          name: blueprint.name,
+        },
+      );
 
       /**
        * 4. Renderizar destino do arquivo
@@ -54,7 +57,7 @@ export class ArtifactGenerator implements GeneratorContract {
        */
       const renderedDestination = this.templateEngine.render(
         file.destination,
-        {
+        blueprint.context ?? {
           name: blueprint.name,
         },
       );
@@ -64,10 +67,7 @@ export class ArtifactGenerator implements GeneratorContract {
       /**
        * 5. Resolver caminho absoluto do arquivo
        */
-      const outputPath = path.join(
-        blueprint.destination,
-        renderedDestination,
-      );
+      const outputPath = path.join(blueprint.destination, renderedDestination);
 
       /**
        * 6. Criar diretório de destino

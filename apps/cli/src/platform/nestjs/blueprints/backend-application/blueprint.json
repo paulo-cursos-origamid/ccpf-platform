@@ -1,0 +1,13 @@
+{
+  "$schema": "1.0",
+  "name": "backend-application",
+  "description": "Application layer",
+  "platform": "nestjs",
+  "type": "backend-application",
+  "files": [
+    {
+      "template": "files/src/application/.gitkeep.hbs",
+      "destination": "src/application/.gitkeep"
+    }
+  ]
+}

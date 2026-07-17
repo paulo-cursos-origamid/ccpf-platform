@@ -1,4 +1,5 @@
 import type { BlueprintChildModel } from "./blueprint-child.model.js";
+import type { TemplateContextModel } from "./template-context.model.js";
 
 export interface CompositeBlueprintModel {
   /**
@@ -20,6 +21,11 @@ export interface CompositeBlueprintModel {
    * Diretório de geração.
    */
   destination: string;
+
+  /**
+ * Dados disponíveis para renderização dos templates.
+ */
+context?: TemplateContextModel;
 
   /**
    * Blueprints filhos.

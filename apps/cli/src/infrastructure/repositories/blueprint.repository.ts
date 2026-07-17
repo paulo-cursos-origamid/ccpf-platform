@@ -21,7 +21,7 @@ export class BlueprintRepository implements BlueprintRepositoryContract {
       artifact,
       "blueprint.json",
     );
-
+console.log("Loading blueprint:", blueprintPath);
     const content = await readFile(blueprintPath, "utf-8");
     
 
