@@ -1,34 +1,22 @@
 {
+  "$schema": "blueprint.schema.json",
   "name": "domain-module",
-  "description": "Generate a DDD domain module",
-  "artifacts": [
+  "description": "Generate a complete DDD domain module",
+  "platform": "nestjs",
+  "type": "domain-module",
+  "variables": ["name"],
+  "children": [
     {
-      "type": "directory",
-      "path": "src/modules/{{name}}/domain/entities"
+      "blueprint": "backend-core"
     },
     {
-      "type": "directory",
-      "path": "src/modules/{{name}}/domain/value-objects"
+      "blueprint": "backend-application"
     },
     {
-      "type": "directory",
-      "path": "src/modules/{{name}}/domain/repositories"
+      "blueprint": "backend-infrastructure"
     },
     {
-      "type": "directory",
-      "path": "src/modules/{{name}}/application/use-cases"
-    },
-    {
-      "type": "directory",
-      "path": "src/modules/{{name}}/application/dto"
-    },
-    {
-      "type": "directory",
-      "path": "src/modules/{{name}}/infrastructure/repositories"
-    },
-    {
-      "type": "directory",
-      "path": "src/modules/{{name}}/presentation/controllers"
+      "blueprint": "backend-presentation"
     }
   ]
 }

@@ -1,3 +1,4 @@
+import type { ArtifactModel } from "./artifact.model.js";
 import type { GeneratedFileModel } from "./generated-file.model.js";
 import type { TemplateContextModel } from "./template-context.model.js";
 
@@ -23,12 +24,25 @@ export interface BlueprintModel {
   destination: string;
 
   /**
- * Dados disponíveis para renderização dos templates.
- */
-context?: TemplateContextModel;
+   * Dados disponíveis para renderização dos templates.
+   */
+  context?: TemplateContextModel;
 
   /**
    * Arquivos pertencentes ao blueprint.
+   *
+   * @deprecated
+   * Mantido para compatibilidade com blueprints antigos.
    */
-  files: GeneratedFileModel[];
+  files?: GeneratedFileModel[];
+
+  /**
+   * Artefatos pertencentes ao blueprint.
+   *
+   * Suporta:
+   * - arquivos
+   * - diretórios
+   * - futuras extensões da CLI
+   */
+  artifacts?: ArtifactModel[];
 }

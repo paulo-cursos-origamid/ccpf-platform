@@ -19,7 +19,7 @@ export class ArtifactGenerator implements GeneratorContract {
   async generate(blueprint: BlueprintModel): Promise<void> {
     this.logger.info(`Generating ${blueprint.type}: ${blueprint.name}`);
 
-    for (const file of blueprint.files) {
+    for (const file of blueprint.files ?? []) {
       /**
        * 1. Resolver caminho do template
        */

@@ -14,14 +14,11 @@ export class BlueprintComposerService {
     /**
      * Blueprint simples.
      */
-    if ("files" in blueprint) {
-      return [blueprint];
+    if ("children" in blueprint) {
+      return this.composeCompositeBlueprint(blueprint);
     }
 
-    /**
-     * Blueprint composto.
-     */
-    return this.composeCompositeBlueprint(blueprint);
+    return [blueprint];
   }
 
   /**

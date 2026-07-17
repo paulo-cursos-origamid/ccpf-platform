@@ -60,6 +60,13 @@ export interface BlueprintSchemaModel {
   files?: BlueprintFileSchemaModel[];
 
   /**
+   * Artefatos do blueprint.
+   *
+   * Utilizado por blueprints simples.
+   */
+  artifacts?: BlueprintFileSchemaModel[];
+
+  /**
    * Blueprints filhos.
    *
    * Utilizado por blueprints compostos.

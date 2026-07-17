@@ -5,6 +5,7 @@ import { BlueprintValidatorService } from "../../application/services/blueprint-
 import type { BlueprintRepositoryContract } from "../../core/contracts/repositories/blueprint.repository.contract.js";
 import type { Blueprint } from "../../core/models/blueprint.type.js";
 import type { BlueprintSchemaModel } from "../../core/models/blueprint-schema.model.js";
+import type { CompositeBlueprintModel } from "../../core/models/composite-blueprint.model.js";
 
 export class BlueprintRepository implements BlueprintRepositoryContract {
   async find(
@@ -21,9 +22,10 @@ export class BlueprintRepository implements BlueprintRepositoryContract {
       artifact,
       "blueprint.json",
     );
-console.log("Loading blueprint:", blueprintPath);
+
+    console.log("Loading blueprint:", blueprintPath);
+
     const content = await readFile(blueprintPath, "utf-8");
-    
 
     const blueprint = JSON.parse(content) as BlueprintSchemaModel;
 
@@ -44,13 +46,15 @@ console.log("Loading blueprint:", blueprintPath);
     }
 
     if (blueprint.children) {
-      return {
+      const compositeBlueprint: CompositeBlueprintModel = {
         platform,
         name: artifact,
-        type: blueprint.type,
+        type: "composite",
         destination,
         children: blueprint.children,
       };
+
+      return compositeBlueprint;
     }
 
     throw new Error(`Invalid blueprint: ${artifact}`);

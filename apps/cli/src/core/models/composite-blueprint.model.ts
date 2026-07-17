@@ -15,7 +15,7 @@ export interface CompositeBlueprintModel {
   /**
    * Tipo do artefato.
    */
-  type: string;
+  type: "composite";
 
   /**
    * Diretório de geração.
@@ -23,9 +23,9 @@ export interface CompositeBlueprintModel {
   destination: string;
 
   /**
- * Dados disponíveis para renderização dos templates.
- */
-context?: TemplateContextModel;
+   * Dados disponíveis para renderização dos templates.
+   */
+  context?: TemplateContextModel;
 
   /**
    * Blueprints filhos.
