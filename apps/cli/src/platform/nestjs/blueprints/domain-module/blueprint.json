@@ -1,0 +1,34 @@
+{
+  "name": "domain-module",
+  "description": "Generate a DDD domain module",
+  "artifacts": [
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/domain/entities"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/domain/value-objects"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/domain/repositories"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/application/use-cases"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/application/dto"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/infrastructure/repositories"
+    },
+    {
+      "type": "directory",
+      "path": "src/modules/{{name}}/presentation/controllers"
+    }
+  ]
+}

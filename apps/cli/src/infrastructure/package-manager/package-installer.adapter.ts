@@ -1,50 +1,69 @@
 import { spawn } from "node:child_process";
+import { platform } from "node:os";
 
 import type { PackageInstallerContract } from "../../core/contracts/package-installer.contract.js";
 import type { PackageInstallOptions } from "../../core/models/package-install-options.model.js";
 
-export class PackageInstallerAdapter
-  implements PackageInstallerContract
-{
-  async install(
-    options: PackageInstallOptions,
-  ): Promise<void> {
-    if (options.dependencies.length > 0) {
-      await this.execute(
-        options.packageManager,
-        [
-          "install",
-          ...options.dependencies,
-        ],
-        options.projectPath,
-      );
-    }
+export class PackageInstallerAdapter implements PackageInstallerContract {
+  async install(options: PackageInstallOptions): Promise<void> {
+    await this.installDependencies(options);
 
-    if (options.devDependencies.length > 0) {
-      await this.execute(
-        options.packageManager,
-        [
-          "install",
-          "-D",
-          ...options.devDependencies,
-        ],
-        options.projectPath,
-      );
-    }
+    await this.installDevDependencies(options);
   }
 
-  private async execute(
-    command: string,
-    args: string[],
-    cwd: string,
+  /**
+   * Instala as dependências de produção.
+   */
+  private async installDependencies(
+    options: PackageInstallOptions,
   ): Promise<void> {
-    console.log(`Executing: ${command} ${args.join(" ")}`);
+    if (options.dependencies.length === 0) {
+      return;
+    }
+
+    await this.execute(["install", ...options.dependencies], options);
+  }
+
+  /**
+   * Instala as dependências de desenvolvimento.
+   */
+  private async installDevDependencies(
+    options: PackageInstallOptions,
+  ): Promise<void> {
+    if (options.devDependencies.length === 0) {
+      return;
+    }
+
+    await this.execute(
+      ["install", "--save-dev", ...options.devDependencies],
+      options,
+    );
+  }
+
+  /**
+   * Executa o gerenciador de pacotes.
+   */
+  private async execute(
+    args: string[],
+    options: PackageInstallOptions,
+  ): Promise<void> {
+    const executable =
+      platform() === "win32" ? "npm.cmd" : options.packageManager;
+
+    console.log("");
+    console.log("====================================");
+    console.log("Installing packages");
+    console.log("Project:", options.projectPath);
+    console.log("Command:", executable);
+    console.log("Arguments:", args.join(" "));
+    console.log("====================================");
+    console.log("");
 
     await new Promise<void>((resolve, reject) => {
-      const child = spawn(command, args, {
-        cwd,
+      const child = spawn(executable, args, {
+        cwd: options.projectPath,
         stdio: "inherit",
-        shell: true,
+        shell: false,
       });
 
       child.on("error", reject);
@@ -55,11 +74,7 @@ export class PackageInstallerAdapter
           return;
         }
 
-        reject(
-          new Error(
-            `${command} exited with code ${code}`,
-          ),
-        );
+        reject(new Error(`${executable} exited with code ${code}`));
       });
     });
   }
