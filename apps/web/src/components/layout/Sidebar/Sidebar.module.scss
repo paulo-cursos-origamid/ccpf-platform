@@ -1,0 +1,25 @@
+.sidebar {
+  width: 260px;
+
+  min-height: calc(100vh - 64px);
+
+  padding: 24px;
+
+  background: var(--surface);
+
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  a {
+    cursor: pointer;
+    padding: 12px;
+    border-radius: 8px;
+
+    &:hover {
+      background: var(--hover);
+    }
+  }
+}
