@@ -1,15 +1,14 @@
+import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
 import styles from "./Header.module.scss";
 
 export function Header() {
   return (
     <header className={styles.header}>
+      <div>CCPF</div>
       <div>
-        CCPF
+        <ThemeSwitch />
       </div>
-
-      <div>
-        Usuário
-      </div>
+      <div>Usuário</div>
     </header>
   );
 }

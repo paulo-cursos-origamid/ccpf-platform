@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "@/styles/globals.scss";
 
 export const metadata = {
@@ -14,8 +15,16 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <AppLayout>{children}</AppLayout>
-      </body>
+
+  <ThemeProvider>
+
+    <AppLayout>
+      {children}
+    </AppLayout>
+
+  </ThemeProvider>
+
+</body>
     </html>
   );
 }
