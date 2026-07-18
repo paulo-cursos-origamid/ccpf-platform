@@ -1,5 +1,5 @@
-import { AppLayout } from "@/src/components/layout/AppLayout";
-import "./globals.scss";
+import { AppLayout } from "@/components/layout/AppLayout";
+import "@/styles/globals.scss";
 
 export const metadata = {
   title: "CCPF",
