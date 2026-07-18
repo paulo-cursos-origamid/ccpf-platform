@@ -10,8 +10,8 @@ export const BACKEND_DEPENDENCIES = [
   "nestjs-pino",
   "pino",
   "pino-pretty",
-  "prisma",
-  "@prisma/client",
+  "prisma@6.14.0",
+  "@prisma/client@6.14.0",
 ] as const;
 
 export const BACKEND_DEV_DEPENDENCIES = [
