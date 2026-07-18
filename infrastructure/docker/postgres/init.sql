@@ -1,0 +1,1 @@
+SELECT 'CCPF Platform initialized';

@@ -1,0 +1,77 @@
+name: ccpf-platform
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ccpf-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ccpf
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    container_name: ccpf-api
+
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - apps/api/.env
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+
+  web:
+    container_name: ccpf-web
+
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+
+    restart: unless-stopped
+
+    depends_on:
+      - api
+
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+
+    ports:
+      - "3001:3000"
+
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+      - web_next:/app/.next
+
+volumes:
+  postgres_data:
+  web_node_modules:
+  web_next:

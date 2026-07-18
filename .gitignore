@@ -1,75 +1,19 @@
-# =========================
-# Dependencies
-# =========================
-node_modules/
+node_modules
+dist
+coverage
 
-# =========================
-# Build
-# =========================
-dist/
-build/
-coverage/
-.next/
-out/
-.tmp/
-tmp/
-
-# =========================
-# Prisma
-# =========================
-prisma/dev.db
-prisma/dev.db-journal
-
-# =========================
-# Logs
-# =========================
-*.log
-logs/
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# =========================
-# Environment
-# =========================
 .env
 .env.*
-!.env.example
 
-# =========================
-# IDE
-# =========================
-.vscode/
-.idea/
+*.log
 
-# =========================
-# Operating System
-# =========================
-.DS_Store
-Thumbs.db
+.next
 
-# =========================
-# TypeScript
-# =========================
+apps/api/dist
+apps/api/node_modules
+apps/web/node_modules
+apps/cli/node_modules
+
+postgres_data
+
 *.tsbuildinfo
-
-# =========================
-# Cache
-# =========================
-.cache/
-.turbo/
-.eslintcache
-
-# =========================
-# Archives
-# =========================
-*.zip
-*.tar
-*.gz
-
-# =========================
-# Temporary
-# =========================
-*.tmp
-*.swp
-*.swo
