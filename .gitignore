@@ -1,37 +1,75 @@
+# =========================
 # Dependencies
+# =========================
 node_modules/
 
+# =========================
 # Build
+# =========================
 dist/
 build/
 coverage/
+.next/
+out/
 .tmp/
 tmp/
 
+# =========================
+# Prisma
+# =========================
+prisma/dev.db
+prisma/dev.db-journal
+
+# =========================
 # Logs
+# =========================
 *.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# =========================
 # Environment
+# =========================
 .env
 .env.*
 !.env.example
 
+# =========================
 # IDE
+# =========================
 .vscode/
 .idea/
 
-# OS
+# =========================
+# Operating System
+# =========================
 .DS_Store
 Thumbs.db
 
+# =========================
 # TypeScript
+# =========================
 *.tsbuildinfo
 
-# Archives
-*.zip
+# =========================
+# Cache
+# =========================
+.cache/
+.turbo/
+.eslintcache
 
-# Temporary files
+# =========================
+# Archives
+# =========================
+*.zip
+*.tar
+*.gz
+
+# =========================
+# Temporary
+# =========================
 *.tmp
+*.swp
+*.swo
