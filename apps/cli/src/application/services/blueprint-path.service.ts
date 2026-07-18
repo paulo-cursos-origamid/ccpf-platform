@@ -13,7 +13,6 @@ export class BlueprintPathService {
       platform,
       "blueprints",
       blueprint,
-      "templates",
       template,
     );
   }

@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "prisma-repository",
+  "description": "Generates a Prisma Repository implementation.",
+  "platform": "nestjs",
+  "type": "prisma-repository",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "prisma-repository.ts.hbs",
+      "destination": "infrastructure/repositories/prisma-{{kebabCase name}}.repository.ts"
+    }
+  ]
+}

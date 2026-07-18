@@ -1,0 +1,20 @@
+{
+  "$schema": "1.0",
+
+  "name": "controller",
+
+  "description": "Generates a NestJS controller.",
+
+  "platform": "nestjs",
+
+  "type": "controller",
+
+  "variables": ["name"],
+
+  "files": [
+    {
+      "template": "presentation/controllers/controller.ts.hbs",
+      "destination": "presentation/controllers/{{kebabCase name}}.controller.ts"
+    }
+  ]
+}

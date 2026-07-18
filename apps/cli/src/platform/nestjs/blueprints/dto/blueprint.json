@@ -1,0 +1,16 @@
+{
+  "$schema": "1.0",
+  "name": "dto",
+  "description": "Generates a NestJS DTO.",
+  "platform": "nestjs",
+  "type": "dto",
+  "variables": [
+    "name"
+  ],
+  "files": [
+    {
+      "template": "dto.ts.hbs",
+      "destination": "application/dto/{{kebabCase name}}.dto.ts"
+    }
+  ]
+}

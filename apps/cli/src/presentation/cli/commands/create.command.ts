@@ -6,9 +6,9 @@ export function createCommand(): Command {
   const command = new Command('create');
 
   command
-    .description('Create project resources')
-    .argument('<type>', 'Resource type')
-    .argument('<name>', 'Resource name')
+    .description('Create project resources and applications')
+    .argument('<type>', 'Artifact or project type')
+    .argument('<name>', 'Resource or project name')
     .option(
       '-p, --path <path>',
       'Destination path',

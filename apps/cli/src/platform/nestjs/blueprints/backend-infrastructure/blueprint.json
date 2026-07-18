@@ -1,0 +1,13 @@
+{
+  "$schema": "1.0",
+  "name": "backend-infrastructure",
+  "description": "Infrastructure layer",
+  "platform": "nestjs",
+  "type": "backend-infrastructure",
+  "files": [
+    {
+      "template": "files/src/infrastructure/.gitkeep.hbs",
+      "destination": "src/infrastructure/.gitkeep"
+    }
+  ]
+}

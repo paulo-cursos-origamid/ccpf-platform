@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "repository",
+  "description": "Generates a NestJS Repository.",
+  "platform": "nestjs",
+  "type": "repository",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "repository.ts.hbs",
+      "destination": "application/repositories/{{kebabCase name}}.repository.ts"
+    }
+  ]
+}

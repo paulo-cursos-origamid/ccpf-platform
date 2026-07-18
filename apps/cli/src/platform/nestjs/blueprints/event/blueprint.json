@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "event",
+  "description": "Generates a Domain Event.",
+  "platform": "nestjs",
+  "type": "event",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "event.ts.hbs",
+      "destination": "domain/events/{{kebabCase name}}.event.ts"
+    }
+  ]
+}

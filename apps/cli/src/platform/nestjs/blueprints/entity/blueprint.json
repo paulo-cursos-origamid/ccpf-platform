@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "entity",
+  "description": "Generates a NestJS entity.",
+  "platform": "nestjs",
+  "type": "entity",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "entity.ts.hbs",
+      "destination": "domain/entities/{{kebabCase name}}.entity.ts"
+    }
+  ]
+}

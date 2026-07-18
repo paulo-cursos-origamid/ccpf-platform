@@ -1,0 +1,21 @@
+{
+  "$schema": "1.0",
+  "name": "backend",
+  "description": "NestJS backend bootstrap",
+  "platform": "nestjs",
+  "type": "backend",
+  "children": [
+    {
+      "blueprint": "backend-core"
+    },
+    {
+      "blueprint": "backend-application"
+    },
+    {
+      "blueprint": "backend-infrastructure"
+    },
+    {
+      "blueprint": "backend-presentation"
+    }
+  ]
+}

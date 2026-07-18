@@ -1,0 +1,14 @@
+{
+  "$schema": "1.0",
+  "name": "command",
+  "description": "Generates a CQRS Command.",
+  "platform": "nestjs",
+  "type": "command",
+  "variables": ["name"],
+  "files": [
+    {
+      "template": "command.ts.hbs",
+      "destination": "application/commands/{{kebabCase name}}.command.ts"
+    }
+  ]
+}

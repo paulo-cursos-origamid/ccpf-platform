@@ -1,0 +1,13 @@
+{
+  "$schema": "1.0",
+  "name": "backend-presentation",
+  "description": "Presentation layer",
+  "platform": "nestjs",
+  "type": "backend-presentation",
+  "files": [
+    {
+      "template": "files/src/presentation/.gitkeep.hbs",
+      "destination": "src/presentation/.gitkeep"
+    }
+  ]
+}

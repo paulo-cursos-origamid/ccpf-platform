@@ -1,0 +1,22 @@
+{
+  "$schema": "blueprint.schema.json",
+  "name": "domain-module",
+  "description": "Generate a complete DDD domain module",
+  "platform": "nestjs",
+  "type": "domain-module",
+  "variables": ["name"],
+  "children": [
+    {
+      "blueprint": "backend-core"
+    },
+    {
+      "blueprint": "backend-application"
+    },
+    {
+      "blueprint": "backend-infrastructure"
+    },
+    {
+      "blueprint": "backend-presentation"
+    }
+  ]
+}

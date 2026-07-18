@@ -1,0 +1,7 @@
+import { Injectable } from "@nestjs/common"; import {
+{{pascalCase name}}Repository } from "../../domain/repositories/{{kebabCase
+  name
+}}.repository.js"; @Injectable() export class Prisma{{pascalCase
+  name
+}}Repository implements
+{{pascalCase name}}Repository { }

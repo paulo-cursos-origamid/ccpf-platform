@@ -1,0 +1,39 @@
+{
+  "$schema": "1.0",
+  "name": "resource",
+  "description": "Generates a complete NestJS resource.",
+  "platform": "nestjs",
+  "type": "resource",
+  "children": [
+    {
+      "blueprint": "module"
+    },
+    {
+      "blueprint": "controller"
+    },
+    {
+      "blueprint": "service"
+    },
+    {
+      "blueprint": "dto"
+    },
+    {
+      "blueprint": "entity"
+    },
+    {
+      "blueprint": "repository"
+    },
+    {
+      "blueprint": "prisma-repository"
+    },
+    {
+      "blueprint": "use-case"
+    },
+    {
+      "blueprint": "command"
+    },
+    {
+      "blueprint": "query"
+    }
+  ]
+}
