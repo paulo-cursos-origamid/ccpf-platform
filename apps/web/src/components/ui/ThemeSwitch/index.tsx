@@ -1,15 +1,48 @@
 "use client";
 
+import {
+  Moon,
+  Sun,
+} from "@/components/icons";
+
+
+import {
+  useThemeStore
+} from "@/stores/theme.store";
+
+
 import styles from "./ThemeSwitch.module.scss";
 
-import { useThemeStore } from "@/stores/theme.store";
 
-export function ThemeSwitch() {
-  const toggleTheme = useThemeStore((state) => state.toggleTheme);
+export function ThemeSwitch(){
+
+  const theme = useThemeStore(
+    state => state.theme
+  );
+
+
+  const toggleTheme = useThemeStore(
+    state => state.toggleTheme
+  );
+
 
   return (
-    <button className={styles.button} onClick={toggleTheme}>
-      Tema
+
+    <button
+      className={styles.button}
+      onClick={toggleTheme}
+    >
+
+      {
+        theme === "light"
+        ?
+        <Moon size={18}/>
+        :
+        <Sun size={18}/>
+      }
+
     </button>
+
   );
+
 }
