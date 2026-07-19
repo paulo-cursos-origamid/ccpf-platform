@@ -1,0 +1,25 @@
+services:
+  api:
+    image: ccpf-api:latest
+
+    container_name: ccpf-api-prod
+
+    restart: always
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      NODE_ENV: production
+
+      DATABASE_URL: ${DATABASE_URL}
+
+  web:
+    image: ccpf-web:latest
+
+    container_name: ccpf-web-prod
+
+    restart: always
+
+    ports:
+      - "80:3000"
