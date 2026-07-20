@@ -1,6 +1,8 @@
 import { UserEntity } from '../../../domain/entities/user.entity';
 import { UserRepository } from '../../../domain/repositories/user.repository';
 import { Injectable } from '@nestjs/common';
+// import { PasswordHasher } from '../../services/password-hasher.service';
+import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
 
 export interface CreateUserInput {
   name: string;
@@ -16,13 +18,18 @@ export interface CreateUserOutput {
 
 @Injectable()
 export class CreateUserUseCase {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+
+    private readonly passwordHasher: PasswordHasherContract,
+  ) {}
 
   async execute(input: CreateUserInput): Promise<CreateUserOutput> {
+    const passwordHash = await this.passwordHasher.hash(input.password);
     const user = new UserEntity({
       name: input.name,
       email: input.email,
-      password: input.password,
+      password: passwordHash,
     });
 
     const savedUser = await this.userRepository.create(user);

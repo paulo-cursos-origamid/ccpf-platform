@@ -26,7 +26,7 @@ services:
 
   api:
     container_name: ccpf-api
-
+    user: "1000:1000"
     build:
       context: ../../apps/api
       dockerfile: Dockerfile
