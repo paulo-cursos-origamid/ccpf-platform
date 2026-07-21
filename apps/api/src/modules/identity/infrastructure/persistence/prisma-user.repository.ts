@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
 import { UserEntity, UserRole } from '../../domain/entities/user.entity';
+import { UserRepository } from '../../domain/repositories/user.repository';
 
 import { UserRole as PrismaUserRole } from '@prisma/client';
-
-import { UserRepository } from '../../domain/repositories/user.repository';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
@@ -19,6 +18,17 @@ export class PrismaUserRepository implements UserRepository {
         email: user.email,
         password: user.password,
         role: user.role,
+
+        emailVerified: user.emailVerified,
+        verificationToken: user.verificationToken,
+        verificationTokenExpiresAt: user.verificationTokenExpiresAt,
+
+        refreshTokenHash: user.refreshTokenHash,
+
+        passwordResetToken: user.passwordResetToken,
+        passwordResetExpiresAt: user.passwordResetExpiresAt,
+
+        lastLoginAt: user.lastLoginAt,
       },
     });
 
@@ -52,6 +62,19 @@ export class PrismaUserRepository implements UserRepository {
 
     return this.toDomain(user);
   }
+  async findByVerificationToken(token: string): Promise<UserEntity | null> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        verificationToken: token,
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.toDomain(user);
+  }
 
   async update(user: UserEntity): Promise<UserEntity> {
     const updatedUser = await this.prisma.user.update({
@@ -63,6 +86,17 @@ export class PrismaUserRepository implements UserRepository {
         email: user.email,
         password: user.password,
         role: user.role,
+
+        emailVerified: user.emailVerified,
+        verificationToken: user.verificationToken,
+        verificationTokenExpiresAt: user.verificationTokenExpiresAt,
+
+        refreshTokenHash: user.refreshTokenHash,
+
+        passwordResetToken: user.passwordResetToken,
+        passwordResetExpiresAt: user.passwordResetExpiresAt,
+
+        lastLoginAt: user.lastLoginAt,
       },
     });
 
@@ -75,6 +109,18 @@ export class PrismaUserRepository implements UserRepository {
     email: string;
     password: string;
     role: PrismaUserRole;
+
+    emailVerified: boolean;
+    verificationToken: string | null;
+    verificationTokenExpiresAt: Date | null;
+
+    refreshTokenHash: string | null;
+
+    passwordResetToken: string | null;
+    passwordResetExpiresAt: Date | null;
+
+    lastLoginAt: Date | null;
+
     createdAt: Date;
     updatedAt: Date;
   }): UserEntity {
@@ -84,6 +130,19 @@ export class PrismaUserRepository implements UserRepository {
       email: rawUser.email,
       password: rawUser.password,
       role: rawUser.role as UserRole,
+
+      emailVerified: rawUser.emailVerified,
+      verificationToken: rawUser.verificationToken ?? undefined,
+      verificationTokenExpiresAt:
+        rawUser.verificationTokenExpiresAt ?? undefined,
+
+      refreshTokenHash: rawUser.refreshTokenHash ?? undefined,
+
+      passwordResetToken: rawUser.passwordResetToken ?? undefined,
+      passwordResetExpiresAt: rawUser.passwordResetExpiresAt ?? undefined,
+
+      lastLoginAt: rawUser.lastLoginAt ?? undefined,
+
       createdAt: rawUser.createdAt,
       updatedAt: rawUser.updatedAt,
     });

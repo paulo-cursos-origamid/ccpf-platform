@@ -5,12 +5,15 @@ import { LoginUseCase } from '../../application/use-cases/login/login.use-case';
 
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginDto } from '../dto/login.dto';
+import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
 
 @Controller('identity')
 export class IdentityController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly loginUseCase: LoginUseCase,
+    private readonly verifyEmailUseCase: VerifyEmailUseCase,
   ) {}
 
   @Post('users')
@@ -27,6 +30,13 @@ export class IdentityController {
     return this.loginUseCase.execute({
       email: dto.email,
       password: dto.password,
+    });
+  }
+
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.verifyEmailUseCase.execute({
+      token: dto.token,
     });
   }
 }

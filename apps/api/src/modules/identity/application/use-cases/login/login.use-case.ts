@@ -48,6 +48,16 @@ export class LoginUseCase {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in',
+      );
+    }
+
+    user.updateLastLogin();
+
+    await this.userRepository.update(user);
+
     const accessToken = await this.tokenProvider.generate(user.id, user.email);
 
     return {

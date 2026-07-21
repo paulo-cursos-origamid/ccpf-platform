@@ -13,6 +13,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtTokenService } from './infrastructure/auth/jwt-token.service';
 import { TokenProviderContract } from './domain/contracts/token-provider.contract';
 import { LoginUseCase } from './application/use-cases/login/login.use-case';
+import { VerifyEmailUseCase } from './application/use-cases/verify-email/verify-email.use-case';
 
 @Module({
   imports: [
@@ -24,10 +25,11 @@ import { LoginUseCase } from './application/use-cases/login/login.use-case';
     }),
   ],
   controllers: [IdentityController],
+
   providers: [
     CreateUserUseCase,
     LoginUseCase,
-
+    VerifyEmailUseCase,
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,
