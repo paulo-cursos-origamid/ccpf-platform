@@ -1,4 +1,5 @@
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 import { UserRepository } from '../../../domain/repositories/user.repository';
 import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
@@ -11,6 +12,8 @@ export interface LoginInput {
 
 export interface LoginOutput {
   accessToken: string;
+
+  refreshToken: string;
 
   user: {
     id: string;
@@ -56,12 +59,23 @@ export class LoginUseCase {
 
     user.updateLastLogin();
 
-    await this.userRepository.update(user);
+    const accessToken = await this.tokenProvider.generateAccessToken(
+      user.id,
+      user.email,
+    );
 
-    const accessToken = await this.tokenProvider.generate(user.id, user.email);
+    const refreshToken = await this.tokenProvider.generateRefreshToken(user.id);
+
+    const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+
+    user.setRefreshToken(refreshTokenHash);
+
+    await this.userRepository.update(user);
 
     return {
       accessToken,
+      refreshToken,
+
       user: {
         id: user.id,
         name: user.name,

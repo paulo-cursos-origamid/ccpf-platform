@@ -14,6 +14,7 @@ import { JwtTokenService } from './infrastructure/auth/jwt-token.service';
 import { TokenProviderContract } from './domain/contracts/token-provider.contract';
 import { LoginUseCase } from './application/use-cases/login/login.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email/verify-email.use-case';
+import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refresh-token.use-case';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { VerifyEmailUseCase } from './application/use-cases/verify-email/verify-
     CreateUserUseCase,
     LoginUseCase,
     VerifyEmailUseCase,
+    RefreshTokenUseCase,
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,

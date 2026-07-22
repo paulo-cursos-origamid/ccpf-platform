@@ -7,6 +7,8 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginDto } from '../dto/login.dto';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
+import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
+import { RefreshTokenDto } from '../dto/refresh-token.dto';
 
 @Controller('identity')
 export class IdentityController {
@@ -14,6 +16,7 @@ export class IdentityController {
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
+    private readonly refreshTokenUseCase: RefreshTokenUseCase,
   ) {}
 
   @Post('users')
@@ -37,6 +40,12 @@ export class IdentityController {
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.verifyEmailUseCase.execute({
       token: dto.token,
+    });
+  }
+  @Post('refresh')
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.refreshTokenUseCase.execute({
+      refreshToken: dto.refreshToken,
     });
   }
 }
