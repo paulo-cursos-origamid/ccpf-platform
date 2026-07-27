@@ -8,12 +8,8 @@ interface IdentityProviderProps {
   children: React.ReactNode;
 }
 
-export function IdentityProvider({
-  children,
-}: IdentityProviderProps) {
-  const initialize = useIdentityStore(
-    (state) => state.initialize,
-  );
+export function IdentityProvider({ children }: IdentityProviderProps) {
+  const initialize = useIdentityStore((state) => state.initialize);
 
   useEffect(() => {
     initialize();

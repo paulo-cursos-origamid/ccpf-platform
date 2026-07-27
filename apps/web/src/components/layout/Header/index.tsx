@@ -1,18 +1,53 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
-import styles from "./Header.module.scss";
 import { Bell, User } from "@/components/icons";
 
+import { useIdentityStore } from "@/modules/identity/stores/identity.store";
+
+import styles from "./Header.module.scss";
+
 export function Header() {
+  const router = useRouter();
+
+  const logout = useIdentityStore((state) => state.logout);
+
+  const user = useIdentityStore((state) => state.user);
+
+  async function handleLogout() {
+    await logout();
+
+    router.replace("/login");
+  }
+
   return (
     <header className={styles.header}>
-      <div>CCPF</div>
-      <div>
-        <ThemeSwitch />
+      <div className={styles.left}>
+        <span className={styles.logo}>CCPF</span>
       </div>
 
-      <Bell />
-      <div>
-        <User />
+      <div className={styles.right}>
+        <ThemeSwitch />
+
+        <button type="button" className={styles.iconButton}>
+          <Bell />
+        </button>
+
+        <div className={styles.user}>
+          <User />
+
+          <span className={styles.userName}>{user?.name}</span>
+
+          <button
+            type="button"
+            className={styles.logout}
+            onClick={handleLogout}
+          >
+            Sair
+          </button>
+        </div>
       </div>
     </header>
   );
