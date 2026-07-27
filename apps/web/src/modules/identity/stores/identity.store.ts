@@ -15,6 +15,8 @@ interface IdentityState {
   logout: () => Promise<void>;
 
   loadUser: () => Promise<void>;
+
+  initialize: () => Promise<void>;
 }
 
 export const useIdentityStore = create<IdentityState>((set) => ({
@@ -51,6 +53,30 @@ export const useIdentityStore = create<IdentityState>((set) => ({
   },
 
   loadUser: async () => {
+    set({
+      loading: true,
+    });
+
+    try {
+      const user = await identityService.me();
+
+      set({
+        user,
+        isAuthenticated: true,
+      });
+    } catch {
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
+    } finally {
+      set({
+        loading: false,
+      });
+    }
+  },
+
+  initialize: async () => {
     set({
       loading: true,
     });

@@ -16,8 +16,15 @@ import { LoginUseCase } from './application/use-cases/login/login.use-case';
 import { VerifyEmailUseCase } from './application/use-cases/verify-email/verify-email.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refresh-token.use-case';
 
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './infrastructure/auth/jwt.strategy';
+import { GetProfileUseCase } from './application/use-cases/get-profile/get-profile.use-case';
+
 @Module({
   imports: [
+    PassportModule.register({
+      defaultStrategy: 'jwt',
+    }),
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'ccpf-secret',
       signOptions: {
@@ -32,6 +39,9 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refre
     LoginUseCase,
     VerifyEmailUseCase,
     RefreshTokenUseCase,
+    GetProfileUseCase,
+
+    JwtStrategy,
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,

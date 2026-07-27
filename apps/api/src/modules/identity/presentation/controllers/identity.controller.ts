@@ -10,6 +10,15 @@ import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
 
+import { Get } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
+import { Request } from '@nestjs/common';
+
+import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
+import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
+// import type { JwtPayload } from '../../infrastructure/auth/jwt-payload.interface';
+import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
+
 @Controller('identity')
 export class IdentityController {
   constructor(
@@ -17,6 +26,7 @@ export class IdentityController {
     private readonly loginUseCase: LoginUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
+    private readonly getProfileUseCase: GetProfileUseCase,
   ) {}
 
   @Post('users')
@@ -33,6 +43,14 @@ export class IdentityController {
     return this.loginUseCase.execute({
       email: dto.email,
       password: dto.password,
+    });
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async me(@CurrentUser() user: AuthenticatedUser) {
+    return this.getProfileUseCase.execute({
+      userId: user.sub,
     });
   }
 
