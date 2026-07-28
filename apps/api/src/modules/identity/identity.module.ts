@@ -19,6 +19,7 @@ import { RefreshTokenUseCase } from './application/use-cases/refresh-token/refre
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './infrastructure/auth/jwt.strategy';
 import { GetProfileUseCase } from './application/use-cases/get-profile/get-profile.use-case';
+import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { GetProfileUseCase } from './application/use-cases/get-profile/get-profi
   providers: [
     CreateUserUseCase,
     LoginUseCase,
+    LogoutUseCase,
     VerifyEmailUseCase,
     RefreshTokenUseCase,
     GetProfileUseCase,

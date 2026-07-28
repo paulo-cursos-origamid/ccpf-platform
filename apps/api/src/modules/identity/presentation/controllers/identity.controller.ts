@@ -16,12 +16,14 @@ import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
 // import type { JwtPayload } from '../../infrastructure/auth/jwt-payload.interface';
 import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
+import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-case';
 
 @Controller('identity')
 export class IdentityController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly loginUseCase: LoginUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
@@ -79,16 +81,40 @@ export class IdentityController {
       token: dto.token,
     });
   }
+  // @Post('refresh')
+  // async refresh(@Body() dto: RefreshTokenDto) {
+  //   return this.refreshTokenUseCase.execute({
+  //     refreshToken: dto.refreshToken,
+  //   });
+  // }
+  // @Post('logout')
+  // logout(@Res({ passthrough: true }) response: Response) {
+  //   response.clearCookie('access_token');
+  //   response.clearCookie('refresh_token');
+
+  //   return {
+  //     success: true,
+  //   };
+  // }
   @Post('refresh')
   async refresh(@Body() dto: RefreshTokenDto) {
     return this.refreshTokenUseCase.execute({
       refreshToken: dto.refreshToken,
     });
   }
+
   @Post('logout')
-  logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('access_token');
-    response.clearCookie('refresh_token');
+  @UseGuards(JwtAuthGuard)
+  async logout(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.logoutUseCase.execute({
+      userId: user.sub,
+    });
+
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
 
     return {
       success: true,
