@@ -1,6 +1,4 @@
-import { AppLayout } from "@/components/layout/AppLayout";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-// import { IdentityProvider } from "@/modules/identity";
 import { IdentityProvider } from "@/modules/identity/providers/IdentityProvider";
 import "@/styles/globals.scss";
 
@@ -18,9 +16,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <ThemeProvider>
-          <IdentityProvider>
-            <AppLayout>{children}</AppLayout>
-          </IdentityProvider>
+          <IdentityProvider>{children}</IdentityProvider>
         </ThemeProvider>
       </body>
     </html>

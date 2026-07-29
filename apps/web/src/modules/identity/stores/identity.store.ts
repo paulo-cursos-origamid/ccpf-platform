@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 import type { User } from "../types/user";
 import type { LoginDto } from "../types/login.dto";
@@ -8,8 +7,12 @@ import { identityService } from "../services/identity.service";
 
 interface IdentityState {
   user: User | null;
+
   isAuthenticated: boolean;
+
   loading: boolean;
+
+  initialized: boolean;
 
   login: (data: LoginDto) => Promise<void>;
 
@@ -20,95 +23,92 @@ interface IdentityState {
   initialize: () => Promise<void>;
 }
 
-export const useIdentityStore = create<IdentityState>()(
-  persist(
-    (set) => ({
-      user: null,
+export const useIdentityStore = create<IdentityState>()((set) => ({
+  user: null,
 
-      isAuthenticated: false,
+  isAuthenticated: false,
 
-      loading: false,
+  loading: false,
 
-      login: async (data) => {
-        set({
-          loading: true,
-        });
+  initialized: false,
+  
 
-        try {
-          const response = await identityService.login(data);
+  login: async (data) => {
+    set({
+      loading: true,
+    });
 
-          set({
-            user: response.user,
-            isAuthenticated: true,
-          });
-        } finally {
-          set({
-            loading: false,
-          });
-        }
-      },
+    try {
+      const response = await identityService.login(data);
 
-      logout: async () => {
-        try {
-          await identityService.logout();
-        } finally {
-          set({
-            user: null,
-            isAuthenticated: false,
-          });
-        }
-      },
+      set({
+        user: response.user,
+        isAuthenticated: true,
+      });
+    } finally {
+      set({
+        loading: false,
+      });
+    }
+  },
 
-      loadUser: async () => {
-        set({
-          loading: true,
-        });
+  logout: async () => {
+    try {
+      await identityService.logout();
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
+    }
+  },
 
-        try {
-          const user = await identityService.me();
+  loadUser: async () => {
+    set({
+      loading: true,
+    });
 
-          set({
-            user,
-            isAuthenticated: true,
-          });
-        } catch {
-          set({
-            user: null,
-            isAuthenticated: false,
-          });
-        } finally {
-          set({
-            loading: false,
-          });
-        }
-      },
+    try {
+      const user = await identityService.me();
 
-      initialize: async () => {
-        set({
-          loading: true,
-        });
+      set({
+        user,
+        isAuthenticated: true,
+      });
+    } catch {
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
+    } finally {
+      set({
+        loading: false,
+      });
+    }
+  },
 
-        try {
-          const user = await identityService.me();
+  initialize: async () => {
+    set({
+      loading: true,
+    });
 
-          set({
-            user,
-            isAuthenticated: true,
-          });
-        } catch {
-          set({
-            user: null,
-            isAuthenticated: false,
-          });
-        } finally {
-          set({
-            loading: false,
-          });
-        }
-      },
-    }),
-    {
-      name: "ccpf-identity",
-    },
-  ),
-);
+    try {
+      const user = await identityService.me();
+
+      set({
+        user,
+        isAuthenticated: true,
+      });
+    } catch {
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
+    } finally {
+      set({
+        loading: false,
+        initialized: true,
+      });
+    }
+  },
+}));

@@ -4,12 +4,16 @@ import type { LoginDto } from "../types/login.dto";
 import type { LoginResponseDto } from "../types/login-response.dto";
 import type { User } from "../types/user";
 
+interface RefreshResponse {
+  success: boolean;
+}
 class IdentityService {
   login(dto: LoginDto) {
     return api.post<LoginResponseDto>("/identity/login", dto);
   }
 
   me() {
+      console.trace("identityService.me()");
     return api.get<User>("/identity/me");
   }
 
@@ -18,7 +22,7 @@ class IdentityService {
   }
 
   refresh() {
-    return api.post<LoginResponseDto>("/identity/refresh");
+    return api.post<RefreshResponse>("/identity/refresh");
   }
 }
 

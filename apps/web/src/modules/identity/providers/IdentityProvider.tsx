@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useIdentityStore } from "../stores/identity.store";
 
@@ -11,8 +11,16 @@ interface IdentityProviderProps {
 export function IdentityProvider({ children }: IdentityProviderProps) {
   const initialize = useIdentityStore((state) => state.initialize);
 
+  const initialized = useRef(false);
+
   useEffect(() => {
-    initialize();
+    if (initialized.current) {
+      return;
+    }
+
+    initialized.current = true;
+
+    void initialize();
   }, [initialize]);
 
   return <>{children}</>;
