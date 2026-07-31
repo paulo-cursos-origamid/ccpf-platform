@@ -1,16 +1,24 @@
-import { Body, Controller, Post, Res, Get, UseGuards } from '@nestjs/common';
-
-import type { Response } from 'express';
+import {
+  Body,
+  Controller,
+  Post,
+  Res,
+  Get,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
 import { LoginUseCase } from '../../application/use-cases/login/login.use-case';
+
+import type { Request, Response } from 'express';
 
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginDto } from '../dto/login.dto';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { Req } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
@@ -18,6 +26,11 @@ import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-p
 import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
 import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-case';
 
+interface RefreshRequest extends Request {
+  cookies: {
+    refresh_token?: string;
+  };
+}
 @Controller('identity')
 export class IdentityController {
   constructor(
@@ -81,26 +94,39 @@ export class IdentityController {
       token: dto.token,
     });
   }
-  // @Post('refresh')
-  // async refresh(@Body() dto: RefreshTokenDto) {
-  //   return this.refreshTokenUseCase.execute({
-  //     refreshToken: dto.refreshToken,
-  //   });
-  // }
-  // @Post('logout')
-  // logout(@Res({ passthrough: true }) response: Response) {
-  //   response.clearCookie('access_token');
-  //   response.clearCookie('refresh_token');
 
-  //   return {
-  //     success: true,
-  //   };
-  // }
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto) {
-    return this.refreshTokenUseCase.execute({
-      refreshToken: dto.refreshToken,
+  async refresh(
+    @Req() req: RefreshRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = req.cookies.refresh_token;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
+    }
+
+    const result = await this.refreshTokenUseCase.execute({
+      refreshToken,
     });
+
+    res.cookie('access_token', result.accessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 1000 * 60 * 15,
+    });
+
+    res.cookie('refresh_token', result.refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+
+    return {
+      success: true,
+    };
   }
 
   @Post('logout')
