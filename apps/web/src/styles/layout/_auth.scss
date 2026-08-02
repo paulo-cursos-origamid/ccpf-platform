@@ -1,0 +1,16 @@
+/* ==================================================
+   AUTH PAGE
+================================================== */
+
+.auth-page {
+  width: 100%;
+  min-height: 100vh;
+
+  display: flex;
+
+  background: linear-gradient(
+    135deg,
+    var(--dashboard-bg-start),
+    var(--dashboard-bg-end)
+  );
+}

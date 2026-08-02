@@ -1,0 +1,27 @@
+.container {
+  width: 100%;
+  min-height: 100vh;
+
+  display: grid;
+  grid-template-columns: 1fr 520px;
+
+  background: linear-gradient(
+    135deg,
+    var(--surface-primary),
+    var(--surface-tertiary)
+  );
+
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal);
+
+  @media (max-width:1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}

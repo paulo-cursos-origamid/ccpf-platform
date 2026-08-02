@@ -4,3 +4,87 @@ $bp-md: 768px;
 $bp-lg: 1024px;
 $bp-xl: 1280px;
 $bp-2xl: 1536px;
+
+/* Down */
+
+@mixin down-xs {
+  @media (max-width: $bp-xs) {
+    @content;
+  }
+}
+
+@mixin down-sm {
+  @media (max-width: $bp-sm) {
+    @content;
+  }
+}
+
+@mixin down-md {
+  @media (max-width: $bp-md) {
+    @content;
+  }
+}
+
+@mixin down-lg {
+  @media (max-width: $bp-lg) {
+    @content;
+  }
+}
+
+@mixin down-xl {
+  @media (max-width: $bp-xl) {
+    @content;
+  }
+}
+
+@mixin down-2xl {
+  @media (max-width: $bp-2xl) {
+    @content;
+  }
+}
+
+/* Up */
+
+@mixin up-xs {
+  @media (min-width: $bp-xs) {
+    @content;
+  }
+}
+
+@mixin up-sm {
+  @media (min-width: $bp-sm) {
+    @content;
+  }
+}
+
+@mixin up-md {
+  @media (min-width: $bp-md) {
+    @content;
+  }
+}
+
+@mixin up-lg {
+  @media (min-width: $bp-lg) {
+    @content;
+  }
+}
+
+@mixin up-xl {
+  @media (min-width: $bp-xl) {
+    @content;
+  }
+}
+
+@mixin up-2xl {
+  @media (min-width: $bp-2xl) {
+    @content;
+  }
+}
+
+/* Between */
+
+@mixin between($min, $max) {
+  @media (min-width: $min) and (max-width: $max) {
+    @content;
+  }
+}

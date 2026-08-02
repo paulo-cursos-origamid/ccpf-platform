@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { useIdentityStore } from "../../stores/identity.store";
+import { useIdentityStore } from "../../../stores/identity.store";
 
 interface AuthBoundaryProps {
   children: React.ReactNode;

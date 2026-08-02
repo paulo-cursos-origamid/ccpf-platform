@@ -1,17 +1,61 @@
+/* ==================================================
+   TYPOGRAPHY BASE
+================================================== */
+
 body {
-
-  font-size:16px;
-
-  line-height:1.5;
-
+  font-size: var(--font-md);
+  line-height: var(--line-height-normal);
 }
 
+/* ==================================================
+   HEADINGS
+================================================== */
 
 h1,
 h2,
 h3,
+h4,
+h5,
+h6 {
+  color: var(--text-primary);
+
+  font-weight: var(--font-weight-semibold);
+
+  line-height: var(--line-height-tight);
+}
+
+h1 {
+  font-size: var(--font-4xl);
+}
+
+h2 {
+  font-size: var(--font-3xl);
+}
+
+h3 {
+  font-size: var(--font-2xl);
+}
+
 h4 {
+  font-size: var(--font-xl);
+}
 
-  font-weight:600;
+/* ==================================================
+   TEXT
+================================================== */
 
+p {
+  color: var(--text-secondary);
+
+  line-height: var(--line-height-relaxed);
+}
+
+/* ==================================================
+   SMALL
+================================================== */
+
+small {
+  font-size: var(--font-sm);
+
+  color: var(--text-muted, var(--text-secondary));
 }

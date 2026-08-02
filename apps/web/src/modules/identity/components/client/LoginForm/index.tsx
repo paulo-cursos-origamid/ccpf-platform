@@ -1,8 +1,11 @@
 "use client";
 
-import { useLogin } from "@/modules/identity/hooks/client";
 import { useState } from "react";
 
+// import { useLogin } from "@/modules/identity/hooks/";
+import { useLogin } from "../../../hooks/client";
+
+import styles from "./LoginForm.module.scss";
 
 export function LoginForm() {
   const { login, loading } = useLogin();
@@ -20,22 +23,44 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-      />
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Entrar</h1>
 
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Senha"
-      />
+        <p className={styles.subtitle}>Acesse sua conta no CCPF Platform</p>
 
-      <button disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button>
-    </form>
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <div className={styles.field}>
+            <label htmlFor="email">Email</label>
+
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="password">Senha</label>
+
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="********"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+
+          <button className={styles.button} type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

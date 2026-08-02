@@ -1,0 +1,63 @@
+/* ==================================================
+   GLOBAL DOCUMENT
+================================================== */
+
+html {
+  font-size: 16px;
+
+  scroll-behavior: smooth;
+
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ==================================================
+   BODY
+================================================== */
+
+body {
+  min-width: 320px;
+
+  min-height: 100vh;
+
+  background: var(--surface-primary);
+
+  color: var(--text-primary);
+
+  font-family: var(--font-primary, "Roboto", sans-serif);
+
+  font-weight: var(--font-weight-normal, 400);
+
+  line-height: var(--line-height-normal, 1.5);
+
+  transition:
+    background-color var(--transition-normal),
+    color var(--transition-normal);
+
+  -webkit-font-smoothing: antialiased;
+
+  -moz-osx-font-smoothing: grayscale;
+
+  text-rendering: optimizeLegibility;
+}
+
+/* ==================================================
+   FORM ELEMENTS
+================================================== */
+
+input,
+textarea,
+select {
+  color: var(--text-primary);
+
+  background: var(--surface-secondary);
+}
+
+/* ==================================================
+   FOCUS
+================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+
+  outline-offset: 2px;
+}

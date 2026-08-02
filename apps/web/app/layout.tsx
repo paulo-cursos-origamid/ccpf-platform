@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { IdentityProvider } from "@/modules/identity/providers/IdentityProvider";
+// import "@/styles/globals.scss";
 import "@/styles/globals.scss";
 
 export const metadata = {

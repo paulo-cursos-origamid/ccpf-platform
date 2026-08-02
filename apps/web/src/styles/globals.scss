@@ -1,11 +1,9 @@
-@use "./abstracts/variables";
-@use "./abstracts/colors";
-@use "./abstracts/spacing";
+@use "@/styles/main";
 
-@use "./themes/light";
-@use "./themes/dark";
-
-@use "./base/reset";
-@use "./base/typography";
-
-@use "./layout/grid";
+#root,
+__next {
+  min-height: 100vh;
+}
+::selection {
+  background: rgba(var(--accent-primary-rgb), 0.18);
+}

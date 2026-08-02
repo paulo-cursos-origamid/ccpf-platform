@@ -1,0 +1,30 @@
+@use "../abstracts/variables" as *;
+
+:root {
+  /* Typography */
+
+  --font-primary: #{$font-primary};
+  --font-secondary: #{$font-secondary};
+
+  /* Radius */
+
+  --radius-xs: #{$radius-xs};
+  --radius-sm: #{$radius-sm};
+  --radius-md: #{$radius-md};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-2xl: #{$radius-2xl};
+  --radius-full: 9999px;
+
+  /* Shadows */
+
+  --shadow-sm: #{$shadow-sm};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+
+  /* Transition */
+
+  --transition-fast: #{$transition-fast};
+  --transition-normal: #{$transition-normal};
+  --transition-slow: #{$transition-slow};
+}
