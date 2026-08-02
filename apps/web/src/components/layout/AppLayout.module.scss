@@ -1,7 +1,50 @@
 .layout {
   min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-primary);
+
+  color: var(--text-primary);
+
+  transition:
+    background var(--transition-normal),
+    color var(--transition-normal);
 }
 
 .body {
+  flex: 1;
+
   display: flex;
+
+  background: var(--surface-primary);
 }
+
+.content {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: var(--spacing-xl);
+
+  background: var(--surface-primary);
+
+  overflow-y: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: 1600px;
+
+  margin: 0 auto;
+}
+
+// .layout {
+//   min-height: 100vh;
+// }
+
+// .body {
+//   display: flex;
+// }

@@ -1,15 +1,58 @@
 .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  padding: 8px 16px;
+  width: 42px;
+  height: 42px;
 
+  border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
 
-  border: 1px solid var(--border);
+  background: var(--surface-card);
 
-  background: var(--surface);
-
-  color: var(--text);
+  color: var(--text-primary);
 
   cursor: pointer;
 
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-hover);
+  }
 }
+
+/* No tema escuro o ícone ficará branco */
+[data-theme="dark"] .button {
+  color: #ffffff;
+}
+
+/* No tema claro o ícone fica escuro */
+[data-theme="light"] .button {
+  color: var(--text-primary);
+}
+
+.button svg {
+  width: 18px;
+  height: 18px;
+}
+
+// .button {
+
+//   padding: 8px 16px;
+
+//   border-radius: var(--radius-md);
+
+//   border: 1px solid var(--border);
+
+//   background: var(--surface);
+
+//   color: var(--text);
+
+//   cursor: pointer;
+
+// }

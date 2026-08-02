@@ -29,6 +29,7 @@ export function Header() {
       </div>
 
       <div className={styles.right}>
+        
         <ThemeSwitch />
 
         <button type="button" className={styles.iconButton}>
