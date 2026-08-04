@@ -5,5 +5,9 @@ interface LoginCardProps {
 }
 
 export function LoginCard({ children }: LoginCardProps) {
-  return <div className={styles.card}>{children}</div>;
+  return (
+    <section className={styles.wrapper}>
+      <div className={styles.card}>{children}</div>
+    </section>
+  );
 }

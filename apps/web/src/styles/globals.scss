@@ -2,7 +2,9 @@
 
 #root,
 __next {
+  min-width: 100%;
   min-height: 100vh;
+  
 }
 ::selection {
   background: rgba(var(--accent-primary-rgb), 0.18);

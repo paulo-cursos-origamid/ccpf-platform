@@ -1,79 +1,93 @@
 /* ==================================================
-   FONT SIZE TOKENS
+   FONT FAMILY
+================================================== */
+
+$font-heading: "Inter", sans-serif;
+$font-body: "Inter", sans-serif;
+$font-mono: "JetBrains Mono", monospace;
+
+/* ==================================================
+   FONT SIZE
 ================================================== */
 
 $font-sxs: 10px;
-
 $font-xs: 12px;
-
 $font-sm: 14px;
-
 $font-md: 16px;
-
 $font-lg: 18px;
-
 $font-xl: 20px;
-
 $font-2xl: 24px;
-
 $font-3xl: 32px;
-
 $font-4xl: 40px;
+$font-5xl: 56px;
 
 /* ==================================================
-   FONT WEIGHT TOKENS
+   FONT WEIGHT
 ================================================== */
 
 $font-weight-normal: 400;
-
 $font-weight-medium: 500;
-
 $font-weight-semibold: 600;
-
 $font-weight-bold: 700;
+$font-weight-black: 800;
 
 /* ==================================================
-   LINE HEIGHT TOKENS
+   LINE HEIGHT
 ================================================== */
 
-$line-height-tight: 1.2;
-
+$line-height-tight: 1.15;
 $line-height-normal: 1.5;
-
 $line-height-relaxed: 1.7;
+
+/* ==================================================
+   LETTER SPACING
+================================================== */
+
+$tracking-tight: -0.04em;
+$tracking-normal: 0;
+$tracking-wide: 0.04em;
 
 /* ==================================================
    CSS VARIABLES
 ================================================== */
 
 :root {
+  /* Font Family */
+
+  --font-heading: #{$font-heading};
+  --font-body: #{$font-body};
+  --font-mono: #{$font-mono};
+
+  /* Font Size */
+
+  --font-sxs: #{$font-sxs};
   --font-xs: #{$font-xs};
-
   --font-sm: #{$font-sm};
-
   --font-md: #{$font-md};
-
   --font-lg: #{$font-lg};
-
   --font-xl: #{$font-xl};
-
   --font-2xl: #{$font-2xl};
-
   --font-3xl: #{$font-3xl};
-
   --font-4xl: #{$font-4xl};
+  --font-5xl: #{$font-5xl};
+
+  /* Weight */
 
   --font-weight-normal: #{$font-weight-normal};
-
   --font-weight-medium: #{$font-weight-medium};
-
   --font-weight-semibold: #{$font-weight-semibold};
-
   --font-weight-bold: #{$font-weight-bold};
+  --font-weight-black: #{$font-weight-black};
+
+  /* Line Height */
 
   --line-height-tight: #{$line-height-tight};
-
   --line-height-normal: #{$line-height-normal};
-
   --line-height-relaxed: #{$line-height-relaxed};
+
+  /* Letter Spacing */
+
+  --tracking-tight: #{$tracking-tight};
+  --tracking-normal: #{$tracking-normal};
+  --tracking-wide: #{$tracking-wide};
 }
