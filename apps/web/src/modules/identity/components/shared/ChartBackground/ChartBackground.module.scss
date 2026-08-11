@@ -1,41 +1,462 @@
 .chart {
   position: absolute;
+
   inset: 0;
+
+  z-index: 2;
 
   overflow: hidden;
 
   pointer-events: none;
+
+  opacity: .9;
 }
+
+
+/* =====================================================
+   SVG CONTAINER
+===================================================== */
 
 .svg {
   position: absolute;
 
   left: 0;
-  bottom: 0;
+  bottom: -2%;
 
-  width: 100%;
-  height: 50%;
+  width: 116%;
+  height: 45%;
 
-  transform: translateY(12%);
+  animation: floatChart 8s ease-in-out infinite;
 }
+
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.grid {
+  stroke: var(--text-secondary);
+
+  stroke-width: 1;
+
+  opacity: .04;
+}
+
+
+/* =====================================================
+   AREA
+===================================================== */
+
 .area {
-  fill: url(#fill);
+
+  fill: url(#fillGradient);
+
+  opacity: .35;
+
+  filter: blur(2px);
+
+  animation:
+    areaGlow 6s ease-in-out infinite;
 }
+
+
+/* =====================================================
+   LINE
+===================================================== */
 
 .line {
+
   fill: none;
 
-  stroke: url(#line);
+  stroke: url(#lineGradient);
 
-  stroke-width: 5;
+  stroke-width: 6;
 
   stroke-linecap: round;
+
   stroke-linejoin: round;
+
+
+  stroke-dasharray: 1400;
+
+  stroke-dashoffset: 1400;
+
+
+  filter:
+    drop-shadow(
+      0 0 14px rgba(34,197,94,.35)
+    );
+
+
+  animation:
+    drawLine 2.8s ease forwards;
 }
 
+
+/* =====================================================
+   POINTS
+===================================================== */
+
 .point {
+
   fill: var(--accent-secondary);
 
   stroke: var(--surface-primary);
+
   stroke-width: 4;
+
+
+  filter:
+    drop-shadow(
+      0 0 10px rgba(34,197,94,.6)
+    );
+
+
+  transform-origin: center;
+
+
+  animation:
+    pulse 2.5s ease-in-out infinite;
 }
+
+
+.point:nth-child(1) {
+  animation-delay: .3s;
+}
+
+
+.point:nth-child(2) {
+  animation-delay: .9s;
+}
+
+
+.point:nth-child(3) {
+  animation-delay: 1.5s;
+}
+
+
+/* =====================================================
+   ARROW
+===================================================== */
+
+.arrow {
+
+  filter:
+    drop-shadow(
+      0 0 14px rgba(34,197,94,.7)
+    );
+
+
+  transform-origin: center;
+
+
+  animation:
+    arrowGlow 2s ease-in-out infinite;
+}
+
+
+/* =====================================================
+   PARTICLES
+===================================================== */
+
+.particle {
+
+  fill: var(--accent-primary);
+
+  opacity: .8;
+
+  filter:
+    drop-shadow(
+      0 0 8px var(--accent-primary)
+    );
+
+}
+
+
+/* =====================================================
+   ANIMATIONS
+===================================================== */
+
+
+@keyframes drawLine {
+
+  to {
+
+    stroke-dashoffset: 0;
+
+  }
+
+}
+
+
+
+@keyframes floatChart {
+
+  0%,
+  100% {
+
+    transform:
+      translateY(12%);
+
+  }
+
+
+  50% {
+
+    transform:
+      translateY(8%);
+
+  }
+
+}
+
+
+
+@keyframes areaGlow {
+
+  0%,
+  100% {
+
+    opacity: .25;
+
+  }
+
+
+  50% {
+
+    opacity: .5;
+
+  }
+
+}
+
+
+
+@keyframes pulse {
+
+  0%,
+  100% {
+
+    transform:
+      scale(1);
+
+    opacity: .9;
+
+  }
+
+
+  50% {
+
+    transform:
+      scale(1.35);
+
+    opacity: 1;
+
+  }
+
+}
+
+
+
+@keyframes arrowGlow {
+
+  0%,
+  100% {
+
+    opacity: .8;
+
+    transform:
+      scale(1);
+
+  }
+
+
+  50% {
+
+    opacity: 1;
+
+    transform:
+      scale(1.15);
+
+  }
+
+}
+
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media(max-width:1024px){
+
+  .chart {
+
+    opacity:.5;
+
+  }
+
+
+  .svg {
+
+    width:140%;
+
+    height:40%;
+
+  }
+
+}
+
+// .chart {
+//   position: absolute;
+//   inset: 0;
+
+//   z-index: 2;
+
+//   overflow: hidden;
+
+//   pointer-events: none;
+
+//   opacity: 0.9;
+// }
+
+// .svg {
+//   position: absolute;
+
+//   left: 0;
+//   bottom: -2%;
+
+//   width: 116%;
+//   height: 45%;
+
+//   animation: floatChart 8s ease-in-out infinite;
+// }
+
+// /* ==========================================
+//    AREA
+// ========================================== */
+
+// .area {
+//   fill: url(#fillGradient);
+
+//   opacity: 0.35;
+
+//   filter: blur(2px);
+
+//   animation: areaGlow 6s ease-in-out infinite;
+// }
+
+// /* ==========================================
+//    LINE
+// ========================================== */
+
+// .line {
+//   fill: none;
+
+//   stroke: url(#lineGradient);
+
+//   stroke-width: 6;
+
+//   stroke-linecap: round;
+//   stroke-linejoin: round;
+
+//   stroke-dasharray: 1400;
+//   stroke-dashoffset: 1400;
+
+//   filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.35));
+
+//   animation: drawLine 2.8s ease forwards;
+// }
+
+// /* ==========================================
+//    ARROW
+// ========================================== */
+
+// .arrow {
+//   filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.7));
+
+//   animation: arrowGlow 2s ease-in-out infinite 2.8s;
+// }
+
+// /* ==========================================
+//    POINTS
+// ========================================== */
+
+// .point {
+//   fill: var(--accent-secondary);
+
+//   stroke: var(--surface-primary);
+//   stroke-width: 4;
+
+//   filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.6));
+
+//   animation: pulse 2.5s ease-in-out infinite;
+// }
+
+// .delay1 {
+//   animation-delay: 0.3s;
+// }
+
+// .delay2 {
+//   animation-delay: 0.9s;
+// }
+
+// .delay3 {
+//   animation-delay: 1.5s;
+// }
+
+// /* ==========================================
+//    ANIMAÇÕES
+// ========================================== */
+
+// @keyframes drawLine {
+//   to {
+//     stroke-dashoffset: 0;
+//   }
+// }
+
+// @keyframes floatChart {
+//   0%,
+//   100% {
+//     transform: translateY(12%);
+//   }
+
+//   50% {
+//     transform: translateY(8%);
+//   }
+// }
+
+// @keyframes areaGlow {
+//   0%,
+//   100% {
+//     opacity: 0.25;
+//   }
+
+//   50% {
+//     opacity: 0.5;
+//   }
+// }
+
+// @keyframes pulse {
+//   0%,
+//   100% {
+//     transform: scale(1);
+//   }
+
+//   50% {
+//     transform: scale(1.35);
+//   }
+// }
+
+// @keyframes arrowGlow {
+//   0%,
+//   100% {
+//     opacity: 0.9;
+//     transform: scale(1);
+//   }
+
+//   50% {
+//     opacity: 1;
+//     transform: scale(1.15);
+//   }
+// }

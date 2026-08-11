@@ -1,0 +1,36 @@
+.card {
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-primary);
+
+  border: 1px solid var(--border-primary);
+
+  border-radius: var(--radius-lg);
+
+  transition: var(--transition-normal);
+}
+
+.elevated {
+  box-shadow: var(--shadow-lg);
+}
+
+.outlined {
+  border: 2px solid var(--accent-primary);
+}
+
+.paddingNone {
+  padding: 0;
+}
+
+.paddingSm {
+  padding: var(--spacing-4);
+}
+
+.paddingMd {
+  padding: var(--spacing-6);
+}
+
+.paddingLg {
+  padding: var(--spacing-8);
+}

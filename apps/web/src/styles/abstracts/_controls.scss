@@ -1,0 +1,27 @@
+:root {
+  /* Heights */
+
+  --control-height-sm: 40px;
+  --control-height-md: 48px;
+  --control-height-lg: 56px;
+
+  /* Padding */
+
+  --control-padding-x: var(--spacing-4);
+  --control-padding-y: var(--spacing-3);
+
+  /* Radius */
+
+  --control-radius: var(--radius-md);
+
+  /* Border */
+
+  --control-border: var(--border-primary);
+
+  /* Focus */
+
+  --control-focus-ring: rgba(
+    var(--accent-primary-rgb),
+    0.12
+  );
+}

@@ -132,4 +132,8 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.4s ease;
+
+  --accent-primary: #{v.$color-green};
+  --accent-primary-rgb: 4, 120, 87;
+  --accent-primary-hover: #059669;
 }

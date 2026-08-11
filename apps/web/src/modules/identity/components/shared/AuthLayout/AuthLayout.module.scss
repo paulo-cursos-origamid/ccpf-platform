@@ -1,111 +1,178 @@
 .container {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 620px;
+
   width: 100%;
   min-height: 100vh;
 
-  display: grid;
-  grid-template-columns: 1fr 620px;
-  
+  overflow: hidden;
 
   background:
     radial-gradient(
-      circle at top right,
-      rgba(var(--accent-secondary-rgb), .08),
-      transparent 45%
+      circle at 15% 80%,
+      rgba(var(--accent-primary-rgb), 0.12),
+      transparent 35%
     ),
     radial-gradient(
-      circle at bottom left,
-      rgba(var(--accent-primary-rgb), .08),
-      transparent 45%
+      circle at 85% 20%,
+      rgba(var(--accent-secondary-rgb), 0.1),
+      transparent 40%
     ),
-    linear-gradient(
-      135deg,
-      var(--surface-primary),
-      var(--surface-tertiary)
-    );
+    linear-gradient(135deg, var(--surface-primary), var(--surface-tertiary));
+
+  color: var(--text-primary);
 
   transition:
     background var(--transition-normal),
     color var(--transition-normal);
 }
-.container::before {
+
+/* =====================================================
+   BACKGROUND
+===================================================== */
+
+.background {
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.background::before {
   content: "";
 
   position: absolute;
 
-  width: 1200px;
-  height: 100vh;
+  width: 1150px;
+  height: 1100px;
+
+  left: -520px;
+  top: -120px;
 
   border-radius: 50%;
 
-  right: 38%;
-  top: -320px;
+  border: 3px solid rgba(var(--accent-primary-rgb), 0.15);
 
-  border: 2px solid rgba(38,120,255,.25);
-
-  pointer-events: none;
+  animation: rotateCircle 30s linear infinite;
 }
-.container::after {
+
+.background::after {
   content: "";
 
   position: absolute;
 
-  width: 1000px;
-  height: 1000px;
+  width: 1150px;
+  height: 1100px;
 
-  right: 41%;
-  top: -210px;
+  right: -520px;
+  bottom: -180px;
 
   border-radius: 50%;
 
-  border: 1px solid rgba(0,162,255,.18);
+  border: 3px solid rgba(var(--accent-secondary-rgb), 0.15);
 
-  pointer-events: none;
+  animation: rotateCircleReverse 36s linear infinite;
 }
+
+/* =====================================================
+   GLOW
+===================================================== */
+
 .glow {
   position: absolute;
 
-  right: 44%;
-  top: 50%;
+  width: 520px;
+  height: 520px;
 
-  width: 600px;
-  height: 600px;
+  left: 15%;
+  top: 25%;
 
   border-radius: 50%;
 
   background: radial-gradient(
-      circle,
-      rgba(0,110,255,.18),
-      transparent 70%
+    circle,
+    rgba(var(--accent-primary-rgb), 0.18),
+    transparent 70%
   );
 
-  filter: blur(80px);
+  filter: blur(90px);
+
+  animation: pulseGlow 8s ease-in-out infinite;
 
   pointer-events: none;
 }
+
+/* =====================================================
+   COLUMNS
+===================================================== */
+
 .brand {
+  position: relative;
+  z-index: 2;
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 5rem;
+  padding: clamp(2rem, 5vw, 5rem);
 }
 
 .login {
+  position: relative;
+  z-index: 5;
+
   display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 3rem;
+  padding: clamp(2rem, 4vw, 3rem);
+
+  backdrop-filter: blur(24px);
 
   border-left: 1px solid var(--border-primary);
 
-  background: rgba(0,0,0,.08);
+  background: color-mix(in srgb, var(--surface-card), transparent 18%);
+}
 
-  backdrop-filter: blur(24px);
+/* animações */
+
+@keyframes rotateCircle {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateCircleReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.15);
+  }
 }
 
 @media (max-width: 1200px) {
-
   .container {
     grid-template-columns: 1fr;
   }
@@ -116,6 +183,255 @@
 
   .login {
     border-left: none;
-    padding: 2rem;
   }
 }
+
+// .container {
+//   position: relative;
+
+//   width: 100%;
+//   height: 100vh;
+//   min-height: 150vh;
+
+//   display: grid;
+//   grid-template-columns: minmax(0, 1fr) 620px;
+
+//   overflow: hidden;
+
+//   background:
+//     radial-gradient(
+//       circle at 15% 80%,
+//       rgba(var(--accent-primary-rgb), .12),
+//       transparent 35%
+//     ),
+//     radial-gradient(
+//       circle at 85% 20%,
+//       rgba(var(--accent-secondary-rgb), .10),
+//       transparent 40%
+//     ),
+//     linear-gradient(
+//       135deg,
+//       var(--surface-primary),
+//       var(--surface-tertiary)
+//     );
+
+//   color: var(--text-primary);
+
+//   transition:
+//     background var(--transition-normal),
+//     color var(--transition-normal);
+// }
+
+// /* =====================================================
+//    DECORATIVE CIRCLES
+// ===================================================== */
+
+// .container::before {
+//   content:"";
+
+//   position:absolute;
+
+//   width:100%;
+//   height:100%;
+
+//   right:55%;
+//   top:-20px;
+
+//   border-radius:50%;
+
+//   border:
+//     4px solid
+//     rgba(var(--accent-primary-rgb), .18);
+
+//   opacity:.8;
+
+//   pointer-events:none;
+
+//   animation:
+//     rotateCircle 25s linear infinite;
+// }
+
+// .container::after {
+//   content:"";
+
+//   position:absolute;
+
+//   width:100%;
+//   height:100%;
+
+//   right:-55%;
+//   top:-50px;
+
+//   border-radius:50%;
+
+//   border:
+//     4px solid
+//     rgba(var(--accent-secondary-rgb), .18);
+
+//   opacity:.7;
+
+//   pointer-events:none;
+
+//   animation:
+//     rotateCircleReverse 30s linear infinite;
+// }
+
+// /* =====================================================
+//    GLOW
+// ===================================================== */
+
+// .glow {
+
+//   position:absolute;
+
+//   right:40%;
+//   top:40%;
+
+//   width:500px;
+//   height:500px;
+
+//   border-radius:50%;
+
+//   background:
+//     radial-gradient(
+//       circle,
+//       rgba(var(--accent-primary-rgb),.22),
+//       transparent 70%
+//     );
+
+//   filter:blur(90px);
+
+//   pointer-events:none;
+
+//   animation:pulseGlow 8s ease-in-out infinite;
+// }
+
+// /* =====================================================
+//    COLUMNS
+// ===================================================== */
+
+// .brand {
+
+//   position:relative;
+
+//   z-index:2;
+
+//   display:flex;
+
+//   align-items:center;
+
+//   justify-content:center;
+
+//   padding:
+//     clamp(2rem,5vw,5rem);
+// }
+
+// .login {
+
+//   position:relative;
+
+//   z-index:3;
+
+//   display:flex;
+
+//   align-items:center;
+
+//   justify-content:center;
+
+//   height:100%;
+
+//   padding:
+//     clamp(1.5rem,3vw,3rem);
+
+//   border-left:
+//     1px solid
+//     var(--border-primary);
+
+//   background:
+//     color-mix(
+//       in srgb,
+//       var(--surface-card),
+//       transparent 20%
+//     );
+
+//   backdrop-filter:blur(24px);
+
+//   transition:
+//     background var(--transition-normal),
+//     border-color var(--transition-normal);
+// }
+
+// /* =====================================================
+//    ANIMATIONS
+// ===================================================== */
+
+// @keyframes rotateCircle {
+
+//   from {
+//     transform:rotate(0deg);
+//   }
+
+//   to {
+//     transform:rotate(360deg);
+//   }
+
+// }
+
+// @keyframes rotateCircleReverse {
+
+//   from {
+//     transform:rotate(360deg);
+//   }
+
+//   to {
+//     transform:rotate(0deg);
+//   }
+
+// }
+
+// @keyframes pulseGlow {
+
+//   0%,
+//   100% {
+
+//     opacity:.45;
+
+//     transform:scale(1);
+
+//   }
+
+//   50% {
+
+//     opacity:.75;
+
+//     transform:scale(1.15);
+
+//   }
+
+// }
+
+// /* =====================================================
+//    RESPONSIVE
+// ===================================================== */
+
+// @media(max-width:1200px){
+
+//   .container {
+
+//     grid-template-columns:1fr;
+
+//   }
+
+//   .brand {
+
+//     display:none;
+
+//   }
+
+//   .login {
+
+//     border-left:none;
+
+//   }
+
+// }

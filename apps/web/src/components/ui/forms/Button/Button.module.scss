@@ -1,0 +1,136 @@
+.button {
+  box-sizing: border-box;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--spacing-2);
+
+  min-height: var(--control-height-md);
+
+  padding: var(--control-padding-y) var(--control-padding-x);
+
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+
+  background: transparent;
+
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.button:focus-visible {
+  outline: none;
+
+  box-shadow: 0 0 0 3px var(--control-focus-ring);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+
+  pointer-events: none;
+}
+
+/* ==================================================
+   PRIMARY
+================================================== */
+
+.primary {
+  background: var(--accent-primary);
+
+  color: var(--text-on-accent);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+/* ==================================================
+   SECONDARY
+================================================== */
+
+.secondary {
+  border-color: var(--border-primary);
+
+  background: var(--surface-secondary);
+
+  color: var(--text-primary);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--border-hover);
+
+  background: var(--surface-hover);
+}
+
+/* ==================================================
+   OUTLINE
+================================================== */
+
+.outline {
+  border-color: var(--border-primary);
+
+  background: transparent;
+
+  color: var(--text-primary);
+}
+
+.outline:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+
+  background: var(--surface-hover);
+}
+
+/* ==================================================
+   GHOST
+================================================== */
+
+.ghost {
+  background: transparent;
+
+  color: var(--text-primary);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+/* ==================================================
+   DANGER
+================================================== */
+
+.danger {
+  background: var(--danger);
+
+  color: var(--text-on-accent);
+}
+
+.danger:hover:not(:disabled) {
+  background: rgba(var(--danger-rgb), 0.88);
+}
