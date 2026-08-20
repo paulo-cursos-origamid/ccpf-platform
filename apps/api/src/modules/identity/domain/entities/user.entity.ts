@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 export enum UserRole {
   USER = 'USER',
   ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  SUPPORT = 'SUPPORT',
 }
 
 export interface UserProps {
@@ -143,6 +145,15 @@ export class UserEntity {
 
   updateName(name: string) {
     this._name = name;
+    this.touch();
+  }
+  updateEmail(email: string) {
+    this._email = email;
+    this.touch();
+  }
+
+  changeRole(role: UserRole) {
+    this._role = role;
     this.touch();
   }
   updateLastLogin(): void {

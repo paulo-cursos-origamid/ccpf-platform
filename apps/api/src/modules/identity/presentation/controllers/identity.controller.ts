@@ -6,6 +6,8 @@ import {
   Get,
   UseGuards,
   UnauthorizedException,
+  Query,
+  Req,
 } from '@nestjs/common';
 
 import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
@@ -18,13 +20,21 @@ import { LoginDto } from '../dto/login.dto';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
-import { Req } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
 // import type { JwtPayload } from '../../infrastructure/auth/jwt-payload.interface';
-import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
+import {
+  CurrentUser,
+  Roles,
+  RolesGuard,
+  type AuthenticatedUser,
+} from '../../infrastructure/auth';
 import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-case';
+
+import { ListUsersUseCase } from '../../application/use-cases/list-users/list-users.use-case';
+import { UserRole } from '../../domain/entities/user.entity';
+import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 
 interface RefreshRequest extends Request {
   cookies: {
@@ -40,6 +50,7 @@ export class IdentityController {
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
+    private readonly listUsersUseCase: ListUsersUseCase,
   ) {}
 
   @Post('users')
@@ -48,6 +59,17 @@ export class IdentityController {
       name: dto.name,
       email: dto.email,
       password: dto.password,
+    });
+  }
+
+  @Get('users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async listUsers(@Query() query: ListUsersQueryDto) {
+    return this.listUsersUseCase.execute({
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
     });
   }
 

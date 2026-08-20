@@ -2,7 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
 import { UserEntity, UserRole } from '../../domain/entities/user.entity';
-import { UserRepository } from '../../domain/repositories/user.repository';
+
+import {
+  FindUsersOptions,
+  FindUsersResult,
+  UserRepository,
+} from '../../domain/repositories/user.repository';
 
 import { UserRole as PrismaUserRole } from '@prisma/client';
 
@@ -18,6 +23,8 @@ export class PrismaUserRepository implements UserRepository {
         email: user.email,
         password: user.password,
         role: user.role,
+
+        isActive: user.isActive,
 
         emailVerified: user.emailVerified,
         verificationToken: user.verificationToken,
@@ -62,6 +69,7 @@ export class PrismaUserRepository implements UserRepository {
 
     return this.toDomain(user);
   }
+
   async findByVerificationToken(token: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findFirst({
       where: {
@@ -76,16 +84,66 @@ export class PrismaUserRepository implements UserRepository {
     return this.toDomain(user);
   }
 
+  async findMany(options: FindUsersOptions = {}): Promise<FindUsersResult> {
+    const page = Math.max(options.page ?? 1, 1);
+
+    const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+
+    const search = options.search?.trim();
+
+    const where = search
+      ? {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: 'insensitive' as const,
+              },
+            },
+            {
+              email: {
+                contains: search,
+                mode: 'insensitive' as const,
+              },
+            },
+          ],
+        }
+      : undefined;
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+
+      this.prisma.user.count({
+        where,
+      }),
+    ]);
+
+    return {
+      users: users.map((user) => this.toDomain(user)),
+      total,
+    };
+  }
+
   async update(user: UserEntity): Promise<UserEntity> {
     const updatedUser = await this.prisma.user.update({
       where: {
         id: user.id,
       },
+
       data: {
         name: user.name,
         email: user.email,
         password: user.password,
         role: user.role,
+
+        isActive: user.isActive,
 
         emailVerified: user.emailVerified,
         verificationToken: user.verificationToken,
@@ -110,6 +168,8 @@ export class PrismaUserRepository implements UserRepository {
     password: string;
     role: PrismaUserRole;
 
+    isActive: boolean;
+
     emailVerified: boolean;
     verificationToken: string | null;
     verificationTokenExpiresAt: Date | null;
@@ -126,22 +186,28 @@ export class PrismaUserRepository implements UserRepository {
   }): UserEntity {
     return new UserEntity({
       id: rawUser.id,
+
       name: rawUser.name,
       email: rawUser.email,
       password: rawUser.password,
+
       role: rawUser.role as UserRole,
 
+      isActive: rawUser.isActive,
+
       emailVerified: rawUser.emailVerified,
-      verificationToken: rawUser.verificationToken ?? undefined,
-      verificationTokenExpiresAt:
-        rawUser.verificationTokenExpiresAt ?? undefined,
 
-      refreshTokenHash: rawUser.refreshTokenHash ?? undefined,
+      verificationToken: rawUser.verificationToken,
 
-      passwordResetToken: rawUser.passwordResetToken ?? undefined,
-      passwordResetExpiresAt: rawUser.passwordResetExpiresAt ?? undefined,
+      verificationTokenExpiresAt: rawUser.verificationTokenExpiresAt,
 
-      lastLoginAt: rawUser.lastLoginAt ?? undefined,
+      refreshTokenHash: rawUser.refreshTokenHash,
+
+      passwordResetToken: rawUser.passwordResetToken,
+
+      passwordResetExpiresAt: rawUser.passwordResetExpiresAt,
+
+      lastLoginAt: rawUser.lastLoginAt,
 
       createdAt: rawUser.createdAt,
       updatedAt: rawUser.updatedAt,

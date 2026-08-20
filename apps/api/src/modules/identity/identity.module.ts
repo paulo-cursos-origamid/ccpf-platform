@@ -20,6 +20,8 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './infrastructure/auth/jwt.strategy';
 import { GetProfileUseCase } from './application/use-cases/get-profile/get-profile.use-case';
 import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
+import { ListUsersUseCase } from './application/use-cases/list-users/list-users.use-case';
+import { RolesGuard } from './infrastructure/auth';
 
 @Module({
   imports: [
@@ -42,8 +44,10 @@ import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
     VerifyEmailUseCase,
     RefreshTokenUseCase,
     GetProfileUseCase,
+    ListUsersUseCase,
 
     JwtStrategy,
+    RolesGuard,
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,

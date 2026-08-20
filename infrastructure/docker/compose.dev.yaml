@@ -33,6 +33,7 @@ services:
 
     ports:
       - "3001:3000"
+      - "5555:5555"
 
     env_file:
       - ../../apps/api/.env.docker

@@ -1,5 +1,16 @@
 import { UserEntity } from '../entities/user.entity';
 
+export interface FindUsersOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface FindUsersResult {
+  users: UserEntity[];
+  total: number;
+}
+
 export abstract class UserRepository {
   abstract create(user: UserEntity): Promise<UserEntity>;
 
@@ -7,7 +18,9 @@ export abstract class UserRepository {
 
   abstract findById(id: string): Promise<UserEntity | null>;
 
-  abstract update(user: UserEntity): Promise<UserEntity>;
-
   abstract findByVerificationToken(token: string): Promise<UserEntity | null>;
+
+  abstract findMany(options?: FindUsersOptions): Promise<FindUsersResult>;
+
+  abstract update(user: UserEntity): Promise<UserEntity>;
 }

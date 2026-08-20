@@ -47,6 +47,7 @@ export class RefreshTokenUseCase {
     const accessToken = await this.tokenProvider.generateAccessToken(
       user.id,
       user.email,
+      user.role,
     );
 
     const refreshToken = await this.tokenProvider.generateRefreshToken(user.id);
