@@ -1,25 +1,29 @@
 .container {
   width: 100%;
   max-width: 520px;
-
   margin: 0 auto;
 
   display: flex;
   flex-direction: column;
 
   color: var(--text-primary);
+
+  transition:
+    color var(--transition-normal),
+    background var(--transition-normal);
 }
 
-/* -------------------------------- */
-/* HEADER                           */
-/* -------------------------------- */
+/* ==========================================================
+   HEADER
+========================================================== */
 
 .header {
   display: flex;
   flex-direction: column;
   align-items: center;
 
-  margin-bottom: var(--spacing-8);
+  margin-top: var(--spacing-2xl);
+  margin-bottom: var(--spacing-xl);
 
   text-align: center;
 }
@@ -32,14 +36,14 @@
   align-items: center;
   justify-content: center;
 
-  margin-bottom: var(--spacing-6);
+  margin-bottom: var(--spacing-lg);
 
   border: 1px solid var(--accent-primary);
   border-radius: 50%;
 
   color: var(--accent-primary);
 
-  font-size: var(--font-size-xl);
+  font-size: var(--font-xl);
   font-weight: var(--font-weight-bold);
 
   background: radial-gradient(
@@ -51,7 +55,12 @@
   transition:
     color var(--transition-fast),
     border-color var(--transition-fast),
-    background var(--transition-fast);
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.logo:hover {
+  transform: scale(1.03);
 }
 
 .title {
@@ -60,31 +69,29 @@
   color: var(--text-primary);
 
   font-size: clamp(
-    var(--font-size-2xl),
+    var(--font-2xl),
     3vw,
-    var(--font-size-3xl)
+    var(--font-3xl)
   );
 
   font-weight: var(--font-weight-bold);
-
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
 }
 
 .subtitle {
   max-width: 440px;
 
-  margin: var(--spacing-2) 0 0;
+  margin: var(--spacing-sm) 0 0;
 
   color: var(--text-secondary);
 
-  font-size: var(--font-size-md);
-
-  line-height: 1.5;
+  font-size: var(--font-md);
+  line-height: var(--line-height-normal);
 }
 
-/* -------------------------------- */
-/* FORM                             */
-/* -------------------------------- */
+/* ==========================================================
+   FORM
+========================================================== */
 
 .form {
   width: 100%;
@@ -92,49 +99,49 @@
   display: flex;
   flex-direction: column;
 
-  gap: var(--spacing-5);
+  gap: var(--spacing-md);
 }
 
-/* -------------------------------- */
-/* ERROR                            */
-/* -------------------------------- */
+/* ==========================================================
+   ERROR
+========================================================== */
 
 .error {
-  margin-top: calc(var(--spacing-2) * -1);
+  margin-top: calc(var(--spacing-sm) * -1);
 
-  padding: var(--spacing-3) var(--spacing-4);
+  padding: var(--spacing-md) var(--spacing-lg);
 
   border: 1px solid var(--border-danger);
-
   border-radius: var(--radius-md);
 
   background: var(--surface-danger);
-
   color: var(--text-danger);
 
-  font-size: var(--font-size-sm);
+  font-size: var(--font-sm);
+  line-height: var(--line-height-normal);
 
-  line-height: 1.4;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
-/* -------------------------------- */
-/* LOGIN PROMPT                     */
-/* -------------------------------- */
+/* ==========================================================
+   LOGIN PROMPT
+========================================================== */
 
 .loginPrompt {
   display: flex;
-
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 
-  gap: var(--spacing-1);
+  gap: var(--spacing-xs);
 
-  margin-top: calc(var(--spacing-2) * -1);
+  margin-top: calc(var(--spacing-sm) * -1);
 
   color: var(--text-secondary);
 
-  font-size: var(--font-size-sm);
-
+  font-size: var(--font-sm);
   text-align: center;
 }
 
@@ -144,7 +151,6 @@
   font-weight: var(--font-weight-medium);
 
   text-decoration: none;
-
   cursor: pointer;
 
   transition:
@@ -158,62 +164,72 @@
 
 .loginLink:focus-visible {
   outline: 2px solid var(--accent-primary);
-
   outline-offset: 4px;
 
   border-radius: var(--radius-sm);
 }
 
-/* -------------------------------- */
-/* FOOTER                           */
-/* -------------------------------- */
+/* ==========================================================
+   FOOTER
+========================================================== */
 
 .footer {
   display: flex;
-
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 
-  gap: var(--spacing-1);
+  gap: var(--spacing-xs);
 
-  margin-top: var(--spacing-8);
+  margin-top: var(--spacing-2xl);
 
   color: var(--text-tertiary);
 
-  font-size: var(--font-size-xs);
-
+  font-size: var(--font-xs);
   text-align: center;
 }
 
-/* -------------------------------- */
-/* RESPONSIVE                       */
-/* -------------------------------- */
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
 
 @media (max-width: 600px) {
   .container {
     max-width: 100%;
   }
+
+  .header {
+    margin-top: var(--spacing-2xl);
+  }
 }
 
 @media (max-width: 480px) {
   .header {
-    margin-bottom: var(--spacing-6);
+    margin-top: var(--spacing-xl);
+    margin-bottom: var(--spacing-lg);
   }
 
   .logo {
     width: 64px;
     height: 64px;
+
+    margin-bottom: var(--spacing-md);
   }
 
   .title {
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-2xl);
   }
 
   .subtitle {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-sm);
+  }
+
+  .form {
+    gap: var(--spacing-lg);
   }
 
   .footer {
     flex-direction: column;
+
+    margin-top: var(--spacing-lg);
   }
 }
