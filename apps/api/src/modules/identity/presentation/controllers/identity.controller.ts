@@ -4,6 +4,8 @@ import {
   Post,
   Res,
   Get,
+  Patch,
+  Param,
   UseGuards,
   UnauthorizedException,
   Query,
@@ -23,6 +25,9 @@ import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/r
 
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
+
+import { UpdateUserUseCase } from '../../application/use-cases/update-user/update-user.use-case';
+import { UpdateUserDto } from '../dto/update-user.dto';
 // import type { JwtPayload } from '../../infrastructure/auth/jwt-payload.interface';
 import {
   CurrentUser,
@@ -51,6 +56,7 @@ export class IdentityController {
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
     private readonly listUsersUseCase: ListUsersUseCase,
+    private readonly updateUserUseCase: UpdateUserUseCase,
   ) {}
 
   @Post('users')
@@ -100,6 +106,19 @@ export class IdentityController {
     return {
       user: result.user,
     };
+  }
+
+  @Patch('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.updateUserUseCase.execute({
+      id,
+      name: dto.name,
+      email: dto.email,
+      role: dto.role,
+      isActive: dto.isActive,
+    });
   }
 
   @Get('me')

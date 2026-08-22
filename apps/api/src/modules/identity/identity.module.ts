@@ -22,6 +22,7 @@ import { GetProfileUseCase } from './application/use-cases/get-profile/get-profi
 import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users/list-users.use-case';
 import { RolesGuard } from './infrastructure/auth';
+import { UpdateUserUseCase } from './application/use-cases/update-user/update-user.use-case';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { RolesGuard } from './infrastructure/auth';
     RefreshTokenUseCase,
     GetProfileUseCase,
     ListUsersUseCase,
+    UpdateUserUseCase,
 
     JwtStrategy,
     RolesGuard,
