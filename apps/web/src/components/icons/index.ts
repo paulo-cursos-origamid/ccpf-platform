@@ -7,6 +7,7 @@ export {
   Car,
   Settings,
   User,
+  Users,
   Bell,
   Search,
   Menu,
