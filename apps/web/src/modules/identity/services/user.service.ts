@@ -1,9 +1,7 @@
 import { api } from "@/lib/api/client";
 
-import type {
-  ListUsersQuery,
-  ListUsersResponse,
-} from "../types/user-list";
+import type { ListUsersQuery, ListUsersResponse } from "../types/user-list";
+import type { UpdateUserInput } from "../types/update-user";
 
 class UserService {
   list(query: ListUsersQuery = {}) {
@@ -28,6 +26,12 @@ class UserService {
       : "/identity/users";
 
     return api.get<ListUsersResponse>(path);
+  }
+  update(id: string, data: UpdateUserInput) {
+    return api.patch<ListUsersResponse["users"][number]>(
+      `/identity/users/${id}`,
+      data,
+    );
   }
 }
 
