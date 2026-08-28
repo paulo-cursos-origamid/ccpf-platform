@@ -1,4 +1,4 @@
-# ADR-008 — Blueprint Composition
+# ADR-010 — Blueprint Composition
 
 - **Status:** Aceito
 - **Data:** 2026-07-10
@@ -242,6 +242,6 @@ Esta decisão transforma a CCPF CLI em uma plataforma de automação baseada em 
 
 # ADRs Relacionadas
 
-- ADR-005 — Arquitetura da CLI da CCPF Platform
-- ADR-006 — Organização dos Blueprints por Plataforma
-- ADR-007 — Convenção Oficial para Blueprints da CCPF CLI
+- ADR-007 — Arquitetura da CLI da CCPF Platform
+- ADR-008 — Organização dos Blueprints por Plataforma
+- ADR-009 — Convenção Oficial para Blueprints da CCPF CLI

@@ -1,4 +1,4 @@
-# ADR-006 — Organização dos Blueprints por Plataforma
+# ADR-008 — Organização dos Blueprints por Plataforma
 
 * **Status:** Aceito
 * **Data:** 2026-07-10
@@ -254,4 +254,4 @@ Esta decisão estabelece uma organização modular e escalável para os blueprin
 
 * ADR-001 — Estrutura da CCPF Platform como Monorepo
 * ADR-002 — Estratégia de Compartilhamento entre Apps e Packages
-* ADR-005 — Arquitetura da CLI da CCPF Platform
+* ADR-007 — Arquitetura da CLI da CCPF Platform

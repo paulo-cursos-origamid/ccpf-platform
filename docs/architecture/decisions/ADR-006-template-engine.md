@@ -1,4 +1,4 @@
-# ADR-004 — Utilização de Templates para Geração de Código
+# ADR-006 — Utilização de Templates para Geração de Código
 
 ## Status
 

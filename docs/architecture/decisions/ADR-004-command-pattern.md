@@ -1,4 +1,4 @@
-# ADR-002 — Utilização do Command Pattern
+# ADR-004 — Utilização do Command Pattern
 
 ## Status
 

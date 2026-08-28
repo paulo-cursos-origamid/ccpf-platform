@@ -1,4 +1,4 @@
-# ADR-007 — Convenção Oficial para Blueprints da CCPF CLI
+# ADR-009 — Convenção Oficial para Blueprints da CCPF CLI
 
 * **Status:** Aceito
 * **Data:** 2026-07-10
@@ -356,5 +356,5 @@ A partir desta decisão, todos os blueprints existentes e futuros deverão segui
 
 * ADR-001 — Estrutura da CCPF Platform como Monorepo
 * ADR-002 — Estratégia de Compartilhamento entre Apps e Packages
-* ADR-005 — Arquitetura da CLI da CCPF Platform
-* ADR-006 — Organização dos Blueprints por Plataforma
+* ADR-007 — Arquitetura da CLI da CCPF Platform
+* ADR-008 — Organização dos Blueprints por Plataforma

@@ -1,4 +1,4 @@
-# ADR-005 — Arquitetura da CLI da CCPF Platform
+# ADR-007 — Arquitetura da CLI da CCPF Platform
 
 * **Status:** Aceito
 * **Data:** 2026-07-10
@@ -200,5 +200,9 @@ Esta decisão estabelece a CLI como parte fundamental da plataforma, responsáve
 
 * ADR-001 — Estrutura da CCPF Platform como Monorepo
 * ADR-002 — Estratégia de Compartilhamento entre Apps e Packages
-* ADR-003 — Estratégia de Versionamento
-* ADR-004 — Organização dos Workspaces
+* ADR-005 — Geração Baseada em Blueprints
+* ADR-006 — Utilização de Templates para Geração de Código
+* ADR-008 — Organização dos Blueprints por Plataforma
+* ADR-009 — Convenção Oficial para Blueprints
+* ADR-010 — Blueprint Composition
+* ADR-011 — Backend Bootstrap Generator

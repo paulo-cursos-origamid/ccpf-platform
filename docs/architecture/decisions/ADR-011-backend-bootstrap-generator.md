@@ -1,4 +1,4 @@
-# ADR-009 — Backend Bootstrap Generator
+# ADR-011 — Backend Bootstrap Generator
 
 * **Status:** Aceito
 * **Data:** 2026-07-10
@@ -349,8 +349,8 @@ Essa separação estabelece uma arquitetura mais modular, escalável e preparada
 # ADRs Relacionadas
 
 * ADR-001 — Estrutura da CCPF Platform como Monorepo
-* ADR-005 — Arquitetura da CLI da CCPF Platform
-* ADR-006 — Organização dos Blueprints por Plataforma
-* ADR-007 — Convenção Oficial para Blueprints da CCPF CLI
-* ADR-008 — Blueprint Composition
+* ADR-007 — Arquitetura da CLI da CCPF Platform
+* ADR-008 — Organização dos Blueprints por Plataforma
+* ADR-009 — Convenção Oficial para Blueprints da CCPF CLI
+* ADR-010 — Blueprint Composition
 
