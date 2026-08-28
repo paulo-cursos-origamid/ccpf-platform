@@ -5,6 +5,7 @@ import {
   Res,
   Get,
   Patch,
+  Delete,
   Param,
   UseGuards,
   UnauthorizedException,
@@ -28,7 +29,8 @@ import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-p
 
 import { UpdateUserUseCase } from '../../application/use-cases/update-user/update-user.use-case';
 import { UpdateUserDto } from '../dto/update-user.dto';
-// import type { JwtPayload } from '../../infrastructure/auth/jwt-payload.interface';
+import { DeleteUserUseCase } from '../../application/use-cases/delete-user/delete-user.use-case';
+
 import {
   CurrentUser,
   Roles,
@@ -57,6 +59,7 @@ export class IdentityController {
     private readonly getProfileUseCase: GetProfileUseCase,
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
 
   @Post('users')
@@ -119,6 +122,17 @@ export class IdentityController {
       role: dto.role,
       isActive: dto.isActive,
     });
+  }
+
+  @Delete('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async deleteUser(@Param('id') id: string) {
+    await this.deleteUserUseCase.execute(id);
+
+    return {
+      success: true,
+    };
   }
 
   @Get('me')

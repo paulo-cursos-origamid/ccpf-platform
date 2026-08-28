@@ -4,3 +4,4 @@ export * from "./useRequireAuth";
 export * from "./useUsers";
 export * from "./useRegister";  
 export * from "./useUpdateUser";
+export * from "./useDeleteUser";

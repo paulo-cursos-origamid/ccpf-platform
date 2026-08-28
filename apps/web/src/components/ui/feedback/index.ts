@@ -1,2 +1,2 @@
-export * from "./Badge";
-export * from "./Tooltip";
+// export * from "./Badge";
+// export * from "./Tooltip";

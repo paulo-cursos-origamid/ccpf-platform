@@ -23,4 +23,6 @@ export abstract class UserRepository {
   abstract findMany(options?: FindUsersOptions): Promise<FindUsersResult>;
 
   abstract update(user: UserEntity): Promise<UserEntity>;
+
+  abstract softDelete(id: string): Promise<void>;
 }

@@ -31,6 +31,7 @@ export interface UserProps {
 
   createdAt?: Date;
   updatedAt?: Date;
+  deletedAt?: Date | null;
 }
 
 export class UserEntity {
@@ -43,6 +44,8 @@ export class UserEntity {
   private _role: UserRole;
 
   private _isActive: boolean;
+
+  private _deletedAt: Date | null;
 
   private _emailVerified: boolean;
   private _verificationToken: string | null;
@@ -68,6 +71,8 @@ export class UserEntity {
     this._role = props.role ?? UserRole.USER;
 
     this._isActive = props.isActive ?? true;
+
+    this._deletedAt = props.deletedAt ?? null;
 
     this._emailVerified = props.emailVerified ?? false;
     this._verificationToken = props.verificationToken ?? null;
@@ -108,6 +113,10 @@ export class UserEntity {
     return this._isActive;
   }
 
+  get deletedAt(): Date | null {
+    return this._deletedAt;
+  }
+
   get emailVerified() {
     return this._emailVerified;
   }
@@ -139,6 +148,17 @@ export class UserEntity {
     return this._createdAt;
   }
 
+  softDelete() {
+    this._isActive = false;
+    this._deletedAt = new Date();
+    this.touch();
+  }
+
+  restore() {
+    this._isActive = true;
+    this._deletedAt = null;
+    this.touch();
+  }
   get updatedAt() {
     return this._updatedAt;
   }

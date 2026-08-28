@@ -21,4 +21,4 @@ async function bootstrap() {
   console.log(`API running on http://localhost:${process.env.PORT ?? 3000}`);
 }
 
-bootstrap();
+void bootstrap();

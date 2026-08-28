@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
 import { UserEntity, UserRole } from '../../domain/entities/user.entity';
@@ -15,6 +16,10 @@ import { UserRole as PrismaUserRole } from '@prisma/client';
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // --------------------------------------------------
+  // CREATE
+  // --------------------------------------------------
+
   async create(user: UserEntity): Promise<UserEntity> {
     const createdUser = await this.prisma.user.create({
       data: {
@@ -27,25 +32,35 @@ export class PrismaUserRepository implements UserRepository {
         isActive: user.isActive,
 
         emailVerified: user.emailVerified,
+
         verificationToken: user.verificationToken,
+
         verificationTokenExpiresAt: user.verificationTokenExpiresAt,
 
         refreshTokenHash: user.refreshTokenHash,
 
         passwordResetToken: user.passwordResetToken,
+
         passwordResetExpiresAt: user.passwordResetExpiresAt,
 
         lastLoginAt: user.lastLoginAt,
+
+        deletedAt: user.deletedAt,
       },
     });
 
     return this.toDomain(createdUser);
   }
 
+  // --------------------------------------------------
+  // FIND BY EMAIL
+  // --------------------------------------------------
+
   async findByEmail(email: string): Promise<UserEntity | null> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         email,
+        deletedAt: null,
       },
     });
 
@@ -55,11 +70,16 @@ export class PrismaUserRepository implements UserRepository {
 
     return this.toDomain(user);
   }
+
+  // --------------------------------------------------
+  // FIND BY ID
+  // --------------------------------------------------
 
   async findById(id: string): Promise<UserEntity | null> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         id,
+        deletedAt: null,
       },
     });
 
@@ -69,11 +89,16 @@ export class PrismaUserRepository implements UserRepository {
 
     return this.toDomain(user);
   }
+
+  // --------------------------------------------------
+  // FIND BY VERIFICATION TOKEN
+  // --------------------------------------------------
 
   async findByVerificationToken(token: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findFirst({
       where: {
         verificationToken: token,
+        deletedAt: null,
       },
     });
 
@@ -83,6 +108,10 @@ export class PrismaUserRepository implements UserRepository {
 
     return this.toDomain(user);
   }
+
+  // --------------------------------------------------
+  // FIND MANY
+  // --------------------------------------------------
 
   async findMany(options: FindUsersOptions = {}): Promise<FindUsersResult> {
     const page = Math.max(options.page ?? 1, 1);
@@ -91,32 +120,39 @@ export class PrismaUserRepository implements UserRepository {
 
     const search = options.search?.trim();
 
-    const where = search
-      ? {
-          OR: [
-            {
-              name: {
-                contains: search,
-                mode: 'insensitive' as const,
+    const where = {
+      deletedAt: null,
+
+      ...(search
+        ? {
+            OR: [
+              {
+                name: {
+                  contains: search,
+                  mode: 'insensitive' as const,
+                },
               },
-            },
-            {
-              email: {
-                contains: search,
-                mode: 'insensitive' as const,
+              {
+                email: {
+                  contains: search,
+                  mode: 'insensitive' as const,
+                },
               },
-            },
-          ],
-        }
-      : undefined;
+            ],
+          }
+        : {}),
+    };
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
+
         orderBy: {
           createdAt: 'desc',
         },
+
         skip: (page - 1) * limit,
+
         take: limit,
       }),
 
@@ -130,6 +166,27 @@ export class PrismaUserRepository implements UserRepository {
       total,
     };
   }
+
+  // --------------------------------------------------
+  // SOFT DELETE
+  // --------------------------------------------------
+
+  async softDelete(id: string): Promise<void> {
+    await this.prisma.user.update({
+      where: {
+        id,
+      },
+
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
+  }
+
+  // --------------------------------------------------
+  // UPDATE
+  // --------------------------------------------------
 
   async update(user: UserEntity): Promise<UserEntity> {
     const updatedUser = await this.prisma.user.update({
@@ -146,20 +203,29 @@ export class PrismaUserRepository implements UserRepository {
         isActive: user.isActive,
 
         emailVerified: user.emailVerified,
+
         verificationToken: user.verificationToken,
+
         verificationTokenExpiresAt: user.verificationTokenExpiresAt,
 
         refreshTokenHash: user.refreshTokenHash,
 
         passwordResetToken: user.passwordResetToken,
+
         passwordResetExpiresAt: user.passwordResetExpiresAt,
 
         lastLoginAt: user.lastLoginAt,
+
+        deletedAt: user.deletedAt,
       },
     });
 
     return this.toDomain(updatedUser);
   }
+
+  // --------------------------------------------------
+  // TO DOMAIN
+  // --------------------------------------------------
 
   private toDomain(rawUser: {
     id: string;
@@ -180,6 +246,8 @@ export class PrismaUserRepository implements UserRepository {
     passwordResetExpiresAt: Date | null;
 
     lastLoginAt: Date | null;
+
+    deletedAt: Date | null;
 
     createdAt: Date;
     updatedAt: Date;
@@ -208,6 +276,8 @@ export class PrismaUserRepository implements UserRepository {
       passwordResetExpiresAt: rawUser.passwordResetExpiresAt,
 
       lastLoginAt: rawUser.lastLoginAt,
+
+      deletedAt: rawUser.deletedAt,
 
       createdAt: rawUser.createdAt,
       updatedAt: rawUser.updatedAt,

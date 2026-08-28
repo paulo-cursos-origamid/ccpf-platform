@@ -23,6 +23,7 @@ import { LogoutUseCase } from './application/use-cases/logout/logout.use-case';
 import { ListUsersUseCase } from './application/use-cases/list-users/list-users.use-case';
 import { RolesGuard } from './infrastructure/auth';
 import { UpdateUserUseCase } from './application/use-cases/update-user/update-user.use-case';
+import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-user.use-case';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { UpdateUserUseCase } from './application/use-cases/update-user/update-us
     GetProfileUseCase,
     ListUsersUseCase,
     UpdateUserUseCase,
+    DeleteUserUseCase,
 
     JwtStrategy,
     RolesGuard,

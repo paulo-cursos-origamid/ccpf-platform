@@ -33,6 +33,9 @@ class UserService {
       data,
     );
   }
+  delete(id: string) {
+    return api.delete<void>(`/identity/users/${id}`);
+  }
 }
 
 export const userService = new UserService();

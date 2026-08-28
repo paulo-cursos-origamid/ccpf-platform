@@ -26,7 +26,7 @@ services:
 
   api:
     container_name: ccpf-api
-    user: "1000:1000"
+
     build:
       context: ../../apps/api
       dockerfile: Dockerfile
@@ -37,9 +37,10 @@ services:
 
     env_file:
       - ../../apps/api/.env.docker
+
     volumes:
       - ../../apps/api:/app
-      - /app/node_modules
+      - ccpf-api-node-modules:/app/node_modules
 
     depends_on:
       postgres:
@@ -61,12 +62,11 @@ services:
 
     environment:
       NODE_ENV: development
-
       NEXT_PUBLIC_API_URL: http://localhost:3001
 
     volumes:
       - ../../apps/web:/app
-      - /app/node_modules
+      - ccpf-web-node-modules:/app/node_modules
 
     depends_on:
       - api
@@ -76,6 +76,8 @@ services:
 
 volumes:
   ccpf-postgres-data:
+  ccpf-api-node-modules:
+  ccpf-web-node-modules:
 
 networks:
   ccpf-network:
