@@ -65,6 +65,6 @@ import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-us
       useClass: JwtTokenService,
     },
   ],
-  exports: [CreateUserUseCase, LoginUseCase],
+  exports: [CreateUserUseCase, LoginUseCase, PasswordHasherContract],
 })
 export class IdentityModule {}
