@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+import {
+  Mail,
+  ShieldUser,
+  UserRound,
+} from "@/components/icons";
+
 import { Modal } from "@/components/ui/overlay/Modal";
 import { Input } from "@/components/ui/forms/Input";
 import { Select } from "@/components/ui/forms/Select";
@@ -9,6 +15,7 @@ import { Switch } from "@/components/ui/forms/Switch";
 import { Field } from "@/components/ui/forms/Field";
 
 import { useUpdateUser } from "@/modules/identity/hooks";
+
 import {
   UserRole,
   type UserListItem,
@@ -41,7 +48,11 @@ export function EditUserModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Editar usuário">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Editar usuário"
+    >
       <EditUserForm
         key={user.id}
         user={user}
@@ -58,7 +69,11 @@ interface EditUserFormProps {
   onSuccess: (user: UserListItem) => void;
 }
 
-function EditUserForm({ user, onClose, onSuccess }: EditUserFormProps) {
+function EditUserForm({
+  user,
+  onClose,
+  onSuccess,
+}: EditUserFormProps) {
   const { update, loading, error } = useUpdateUser();
 
   const [name, setName] = useState(user.name);
@@ -66,7 +81,9 @@ function EditUserForm({ user, onClose, onSuccess }: EditUserFormProps) {
   const [role, setRole] = useState<UserRole>(user.role);
   const [isActive, setIsActive] = useState(user.isActive);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     try {
@@ -85,59 +102,89 @@ function EditUserForm({ user, onClose, onSuccess }: EditUserFormProps) {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
-      <Field label="Nome" htmlFor="edit-user-name" required>
+      <Field
+        label="Nome"
+        htmlFor="edit-user-name"
+        required
+      >
         <Input
           id="edit-user-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
+          leftIcon={<UserRound size={18} />}
           required
           minLength={2}
           disabled={loading}
         />
       </Field>
 
-      <Field label="E-mail" htmlFor="edit-user-email" required>
+      <Field
+        label="E-mail"
+        htmlFor="edit-user-email"
+        required
+      >
         <Input
           id="edit-user-email"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          leftIcon={<Mail size={18} />}
           required
           disabled={loading}
         />
       </Field>
 
-      <Field label="Perfil" htmlFor="edit-user-role" required>
-        <Select
-          id="edit-user-role"
-          value={role}
-          onChange={(event) => setRole(event.target.value as UserRole)}
-          disabled={loading}
-        >
-          {Object.values(UserRole).map((value) => (
-            <option key={value} value={value}>
-              {ROLE_LABELS[value]}
-            </option>
-          ))}
-        </Select>
+      <Field
+        label="Perfil"
+        htmlFor="edit-user-role"
+        required
+      >
+        <div className={styles.selectWrapper}>
+          <ShieldUser
+            size={18}
+            className={styles.selectIcon}
+            aria-hidden="true"
+          />
+
+          <Select
+            id="edit-user-role"
+            value={role}
+            onChange={(event) =>
+              setRole(event.target.value as UserRole)
+            }
+            disabled={loading}
+          >
+            {Object.values(UserRole).map((value) => (
+              <option key={value} value={value}>
+                {ROLE_LABELS[value]}
+              </option>
+            ))}
+          </Select>
+        </div>
       </Field>
 
       <Switch
         name="isActive"
         checked={isActive}
-        onChange={(event) => setIsActive(event.target.checked)}
+        onChange={(event) =>
+          setIsActive(event.target.checked)
+        }
         disabled={loading}
         label="Usuário ativo"
       />
 
       {error && (
-        <div className={styles.error}>
+        <div className={styles.error} role="alert">
           Não foi possível atualizar o usuário.
         </div>
       )}
 
       <div className={styles.actions}>
-        <button type="button" onClick={onClose} disabled={loading}>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+        >
           Cancelar
         </button>
 

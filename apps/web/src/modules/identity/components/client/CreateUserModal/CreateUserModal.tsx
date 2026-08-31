@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/overlay/Modal";
 import { useRegister } from "../../../hooks/client";
 
 import styles from "./CreateUserModal.module.scss";
+import { UserRound } from "@/components/icons";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -107,6 +108,7 @@ export function CreateUserModal({
             autoComplete="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
+            leftIcon={<UserRound size={18} />}
             disabled={loading}
           />
         </Field>

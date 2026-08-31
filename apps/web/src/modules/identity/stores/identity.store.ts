@@ -21,6 +21,10 @@ interface IdentityState {
   loadUser: () => Promise<void>;
 
   initialize: () => Promise<void>;
+
+  setUser: (user: User) => void;
+
+  updateUserProfile: (data: Pick<User, "name" | "email">) => void;
 }
 
 export const useIdentityStore = create<IdentityState>()((set) => ({
@@ -31,7 +35,25 @@ export const useIdentityStore = create<IdentityState>()((set) => ({
   loading: false,
 
   initialized: false,
-  
+
+  setUser: (user) => {
+    set({ user, isAuthenticated: true });
+  },
+
+  updateUserProfile: (data) => {
+    set((state) => {
+      if (!state.user) {
+        return state;
+      }
+
+      return {
+        user: {
+          ...state.user,
+          ...data,
+        },
+      };
+    });
+  },
 
   login: async (data) => {
     set({
