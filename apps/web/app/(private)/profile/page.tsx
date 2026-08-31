@@ -46,7 +46,6 @@ export default function ProfilePage() {
         {view === "password" && (
           <ChangePasswordForm
             onSuccess={() => setView("details")}
-            onCancel={() => setView("details")}
           />
         )}
       </div>
