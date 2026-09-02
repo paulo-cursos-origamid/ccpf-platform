@@ -5,6 +5,7 @@ import { Injectable, ConflictException, Inject } from '@nestjs/common';
 import { UserEntity } from '../../../domain/entities/user.entity';
 import { UserRepository } from '../../../domain/repositories/user.repository';
 import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
+import { Prisma } from '@prisma/client';
 
 export interface CreateUserInput {
   name: string;
@@ -52,7 +53,21 @@ export class CreateUserUseCase {
       verificationTokenExpiresAt,
     });
 
-    const savedUser = await this.userRepository.create(user);
+    // const savedUser = await this.userRepository.create(user);
+    let savedUser: UserEntity;
+
+    try {
+      savedUser = await this.userRepository.create(user);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Email already registered');
+      }
+
+      throw error;
+    }
 
     /**
      * Aqui, futuramente, enviaremos um e-mail contendo:
