@@ -20,6 +20,8 @@ export abstract class UserRepository {
 
   abstract findByVerificationToken(token: string): Promise<UserEntity | null>;
 
+  abstract findByPasswordResetToken(token: string): Promise<UserEntity | null>;
+
   abstract findMany(options?: FindUsersOptions): Promise<FindUsersResult>;
 
   abstract update(user: UserEntity): Promise<UserEntity>;

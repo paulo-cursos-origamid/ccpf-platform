@@ -96,19 +96,23 @@ export class PrismaUserRepository implements UserRepository {
 
   async findByVerificationToken(token: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findFirst({
-      where: {
-        verificationToken: token,
-        deletedAt: null,
-      },
+      where: { verificationToken: token, deletedAt: null },
     });
-
-    if (!user) {
-      return null;
-    }
-
+    if (!user) return null;
     return this.toDomain(user);
   }
 
+  // --------------------------------------------------
+  // FIND BY PASSWORD RESET TOKEN
+  // --------------------------------------------------
+
+  async findByPasswordResetToken(token: string): Promise<UserEntity | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { passwordResetToken: token, deletedAt: null },
+    });
+    if (!user) return null;
+    return this.toDomain(user);
+  }
   // --------------------------------------------------
   // FIND MANY
   // --------------------------------------------------
