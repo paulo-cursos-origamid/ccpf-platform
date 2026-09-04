@@ -6,6 +6,39 @@ export interface FetchOptions extends RequestInit {
   retry?: boolean;
 }
 
+export class ApiError extends Error {
+  readonly statusCode: number;
+  readonly error: string | null;
+
+  constructor(
+    message: string,
+    statusCode: number,
+    error: string | null = null,
+  ) {
+    super(message);
+
+    this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.error = error;
+  }
+}
+
+function getApiErrorMessage(message: unknown, statusCode: number): string {
+  if (statusCode === 409 && message === "Email already registered") {
+    return "Este e-mail já está cadastrado.";
+  }
+
+  if (Array.isArray(message)) {
+    return message.join(", ");
+  }
+
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+
+  return "Ocorreu um erro ao processar a solicitação.";
+}
+
 export async function fetcher<T>(
   url: string,
   options: FetchOptions = {},
@@ -71,19 +104,46 @@ export async function fetcher<T>(
   }
 
   if (!response.ok) {
-    let error;
+    let payload: {
+      message?: unknown;
+      error?: string;
+      statusCode?: number;
+    } = {};
 
     try {
-      error = await response.json();
+      payload = await response.json();
+      console.log(
+        "🚨 API Error Payload",
+        JSON.stringify(payload, null, 2),
+        "HTTP:",
+        response.status,
+      );
     } catch {
-      error = {
-        status: response.status,
-      };
+      console.log("🚨 API Error sem JSON", {
+        responseStatus: response.status,
+      });
+      // Resposta sem JSON.
     }
 
-    console.error("🚨 API Error", error);
+    const statusCode = payload.statusCode ?? response.status;
 
-    throw error;
+    const message = getApiErrorMessage(payload.message, statusCode);
+
+    const apiError = new ApiError(message, statusCode, payload.error ?? null);
+    console.error(
+      "🚨 API Error",
+      JSON.stringify(
+        {
+          message: apiError.message,
+          statusCode: apiError.statusCode,
+          error: apiError.error,
+        },
+        null,
+        2,
+      ),
+    );
+
+    throw apiError;
   }
 
   if (response.status === 204) {
@@ -92,239 +152,3 @@ export async function fetcher<T>(
 
   return response.json();
 }
-
-// import { env } from "../config/env";
-
-// const API_PREFIX = "/api/v1";
-
-// export interface FetchOptions extends RequestInit {
-//   retry?: boolean;
-// }
-
-// /**
-//  * Garante que somente um refresh aconteça por vez.
-//  *
-//  * Como o backend faz rotation do refresh token,
-//  * duas chamadas simultâneas de refresh podem invalidar
-//  * uma à outra.
-//  */
-// let refreshPromise: Promise<boolean> | null = null;
-
-// async function refreshAccessToken(): Promise<boolean> {
-//   if (!refreshPromise) {
-//     refreshPromise = fetch(`${env.apiUrl}${API_PREFIX}/identity/refresh`, {
-//       method: "POST",
-//       credentials: "include",
-//     })
-//       .then((response) => {
-//         console.log("🔄 Refresh", {
-//           url: `${env.apiUrl}${API_PREFIX}/identity/refresh`,
-//           status: response.status,
-//         });
-
-//         return response.ok;
-//       })
-//       .catch((error) => {
-//         console.error("❌ Erro no refresh", error);
-
-//         return false;
-//       })
-//       .finally(() => {
-//         refreshPromise = null;
-//       });
-//   } else {
-//     console.log("⏳ Refresh já em andamento. Aguardando...");
-//   }
-
-//   return refreshPromise;
-// }
-
-// export async function fetcher<T>(
-//   url: string,
-//   options: FetchOptions = {},
-// ): Promise<T> {
-//   const { headers, retry = true, ...config } = options;
-
-//   console.log("➡️ Request", {
-//     url,
-//     method: config.method,
-//     retry,
-//   });
-
-//   let response = await fetch(url, {
-//     ...config,
-//     credentials: "include",
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...headers,
-//     },
-//   });
-
-//   console.log("⬅️ Response", {
-//     url,
-//     status: response.status,
-//   });
-
-//   /**
-//    * Access token expirado.
-//    *
-//    * Não tenta refresh quando a própria requisição
-//    * já é a rota de refresh.
-//    */
-//   if (response.status === 401 && retry && !url.endsWith("/identity/refresh")) {
-//     console.warn("🔒 Access token expirado. Tentando refresh...");
-
-//     const refreshed = await refreshAccessToken();
-
-//     if (refreshed) {
-//       console.log("✅ Refresh realizado. Repetindo requisição original...");
-
-//       /**
-//        * Não enviamos Authorization aqui.
-//        *
-//        * O novo access_token está no cookie HttpOnly
-//        * recebido pelo browser.
-//        */
-//       response = await fetch(url, {
-//         ...config,
-//         credentials: "include",
-//         headers: {
-//           "Content-Type": "application/json",
-//           ...headers,
-//         },
-//       });
-
-//       console.log("🔁 Retry", {
-//         url,
-//         status: response.status,
-//       });
-//     } else {
-//       console.error("❌ Refresh falhou.");
-//     }
-//   }
-
-//   if (!response.ok) {
-//     let error;
-
-//     try {
-//       error = await response.json();
-//     } catch {
-//       error = {
-//         status: response.status,
-//       };
-//     }
-
-//     console.error("🚨 API Error", error);
-
-//     throw error;
-//   }
-
-//   if (response.status === 204) {
-//     return undefined as T;
-//   }
-
-//   return response.json();
-// }
-
-// import { env } from "../config/env";
-
-// const API_PREFIX = "/api/v1";
-
-// export interface FetchOptions extends RequestInit {
-//   token?: string;
-//   retry?: boolean;
-// }
-
-// export async function fetcher<T>(
-//   url: string,
-//   options: FetchOptions = {},
-// ): Promise<T> {
-//   const { token, headers, retry = true, ...config } = options;
-
-//   console.log("➡️ Request", {
-//     url,
-//     method: config.method,
-//     retry,
-//   });
-
-//   let response = await fetch(url, {
-//     ...config,
-//     credentials: "include",
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...(token && {
-//         Authorization: `Bearer ${token}`,
-//       }),
-//       ...headers,
-//     },
-//   });
-
-//   console.log("⬅️ Response", {
-//     url,
-//     status: response.status,
-//   });
-
-//   if (response.status === 401 && retry && !url.endsWith("/identity/refresh")) {
-//     console.warn("🔒 Access token expirado. Tentando refresh...");
-
-//     const refreshResponse = await fetch(
-//       `${env.apiUrl}${API_PREFIX}/identity/refresh`,
-//       {
-//         method: "POST",
-//         credentials: "include",
-//       },
-//     );
-
-//     console.log("🔄 Refresh", {
-//       url: `${env.apiUrl}${API_PREFIX}/identity/refresh`,
-//       status: refreshResponse.status,
-//     });
-
-//     if (refreshResponse.ok) {
-//       console.log("✅ Refresh realizado. Repetindo requisição original...");
-
-//       response = await fetch(url, {
-//         ...config,
-//         credentials: "include",
-//         headers: {
-//           "Content-Type": "application/json",
-//           ...(token && {
-//             Authorization: `Bearer ${token}`,
-//           }),
-//           ...headers,
-//         },
-//       });
-
-//       console.log("🔁 Retry", {
-//         url,
-//         status: response.status,
-//       });
-//     } else {
-//       console.error("❌ Refresh falhou.", {
-//         status: refreshResponse.status,
-//       });
-//     }
-//   }
-
-//   if (!response.ok) {
-//     let error;
-
-//     try {
-//       error = await response.json();
-//     } catch {
-//       error = {
-//         status: response.status,
-//       };
-//     }
-
-//     console.error("🚨 API Error", error);
-
-//     throw error;
-//   }
-
-//   if (response.status === 204) {
-//     return undefined as T;
-//   }
-
-//   return response.json();
-// }

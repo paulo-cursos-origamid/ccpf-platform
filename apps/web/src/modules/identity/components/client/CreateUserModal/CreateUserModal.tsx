@@ -39,6 +39,7 @@ export function CreateUserModal({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+
     setValidationError(null);
 
     if (!name.trim()) {
@@ -57,7 +58,10 @@ export function CreateUserModal({
     }
 
     if (password.length < 8) {
-      setValidationError("A senha deve possuir pelo menos 8 caracteres.");
+      const message = "A senha deve possuir pelo menos 8 caracteres.";
+
+
+      setValidationError(message);
       return;
     }
 
@@ -97,6 +101,7 @@ export function CreateUserModal({
 
   const errorMessage =
     validationError ?? (error instanceof Error ? error.message : null);
+
 
   return (
     <Modal open={open} onClose={handleClose} title="Novo usuário">

@@ -17,7 +17,6 @@ class IdentityService {
   }
 
   me() {
-      console.trace("identityService.me()");
     return api.get<User>("/identity/me");
   }
 
