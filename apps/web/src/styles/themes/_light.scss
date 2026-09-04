@@ -25,6 +25,11 @@
 
   --text-on-accent: #ffffff;
 
+  --text-error: #{v.$danger};
+  --text-success: #{v.$success};
+  --text-warning: #{v.$warning};
+  --text-info: #{v.$info};
+
   /* ==================================================
      BORDER
   ================================================== */

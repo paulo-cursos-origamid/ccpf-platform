@@ -50,3 +50,27 @@
     color: var(--text-on-accent);
   }
 }
+
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.selectIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--spacing-md);
+
+  z-index: 1;
+
+  color: var(--text-secondary);
+
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.selectWrapper select {
+  padding-left: calc(
+    var(--spacing-md) + 18px + var(--spacing-md)
+  );
+}

@@ -1,15 +1,23 @@
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
-import styles from "./TextInput.module.scss";
+import { Input } from "../forms";
 
-export type TextInputProps = InputHTMLAttributes<HTMLInputElement>;
+export type TextInputProps = InputHTMLAttributes<HTMLInputElement> & {
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
+};
 
-export function TextInput({ className, ...props }: TextInputProps) {
+export function TextInput({
+  leftIcon,
+  rightIcon,
+  ...props
+}: TextInputProps) {
   return (
-    <input
-      type="text"
-      className={`${styles.input} ${className ?? ""}`}
+    <Input
       {...props}
+      type="text"
+      leftIcon={leftIcon}
+      rightIcon={rightIcon}
     />
   );
 }

@@ -42,6 +42,10 @@ import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-cas
 import { ListUsersUseCase } from '../../application/use-cases/list-users/list-users.use-case';
 import { UserRole } from '../../domain/entities/user.entity';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
+import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
+import { ForgotPasswordDto } from '../dto/forgot-password.dto';
+import { ResetPasswordUseCase } from '../../application/use-cases/reset-password/reset-password.use-case';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 
 interface RefreshRequest extends Request {
   cookies: {
@@ -60,6 +64,8 @@ export class IdentityController {
     private readonly listUsersUseCase: ListUsersUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
     private readonly deleteUserUseCase: DeleteUserUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
   ) {}
 
   @Post('users')
@@ -79,6 +85,21 @@ export class IdentityController {
       page: query.page,
       limit: query.limit,
       search: query.search,
+    });
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.forgotPasswordUseCase.execute({
+      email: dto.email,
+    });
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.resetPasswordUseCase.execute({
+      token: dto.token,
+      newPassword: dto.newPassword,
     });
   }
 

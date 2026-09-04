@@ -32,6 +32,25 @@ $space-16: 64px;
 ================================================== */
 
 :root {
+    /* Numeric */
+
+  --spacing-0: #{$space-0};
+  --spacing-1: #{$space-1};
+  --spacing-2: #{$space-2};
+  --spacing-3: #{$space-3};
+  --spacing-4: #{$space-4};
+  --spacing-5: #{$space-5};
+  --spacing-6: #{$space-6};
+  --spacing-7: #{$space-7};
+  --spacing-8: #{$space-8};
+  --spacing-9: #{$space-9};
+  --spacing-10: #{$space-10};
+  --spacing-12: #{$space-12};
+  --spacing-14: #{$space-14};
+  --spacing-16: #{$space-16};
+
+  /* Semantic */
+
   --spacing-0: #{$space-0};
 
   --spacing-xs: #{$space-1};

@@ -1,0 +1,49 @@
+.page {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+
+  padding: var(--spacing-xl);
+}
+
+.header {
+  margin-bottom: var(--spacing-xl);
+}
+
+.title {
+  margin: 0;
+
+  color: var(--text-primary);
+
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.description {
+  max-width: 680px;
+
+  margin: var(--spacing-sm) 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--spacing-lg);
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: var(--spacing-lg);
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}

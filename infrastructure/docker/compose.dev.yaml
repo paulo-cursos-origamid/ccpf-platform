@@ -61,12 +61,12 @@ services:
       - "3000:3000"
 
     environment:
-      NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:3001
 
     volumes:
       - ../../apps/web:/app
       - ccpf-web-node-modules:/app/node_modules
+      - ccpf-web-next:/app/.next
 
     depends_on:
       - api
@@ -78,6 +78,7 @@ volumes:
   ccpf-postgres-data:
   ccpf-api-node-modules:
   ccpf-web-node-modules:
+  ccpf-web-next:
 
 networks:
   ccpf-network:

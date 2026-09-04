@@ -8,6 +8,8 @@ export {
   Settings,
   User,
   Users,
+  UserRound,
+  ShieldUser,
   Bell,
   Search,
   Menu,
@@ -25,4 +27,5 @@ export {
   Mail,
   Calendar,
   DollarSign,
+  LockKeyhole,
 } from "lucide-react";

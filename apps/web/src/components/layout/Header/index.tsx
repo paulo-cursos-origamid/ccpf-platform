@@ -29,17 +29,35 @@ export function Header() {
       </div>
 
       <div className={styles.right}>
-        
         <ThemeSwitch />
 
         <button type="button" className={styles.iconButton}>
           <Bell />
         </button>
 
-        <div className={styles.user}>
+        {/* <div className={styles.user}>
           <User />
 
           <span className={styles.userName}>{user?.name}</span>
+
+          <button
+            type="button"
+            className={styles.logout}
+            onClick={handleLogout}
+          >
+            Sair
+          </button>
+        </div> */}
+        <div className={styles.user}>
+          <button
+            type="button"
+            className={styles.userProfile}
+            onClick={() => router.push("/profile")}
+            aria-label="Abrir meu perfil"
+          >
+            <User />
+            <span className={styles.userName}>{user?.name}</span>
+          </button>
 
           <button
             type="button"

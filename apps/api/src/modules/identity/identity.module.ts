@@ -24,6 +24,10 @@ import { ListUsersUseCase } from './application/use-cases/list-users/list-users.
 import { RolesGuard } from './infrastructure/auth';
 import { UpdateUserUseCase } from './application/use-cases/update-user/update-user.use-case';
 import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-user.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/forgot-password.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
+import { DevelopmentPasswordResetNotifier } from './infrastructure/notifications/development-password-reset-notifier.service';
+import { PasswordResetNotifierContract } from './domain/contracts/password-reset-notifier.contract';
 
 @Module({
   imports: [
@@ -49,6 +53,8 @@ import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-us
     ListUsersUseCase,
     UpdateUserUseCase,
     DeleteUserUseCase,
+    ForgotPasswordUseCase,
+    ResetPasswordUseCase,
 
     JwtStrategy,
     RolesGuard,
@@ -63,6 +69,10 @@ import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-us
     {
       provide: TokenProviderContract,
       useClass: JwtTokenService,
+    },
+    {
+      provide: PasswordResetNotifierContract,
+      useClass: DevelopmentPasswordResetNotifier,
     },
   ],
   exports: [CreateUserUseCase, LoginUseCase, PasswordHasherContract],

@@ -108,6 +108,26 @@
     color: var(--accent-primary);
   }
 }
+.userProfile {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  gap: 8px;
+
+
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  color: inherit;
+  font: inherit;
+
+  cursor: pointer;
+}
+
+.userProfile:hover {
+  opacity: 0.8;
+}
 
 // .header {
 //   height: 64px;
