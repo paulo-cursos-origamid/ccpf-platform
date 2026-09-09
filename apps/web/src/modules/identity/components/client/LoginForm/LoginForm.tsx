@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import {
   Button,
@@ -12,6 +13,7 @@ import {
 import { useLogin } from "../../../hooks/client";
 
 import styles from "./LoginForm.module.scss";
+import { AuthHeader } from "../..";
 
 export function LoginForm() {
   const { login, loading } = useLogin();
@@ -30,28 +32,13 @@ export function LoginForm() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.logo}>
-          CCPF
-        </div>
+      <AuthHeader
+        title="Bem-vindo de volta!"
+        subtitle="Faça login para acessar sua conta"
+      />
 
-        <h1 className={styles.title}>
-          Bem-vindo de volta!
-        </h1>
-
-        <p className={styles.subtitle}>
-          Faça login para acessar sua conta
-        </p>
-      </header>
-
-      <form
-        className={styles.form}
-        onSubmit={handleSubmit}
-      >
-        <Field
-          label="E-mail"
-          htmlFor="email"
-        >
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <Field label="E-mail" htmlFor="email">
           <EmailInput
             id="email"
             placeholder="Digite seu e-mail"
@@ -61,10 +48,7 @@ export function LoginForm() {
           />
         </Field>
 
-        <Field
-          label="Senha"
-          htmlFor="password"
-        >
+        <Field label="Senha" htmlFor="password">
           <PasswordInput
             id="password"
             placeholder="Digite sua senha"
@@ -75,35 +59,22 @@ export function LoginForm() {
         </Field>
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.forgotPassword}
-          >
+          <Link href="/forgot-password" className={styles.forgotPassword}>
             Esqueceu sua senha?
-          </button>
+          </Link>
         </div>
 
-        <Button
-          type="submit"
-          fullWidth
-          loading={loading}
-        >
+        <Button type="submit" fullWidth loading={loading}>
           Entrar
         </Button>
 
         <div className={styles.divider}>
           <span />
-          <span className={styles.dividerText}>
-            ou
-          </span>
+          <span className={styles.dividerText}>ou</span>
           <span />
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          fullWidth
-        >
+        <Button type="button" variant="outline" fullWidth>
           Acessar com SSO
         </Button>
       </form>
