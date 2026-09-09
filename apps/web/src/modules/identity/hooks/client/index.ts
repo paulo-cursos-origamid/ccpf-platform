@@ -5,3 +5,5 @@ export * from "./useUsers";
 export * from "./useRegister";  
 export * from "./useUpdateUser";
 export * from "./useDeleteUser";
+export * from "./useForgotPassword";
+export * from "./useResetPassword";

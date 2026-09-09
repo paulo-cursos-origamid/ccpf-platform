@@ -17,7 +17,7 @@ export function ChartBackground() {
       <svg
         className={styles.svg}
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid slice"
       >
         <ChartDefs />
 
