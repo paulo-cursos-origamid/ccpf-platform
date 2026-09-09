@@ -26,7 +26,7 @@ import { UpdateUserUseCase } from './application/use-cases/update-user/update-us
 import { DeleteUserUseCase } from './application/use-cases/delete-user/delete-user.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/forgot-password.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
-import { DevelopmentPasswordResetNotifier } from './infrastructure/notifications/development-password-reset-notifier.service';
+import { SmtpPasswordResetNotifier } from './infrastructure/notifications/smtp-password-reset-notifier.service';
 import { PasswordResetNotifierContract } from './domain/contracts/password-reset-notifier.contract';
 
 @Module({
@@ -72,7 +72,7 @@ import { PasswordResetNotifierContract } from './domain/contracts/password-reset
     },
     {
       provide: PasswordResetNotifierContract,
-      useClass: DevelopmentPasswordResetNotifier,
+      useClass: SmtpPasswordResetNotifier,
     },
   ],
   exports: [CreateUserUseCase, LoginUseCase, PasswordHasherContract],
