@@ -5,6 +5,7 @@ import { Injectable, ConflictException, Inject } from '@nestjs/common';
 import { UserEntity } from '../../../domain/entities/user.entity';
 import { UserRepository } from '../../../domain/repositories/user.repository';
 import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
+import { EmailVerificationNotifierContract } from '../../../domain/contracts/email-verification-notifier.contract';
 import { Prisma } from '@prisma/client';
 
 export interface CreateUserInput {
@@ -26,6 +27,9 @@ export class CreateUserUseCase {
 
     @Inject(PasswordHasherContract)
     private readonly passwordHasher: PasswordHasherContract,
+
+    @Inject(EmailVerificationNotifierContract)
+    private readonly emailVerificationNotifier: EmailVerificationNotifierContract,
   ) {}
 
   async execute(input: CreateUserInput): Promise<CreateUserOutput> {
@@ -69,11 +73,11 @@ export class CreateUserUseCase {
       throw error;
     }
 
-    /**
-     * Aqui, futuramente, enviaremos um e-mail contendo:
-     *
-     * https://app.ccpf.com.br/verify?token=verificationToken
-     */
+    await this.emailVerificationNotifier.sendVerificationEmail({
+      email: savedUser.email,
+      name: savedUser.name,
+      verificationToken,
+    });
 
     return {
       id: savedUser.id,

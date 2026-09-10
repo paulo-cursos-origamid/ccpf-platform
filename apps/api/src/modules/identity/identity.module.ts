@@ -28,6 +28,8 @@ import { ForgotPasswordUseCase } from './application/use-cases/forgot-password/f
 import { ResetPasswordUseCase } from './application/use-cases/reset-password/reset-password.use-case';
 import { SmtpPasswordResetNotifier } from './infrastructure/notifications/smtp-password-reset-notifier.service';
 import { PasswordResetNotifierContract } from './domain/contracts/password-reset-notifier.contract';
+import { EmailVerificationNotifierContract } from './domain/contracts/email-verification-notifier.contract';
+import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/smtp-email-verification-notifier.service';
 
 @Module({
   imports: [
@@ -73,6 +75,10 @@ import { PasswordResetNotifierContract } from './domain/contracts/password-reset
     {
       provide: PasswordResetNotifierContract,
       useClass: SmtpPasswordResetNotifier,
+    },
+    {
+      provide: EmailVerificationNotifierContract,
+      useClass: SmtpEmailVerificationNotifier,
     },
   ],
   exports: [CreateUserUseCase, LoginUseCase, PasswordHasherContract],
