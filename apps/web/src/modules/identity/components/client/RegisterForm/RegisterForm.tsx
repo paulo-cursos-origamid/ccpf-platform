@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import {
   Button,
@@ -22,9 +23,15 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] =
+    useState<string | null>(null);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const [registrationCompleted, setRegistrationCompleted] =
+    useState(false);
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     setValidationError(null);
@@ -62,6 +69,8 @@ export function RegisterForm() {
         email: email.trim(),
         password,
       });
+
+      setRegistrationCompleted(true);
     } catch {
       // O erro é disponibilizado pelo hook.
     }
@@ -70,6 +79,52 @@ export function RegisterForm() {
   const errorMessage =
     validationError ??
     (error instanceof Error ? error.message : null);
+
+  if (registrationCompleted) {
+    return (
+      <div className={styles.container}>
+        <header className={styles.successHeader}>
+          <div className={styles.successIcon}>
+            ✓
+          </div>
+
+          <h1 className={styles.title}>
+            Cadastro realizado com sucesso!
+          </h1>
+
+          <p className={styles.subtitle}>
+            Enviamos um e-mail de confirmação para:
+          </p>
+
+          <strong className={styles.email}>
+            {email.trim()}
+          </strong>
+        </header>
+
+        <div className={styles.successContent}>
+          <p>
+            Acesse seu e-mail e clique no link de confirmação
+            para ativar sua conta.
+          </p>
+
+          <Link
+            href="/check-email"
+            className={styles.verifyButton}
+          >
+            Ir para verificar meu e-mail
+          </Link>
+        </div>
+
+        <footer className={styles.footer}>
+          <span>© 2026 CCPF Platform</span>
+
+          <span>
+            Todos os direitos reservados.
+          </span>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
