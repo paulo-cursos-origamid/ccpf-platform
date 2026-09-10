@@ -74,9 +74,12 @@ export function LoginForm() {
           <span />
         </div>
 
-        <Button type="button" variant="outline" fullWidth>
+        {/* <Button type="button" variant="outline" fullWidth>
           Acessar com SSO
-        </Button>
+        </Button> */}
+        <Link href="/register" className={styles.createAccount}>
+          Criar nova conta
+        </Link>
       </form>
 
       <footer className={styles.footer}>

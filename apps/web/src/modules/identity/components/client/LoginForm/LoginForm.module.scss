@@ -58,6 +58,53 @@
 
   border-radius: var(--radius-sm);
 }
+.createAccount {
+  width: 100%;
+
+  min-height: var(--control-height);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 12px var(--spacing-md);
+
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+
+  // color: var(--text-primary);
+  color: blue;
+
+  // background: var(--accent-primary);
+  background: #fb5;
+
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+
+  text-decoration: none;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.createAccount:hover {
+  border-color: var(--accent-primary-hover);
+
+  background: var(--accent-primary-hover);
+
+  transform: translateY(-1px);
+}
+
+.createAccount:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.createAccount:active {
+  transform: translateY(0);
+}
 
 /* ==========================================================
    DIVIDER

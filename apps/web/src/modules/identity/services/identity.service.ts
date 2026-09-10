@@ -5,6 +5,8 @@ import type { LoginDto } from "../types/login.dto";
 import type { LoginResponseDto } from "../types/login-response.dto";
 import type { RegisterDto } from "../types/register.dto";
 import type { ResetPasswordDto } from "../types/reset-password.dto";
+import type { VerifyEmailDto } from "../types/verify-email.dto";
+
 import type { User } from "../types/user";
 
 interface RefreshResponse {
@@ -38,6 +40,9 @@ class IdentityService {
 
   resetPassword(dto: ResetPasswordDto) {
     return api.post<void>("/identity/reset-password", dto);
+  }
+  verifyEmail(dto: VerifyEmailDto) {
+    return api.post<void>("/identity/verify-email", dto);
   }
 }
 

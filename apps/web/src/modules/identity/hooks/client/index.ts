@@ -7,3 +7,4 @@ export * from "./useUpdateUser";
 export * from "./useDeleteUser";
 export * from "./useForgotPassword";
 export * from "./useResetPassword";
+export * from "./useVerifyEmail";
