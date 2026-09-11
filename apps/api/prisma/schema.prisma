@@ -24,6 +24,8 @@ model User {
   refreshTokenHash           String?
   verificationToken          String?
   verificationTokenExpiresAt DateTime?
+
+  accountMembers AccountMember[]
 }
 
 enum UserRole {
@@ -31,4 +33,63 @@ enum UserRole {
   USER
   MANAGER
   SUPPORT
+}
+
+model Account {
+  id String @id @default(uuid())
+
+  name           String
+  type           AccountType
+  currency       String
+  initialBalance Decimal
+  balance        Decimal
+
+  status     AccountStatus
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountMembers AccountMember[]
+
+  @@index([status])
+}
+
+model AccountMember {
+  id        String @id @default(uuid())
+  accountId String
+  userId    String
+
+  role AccountMemberRole
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([accountId, userId])
+  @@index([accountId])
+  @@index([userId])
+}
+
+enum AccountMemberRole {
+  OWNER
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum AccountType {
+  CASH
+  CHECKING
+  SAVINGS
+  DIGITAL
+  INVESTMENT
+  OTHER
+}
+
+enum AccountStatus {
+  ACTIVE
+  ARCHIVED
 }
