@@ -13,6 +13,7 @@ import { GetAccountUseCase } from '../../application/use-cases/get-account/get-a
 
 import { AddAccountMemberUseCase } from '../../application/use-cases/add-account-member/add-account-member.use-case';
 import { AddAccountMemberDto } from '../dto/add-account-member.dto';
+import { ListAccountMembersUseCase } from '../../application/use-cases/list-account-members/list-account-members.use-case';
 
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
@@ -22,6 +23,7 @@ export class AccountsController {
     private readonly listAccountsUseCase: ListAccountsUseCase,
     private readonly getAccountUseCase: GetAccountUseCase,
     private readonly addAccountMemberUseCase: AddAccountMemberUseCase,
+    private readonly listAccountMembersUseCase: ListAccountMembersUseCase,
   ) {}
 
   @Get()
@@ -36,6 +38,16 @@ export class AccountsController {
     @Param('id') accountId: string,
   ) {
     return this.getAccountUseCase.execute({
+      userId: user.sub,
+      accountId,
+    });
+  }
+  @Get(':id/members')
+  async findMembers(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') accountId: string,
+  ) {
+    return this.listAccountMembersUseCase.execute({
       userId: user.sub,
       accountId,
     });

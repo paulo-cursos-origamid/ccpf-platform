@@ -13,8 +13,11 @@ import { PrismaAccountMemberRepository } from './infrastructure/persistence/pris
 import { ListAccountsUseCase } from './application/use-cases/list-accounts/list-accounts.use-case';
 import { GetAccountUseCase } from './application/use-cases/get-account/get-account.use-case';
 import { AddAccountMemberUseCase } from './application/use-cases/add-account-member/add-account-member.use-case';
+import { ListAccountMembersUseCase } from './application/use-cases/list-account-members/list-account-members.use-case';
+import { IdentityModule } from '../identity/identity.module';
 
 @Module({
+  imports: [IdentityModule],
   controllers: [AccountsController],
 
   providers: [
@@ -22,6 +25,7 @@ import { AddAccountMemberUseCase } from './application/use-cases/add-account-mem
     ListAccountsUseCase,
     GetAccountUseCase,
     AddAccountMemberUseCase,
+    ListAccountMembersUseCase,
 
     {
       provide: AccountRepository,

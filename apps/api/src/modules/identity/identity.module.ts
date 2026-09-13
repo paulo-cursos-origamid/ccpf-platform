@@ -81,6 +81,11 @@ import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/sm
       useClass: SmtpEmailVerificationNotifier,
     },
   ],
-  exports: [CreateUserUseCase, LoginUseCase, PasswordHasherContract],
+  exports: [
+    CreateUserUseCase,
+    LoginUseCase,
+    PasswordHasherContract,
+    UserRepository,
+  ],
 })
 export class IdentityModule {}
