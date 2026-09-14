@@ -7,6 +7,7 @@ import {
 
 import { AccountMemberEntity } from '../../../domain/entities/account-member.entity';
 import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
+import { AccountMemberStatus } from '../../../domain/enums/account-member-status.enum';
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 
 export interface AddAccountMemberInput {
@@ -31,6 +32,10 @@ export class AddAccountMemberUseCase {
 
     if (!currentMember) {
       throw new NotFoundException('Account not found');
+    }
+
+    if (currentMember.status !== AccountMemberStatus.ACTIVE) {
+      throw new ForbiddenException('Account access is blocked');
     }
 
     if (

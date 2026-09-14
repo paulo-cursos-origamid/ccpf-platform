@@ -11,6 +11,7 @@ export interface ListAccountsInput {
 export interface ListAccountsOutput {
   id: string;
   name: string;
+  role: string;
   type: string;
   currency: string;
   initialBalance: number;
@@ -34,16 +35,25 @@ export class ListAccountsUseCase {
     );
 
     const accounts = await Promise.all(
-      members.map((member) =>
-        this.accountRepository.findById(member.accountId),
-      ),
+      members.map(async (member) => ({
+        member,
+        account: await this.accountRepository.findById(member.accountId),
+      })),
     );
 
     return accounts
-      .filter((account): account is AccountEntity => account !== null)
-      .map((account) => ({
+      .filter(
+        (
+          item,
+        ): item is {
+          member: (typeof members)[number];
+          account: AccountEntity;
+        } => item.account !== null,
+      )
+      .map(({ member, account }) => ({
         id: account.id,
         name: account.name,
+        role: member.role,
         type: account.type,
         currency: account.currency,
         initialBalance: account.initialBalance,

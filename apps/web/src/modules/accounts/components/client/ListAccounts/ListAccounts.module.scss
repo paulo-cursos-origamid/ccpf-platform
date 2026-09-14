@@ -160,6 +160,65 @@
   font-variant-numeric: tabular-nums;
 }
 
+.actionsHeader {
+  text-align: center !important;
+}
+
+.actions {
+  position: relative;
+  z-index: 3;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--spacing-xs);
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+
+  color: var(--text-secondary);
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover {
+    border-color: var(--border-primary);
+
+    background: var(--background-hover);
+
+    color: var(--accent-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    border-color: var(--accent-primary);
+
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.15);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
 .active,
 .archived {
   display: inline-flex;

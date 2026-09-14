@@ -55,12 +55,15 @@ model Account {
   @@index([status])
 }
 
+// Representa um vínculo entre um usuário e uma conta financeira.
+// O status controla o acesso daquele usuário especificamente àquela conta.
 model AccountMember {
   id        String @id @default(uuid())
   accountId String
   userId    String
 
-  role AccountMemberRole
+  role   AccountMemberRole
+  status AccountMemberStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -71,6 +74,7 @@ model AccountMember {
   @@unique([accountId, userId])
   @@index([accountId])
   @@index([userId])
+  @@index([status])
 }
 
 enum AccountMemberRole {
@@ -78,6 +82,13 @@ enum AccountMemberRole {
   MANAGER
   MEMBER
   VIEWER
+}
+
+// Define se o vínculo do usuário com a conta está ativo ou bloqueado.
+// O bloqueio é específico da conta e não desativa o usuário globalmente.
+enum AccountMemberStatus {
+  ACTIVE
+  BLOCKED
 }
 
 enum AccountType {

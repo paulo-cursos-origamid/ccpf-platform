@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { Plus } from "@/components/icons";
+import { Plus, Users } from "@/components/icons";
 
 import { CreateAccountModal } from "@/modules/accounts/components/client/CreateAccountModal";
 import { useAccounts } from "@/modules/accounts/hooks";
@@ -108,6 +108,7 @@ export function ListAccounts() {
                   <th>Moeda</th>
                   <th>Saldo</th>
                   <th>Status</th>
+                  <th className={styles.actionsHeader}>Ações</th>
                 </tr>
               </thead>
 
@@ -143,6 +144,22 @@ export function ListAccounts() {
                         {ACCOUNT_STATUS_LABELS[account.status] ??
                           account.status}
                       </span>
+                    </td>
+
+                    <td>
+                      {(account.role === "OWNER" ||
+                        account.role === "MANAGER") && (
+                        <div className={styles.actions}>
+                          <Link
+                            href={`/dashboard/accounts/${account.id}`}
+                            className={styles.actionButton}
+                            aria-label={`Gerenciar membros da conta ${account.name}`}
+                            title="Gerenciar membros"
+                          >
+                            <Users size={17} strokeWidth={1.8} />
+                          </Link>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
