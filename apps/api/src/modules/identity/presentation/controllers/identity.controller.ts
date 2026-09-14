@@ -1,35 +1,42 @@
 import {
   Body,
   Controller,
-  Post,
-  Res,
-  Get,
-  Patch,
   Delete,
+  Get,
   Param,
-  UseGuards,
-  UnauthorizedException,
+  Patch,
+  Post,
   Query,
   Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-
-import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
-import { LoginUseCase } from '../../application/use-cases/login/login.use-case';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import type { Request, Response } from 'express';
 
-import { CreateUserDto } from '../dto/create-user.dto';
-import { LoginDto } from '../dto/login.dto';
-import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
-import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
-
-import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
-import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
-
-import { UpdateUserUseCase } from '../../application/use-cases/update-user/update-user.use-case';
-import { UpdateUserDto } from '../dto/update-user.dto';
+import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user/delete-user.use-case';
+import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
+import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
+import { ListUsersUseCase } from '../../application/use-cases/list-users/list-users.use-case';
+import { LoginUseCase } from '../../application/use-cases/login/login.use-case';
+import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-case';
+import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token/refresh-token.use-case';
+import { ResetPasswordUseCase } from '../../application/use-cases/reset-password/reset-password.use-case';
+import { UpdateUserUseCase } from '../../application/use-cases/update-user/update-user.use-case';
+import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
+
+import { UserRole } from '../../domain/entities/user.entity';
 
 import {
   CurrentUser,
@@ -37,21 +44,35 @@ import {
   RolesGuard,
   type AuthenticatedUser,
 } from '../../infrastructure/auth';
-import { LogoutUseCase } from '../../application/use-cases/logout/logout.use-case';
+import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 
-import { ListUsersUseCase } from '../../application/use-cases/list-users/list-users.use-case';
-import { UserRole } from '../../domain/entities/user.entity';
-import { ListUsersQueryDto } from '../dto/list-users-query.dto';
-import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
+import { CreateUserDto } from '../dto/create-user.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
-import { ResetPasswordUseCase } from '../../application/use-cases/reset-password/reset-password.use-case';
+import { ListUsersQueryDto } from '../dto/list-users-query.dto';
+import { LoginDto } from '../dto/login.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
 
 interface RefreshRequest extends Request {
   cookies: {
     refresh_token?: string;
   };
 }
+
+/**
+ * Controller responsável pela entrada HTTP dos recursos de identidade.
+ *
+ * Responsabilidades:
+ * - Receber e validar as requisições relacionadas à identidade.
+ * - Encaminhar as operações para os respectivos Use Cases.
+ * - Aplicar autenticação e autorização através dos Guards.
+ * - Configurar cookies de autenticação.
+ * - Expor a documentação OpenAPI dos endpoints de Identity.
+ *
+ * A regra de negócio permanece nos Use Cases e no domínio.
+ */
+@ApiTags('Identity')
 @Controller('identity')
 export class IdentityController {
   constructor(
@@ -68,7 +89,33 @@ export class IdentityController {
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
   ) {}
 
+  /**
+   * Cria um novo usuário.
+   */
   @Post('users')
+  @ApiOperation({
+    summary: 'Criar usuário',
+    description:
+      'Cria um novo usuário e inicia o processo de verificação de e-mail.',
+  })
+  @ApiBody({
+    type: CreateUserDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário criado com sucesso.',
+    schema: {
+      example: {
+        id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+        name: 'João da Silva',
+        email: 'joao@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'O e-mail informado já está cadastrado.',
+  })
   async create(@Body() dto: CreateUserDto) {
     return this.createUserUseCase.execute({
       name: dto.name,
@@ -77,9 +124,79 @@ export class IdentityController {
     });
   }
 
+  /**
+   * Lista usuários com paginação e busca.
+   *
+   * Acesso restrito a administradores autenticados.
+   */
   @Get('users')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Listar usuários',
+    description:
+      'Retorna usuários paginados. O endpoint exige autenticação JWT e permissão ADMIN.',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    minimum: 1,
+    description: 'Número da página.',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: 1,
+    maximum: 100,
+    description: 'Quantidade de registros por página.',
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Termo utilizado para buscar usuários.',
+    example: 'joao',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de usuários retornada com sucesso.',
+    schema: {
+      example: {
+        users: [
+          {
+            id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+            name: 'João da Silva',
+            email: 'joao@example.com',
+            role: 'USER',
+            isActive: true,
+            emailVerified: true,
+            createdAt: '2026-09-13T20:00:00.000Z',
+            updatedAt: '2026-09-13T20:00:00.000Z',
+            lastLoginAt: '2026-09-13T21:00:00.000Z',
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário autenticado sem permissão ADMIN.',
+  })
   async listUsers(@Query() query: ListUsersQueryDto) {
     return this.listUsersUseCase.execute({
       page: query.page,
@@ -88,14 +205,62 @@ export class IdentityController {
     });
   }
 
+  /**
+   * Solicita a recuperação de senha.
+   *
+   * A resposta é intencionalmente genérica para não revelar
+   * se o endereço de e-mail está cadastrado.
+   */
   @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Solicitar recuperação de senha',
+    description:
+      'Inicia o fluxo de recuperação de senha. A resposta é genérica para evitar enumeração de usuários.',
+  })
+  @ApiBody({
+    type: ForgotPasswordDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Solicitação processada.',
+    schema: {
+      example: {
+        message:
+          'Se o e-mail estiver cadastrado, você receberá instruções para redefinir suasenha.',
+      },
+    },
+  })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.forgotPasswordUseCase.execute({
       email: dto.email,
     });
   }
 
+  /**
+   * Redefine a senha utilizando o token recebido no fluxo de recuperação.
+   */
   @Post('reset-password')
+  @ApiOperation({
+    summary: 'Redefinir senha',
+    description:
+      'Redefine a senha utilizando um token válido de recuperação de senha.',
+  })
+  @ApiBody({
+    type: ResetPasswordDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Senha redefinida com sucesso.',
+    schema: {
+      example: {
+        message: 'Password reset successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token inválido ou expirado.',
+  })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.resetPasswordUseCase.execute({
       token: dto.token,
@@ -103,7 +268,38 @@ export class IdentityController {
     });
   }
 
+  /**
+   * Autentica um usuário.
+   *
+   * Os tokens de acesso e refresh são armazenados em cookies httpOnly.
+   */
   @Post('login')
+  @ApiOperation({
+    summary: 'Autenticar usuário',
+    description:
+      'Autentica o usuário e cria os cookies httpOnly access_token e refresh_token.',
+  })
+  @ApiBody({
+    type: LoginDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário autenticado com sucesso.',
+    schema: {
+      example: {
+        user: {
+          id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+          name: 'João da Silva',
+          email: 'joao@example.com',
+          role: 'USER',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Credenciais inválidas ou e-mail ainda não verificado.',
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) response: Response,
@@ -132,9 +328,45 @@ export class IdentityController {
     };
   }
 
+  /**
+   * Atualiza os dados de um usuário.
+   *
+   * Acesso restrito a administradores autenticados.
+   */
   @Patch('users/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Atualizar usuário',
+    description:
+      'Atualiza os dados de um usuário. O endpoint exige autenticação JWT e permissão ADMIN.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'ID do usuário que será atualizado.',
+    example: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+  })
+  @ApiBody({
+    type: UpdateUserDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuário atualizado com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário autenticado sem permissão ADMIN.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Usuário não encontrado.',
+  })
   async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.updateUserUseCase.execute({
       id,
@@ -145,9 +377,47 @@ export class IdentityController {
     });
   }
 
+  /**
+   * Remove logicamente um usuário.
+   *
+   * Acesso restrito a administradores autenticados.
+   */
   @Delete('users/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Excluir usuário',
+    description:
+      'Executa a exclusão lógica de um usuário. O endpoint exige autenticação JWT e permissão ADMIN.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'ID do usuário que será excluído.',
+    example: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Usuário excluído com sucesso.',
+    schema: {
+      example: {
+        success: true,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário autenticado sem permissão ADMIN.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Usuário não encontrado.',
+  })
   async deleteUser(@Param('id') id: string) {
     await this.deleteUserUseCase.execute(id);
 
@@ -156,22 +426,92 @@ export class IdentityController {
     };
   }
 
+  /**
+   * Retorna os dados do usuário autenticado.
+   */
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Obter usuário autenticado',
+    description: 'Retorna os dados do usuário associado ao JWT atual.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados do usuário retornados com sucesso.',
+    schema: {
+      example: {
+        id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+        name: 'João da Silva',
+        email: 'joao@example.com',
+        role: 'USER',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Usuário não encontrado.',
+  })
   async me(@CurrentUser() user: AuthenticatedUser) {
     return this.getProfileUseCase.execute({
       userId: user.sub,
     });
   }
 
+  /**
+   * Verifica o endereço de e-mail utilizando o token enviado
+   * durante o cadastro.
+   */
   @Post('verify-email')
+  @ApiOperation({
+    summary: 'Verificar e-mail',
+    description:
+      'Valida o token de verificação enviado ao usuário durante o cadastro.',
+  })
+  @ApiBody({
+    type: VerifyEmailDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'E-mail verificado com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token de verificação inválido ou expirado.',
+  })
   async verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.verifyEmailUseCase.execute({
       token: dto.token,
     });
   }
 
+  /**
+   * Renova os tokens de autenticação utilizando o refresh_token
+   * armazenado em cookie httpOnly.
+   */
   @Post('refresh')
+  @ApiOperation({
+    summary: 'Renovar tokens',
+    description:
+      'Gera novos tokens utilizando o refresh_token armazenado no cookie httpOnly.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Tokens renovados com sucesso.',
+    schema: {
+      example: {
+        success: true,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token ausente ou inválido.',
+  })
   async refresh(
     @Req() req: RefreshRequest,
     @Res({ passthrough: true }) res: Response,
@@ -205,8 +545,30 @@ export class IdentityController {
     };
   }
 
+  /**
+   * Encerra a sessão do usuário autenticado.
+   */
   @Post('logout')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Encerrar sessão',
+    description:
+      'Encerra a sessão do usuário autenticado e remove os cookies de autenticação.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Sessão encerrada com sucesso.',
+    schema: {
+      example: {
+        success: true,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
   async logout(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) res: Response,
