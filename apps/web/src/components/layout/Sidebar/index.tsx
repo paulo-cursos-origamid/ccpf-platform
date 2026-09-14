@@ -26,27 +26,27 @@ const menu = [
   {
     label: "Contas",
     icon: Wallet,
-    href: "/accounts",
+    href: "/dashboard/accounts",
   },
   {
     label: "Categorias",
     icon: Tags,
-    href: "/categories",
+    href: "/dashboard/categories",
   },
   {
     label: "Transações",
     icon: ArrowLeftRight,
-    href: "/transactions",
+    href: "/dashboard/transactions",
   },
   {
     label: "Relatórios",
     icon: FileChartColumn,
-    href: "/reports",
+    href: "/dashboard/reports",
   },
   {
     label: "Veículos",
     icon: Car,
-    href: "/vehicles",
+    href: "/dashboard/vehicles",
   },
   {
     label: "Usuários",
