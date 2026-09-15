@@ -10,10 +10,11 @@ import { AccountMemberStatus } from '../../../domain/enums/account-member-status
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 
 /**
- * Entrada para alteração da permissão de um membro.
+ * Dados necessários para alterar o papel de um membro.
  */
 export interface UpdateAccountMemberRoleInput {
   userId: string;
+  tenantId: string;
   accountId: string;
   memberId: string;
   role: AccountMemberRole;
@@ -22,11 +23,11 @@ export interface UpdateAccountMemberRoleInput {
 /**
  * Altera a função de um membro dentro de uma conta.
  *
- * Regra atual:
+ * Regras:
  * - somente OWNER pode alterar permissões;
- * - OWNER não pode alterar a si próprio;
- * - não é permitido promover outro usuário a OWNER;
- * - o OWNER atual continua sendo único.
+ * - OWNER não pode alterar o próprio papel;
+ * - OWNER não pode ser atribuído a outro membro;
+ * - o OWNER atual permanece único.
  */
 @Injectable()
 export class UpdateAccountMemberRoleUseCase {
@@ -35,56 +36,59 @@ export class UpdateAccountMemberRoleUseCase {
   ) {}
 
   async execute(input: UpdateAccountMemberRoleInput): Promise<void> {
+    // Localiza o usuário atual dentro da conta e do Tenant.
     const currentMember =
       await this.accountMemberRepository.findByAccountIdAndUserId(
         input.accountId,
         input.userId,
+        input.tenantId,
       );
 
     if (!currentMember) {
       throw new NotFoundException('Account not found');
     }
 
+    // Um membro bloqueado não pode administrar permissões.
     if (currentMember.status !== AccountMemberStatus.ACTIVE) {
       throw new ForbiddenException('Account access is blocked');
     }
 
+    // Somente o OWNER possui autoridade para alterar papéis.
     if (currentMember.role !== AccountMemberRole.OWNER) {
       throw new ForbiddenException(
         'Only the account owner can change member permissions',
       );
     }
 
-    const targetMember = await this.findTargetMember(input);
+    // Localiza o membro alvo dentro da mesma conta e Tenant.
+    const members = await this.accountMemberRepository.findManyByAccountId(
+      input.accountId,
+      input.tenantId,
+    );
 
+    const targetMember = members.find((member) => member.id === input.memberId);
+
+    if (!targetMember) {
+      throw new NotFoundException('Account member not found');
+    }
+
+    // O OWNER não pode alterar a própria permissão.
     if (targetMember.userId === input.userId) {
       throw new BadRequestException(
         'The account owner cannot change their own role',
       );
     }
 
+    // Não permite criar um segundo OWNER através desta operação.
     if (input.role === AccountMemberRole.OWNER) {
       throw new BadRequestException(
         'The account owner role cannot be assigned to another member',
       );
     }
 
+    // A entidade aplica a alteração de papel.
     targetMember.changeRole(input.role);
 
     await this.accountMemberRepository.update(targetMember);
-  }
-
-  private async findTargetMember(input: UpdateAccountMemberRoleInput) {
-    const members = await this.accountMemberRepository.findManyByAccountId(
-      input.accountId,
-    );
-
-    const member = members.find((item) => item.id === input.memberId);
-
-    if (!member) {
-      throw new NotFoundException('Account member not found');
-    }
-
-    return member;
   }
 }

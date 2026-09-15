@@ -4,10 +4,17 @@ import { AccountEntity } from '../../../domain/entities/account.entity';
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 import { AccountRepository } from '../../../domain/repositories/account.repository';
 
+/**
+ * Dados necessários para listar as contas do usuário.
+ */
 export interface ListAccountsInput {
   userId: string;
+  tenantId: string;
 }
 
+/**
+ * Dados apresentados para cada conta.
+ */
 export interface ListAccountsOutput {
   id: string;
   name: string;
@@ -22,6 +29,10 @@ export interface ListAccountsOutput {
   updatedAt: Date;
 }
 
+/**
+ * Lista as contas às quais o usuário possui acesso
+ * dentro do Tenant ativo.
+ */
 @Injectable()
 export class ListAccountsUseCase {
   constructor(
@@ -30,17 +41,24 @@ export class ListAccountsUseCase {
   ) {}
 
   async execute(input: ListAccountsInput): Promise<ListAccountsOutput[]> {
+    // Busca os vínculos do usuário somente no Tenant atual.
     const members = await this.accountMemberRepository.findManyByUserId(
       input.userId,
+      input.tenantId,
     );
 
+    // Para cada vínculo, recupera a conta dentro do mesmo Tenant.
     const accounts = await Promise.all(
       members.map(async (member) => ({
         member,
-        account: await this.accountRepository.findById(member.accountId),
+        account: await this.accountRepository.findById(
+          member.accountId,
+          input.tenantId,
+        ),
       })),
     );
 
+    // Ignora vínculos cuja conta não esteja mais disponível.
     return accounts
       .filter(
         (

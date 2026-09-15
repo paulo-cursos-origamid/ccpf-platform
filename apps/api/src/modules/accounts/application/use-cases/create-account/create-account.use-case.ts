@@ -11,6 +11,7 @@ import { AccountRepository } from '../../../domain/repositories/account.reposito
 
 export interface CreateAccountInput {
   userId: string;
+  tenantId: string;
   name: string;
   type: AccountType;
   currency: string;
@@ -45,7 +46,10 @@ export class CreateAccountUseCase {
       initialBalance: input.initialBalance,
     });
 
-    const savedAccount = await this.accountRepository.create(account);
+    const savedAccount = await this.accountRepository.create(
+      account,
+      input.tenantId,
+    );
 
     const owner = new AccountMemberEntity({
       accountId: savedAccount.id,
