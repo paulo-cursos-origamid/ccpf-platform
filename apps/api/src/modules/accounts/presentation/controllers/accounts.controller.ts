@@ -17,6 +17,7 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -58,6 +59,12 @@ import { UpdateAccountDto } from '../dto/update-account.dto';
  */
 @ApiTags('Accounts')
 @ApiBearerAuth('access-token')
+@ApiHeader({
+  name: 'X-Tenant-Id',
+  description: 'Identificador do Tenant ativo para a requisição.',
+  required: true,
+  example: 'tenant-uuid',
+})
 @Controller('accounts')
 @UseGuards(JwtAuthGuard, TenantContextGuard)
 export class AccountsController {
