@@ -124,14 +124,14 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
     createdAt: Date;
     updatedAt: Date;
   }): TenantMemberEntity {
-    return new TenantMemberEntity(
-      rawMember.id,
-      rawMember.tenantId,
-      rawMember.userId,
-      rawMember.role as TenantRole,
-      rawMember.status as TenantMemberStatus,
-      rawMember.createdAt,
-      rawMember.updatedAt,
-    );
+    return new TenantMemberEntity({
+      id: rawMember.id,
+      tenantId: rawMember.tenantId,
+      userId: rawMember.userId,
+      role: rawMember.role as TenantRole,
+      status: rawMember.status as TenantMemberStatus,
+      createdAt: rawMember.createdAt,
+      updatedAt: rawMember.updatedAt,
+    });
   }
 }
