@@ -31,6 +31,9 @@ import { PasswordResetNotifierContract } from './domain/contracts/password-reset
 import { EmailVerificationNotifierContract } from './domain/contracts/email-verification-notifier.contract';
 import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/smtp-email-verification-notifier.service';
 
+import { PlatformAuthorizationRepository } from './domain/repositories/platform-authorization.repository';
+import { PrismaPlatformAuthorizationRepository } from './infrastructure/repositories/prisma-platform-authorization.repository';
+import { PlatformPermissionGuard } from './presentation/guards/platform-permission.guard';
 @Module({
   imports: [
     PassportModule.register({
@@ -46,6 +49,11 @@ import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/sm
   controllers: [IdentityController],
 
   providers: [
+    PlatformPermissionGuard,
+    {
+      provide: PlatformAuthorizationRepository,
+      useClass: PrismaPlatformAuthorizationRepository,
+    },
     CreateUserUseCase,
     LoginUseCase,
     LogoutUseCase,

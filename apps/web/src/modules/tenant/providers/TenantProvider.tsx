@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+
+import { useIdentityStore } from "@/modules/identity/stores/identity.store";
 
 import { tenantService } from "../services";
 import { useTenantStore } from "../stores";
@@ -9,35 +11,58 @@ interface TenantProviderProps {
   children: React.ReactNode;
 }
 
-// Inicializa o contexto de Tenant depois que o usuário estiver autenticado.
-//
-// A lista de Tenants sempre vem do backend.
-// Apenas o ID do Tenant ativo é persistido localmente.
+/**
+ * Inicializa e mantém o contexto de Tenant do usuário autenticado.
+ *
+ * A lista de Tenants é sempre obtida do backend através de
+ * GET /tenants/me.
+ *
+ * Somente o activeTenantId é persistido localmente pelo TenantStore.
+ *
+ * O carregamento depende explicitamente do estado de autenticação,
+ * garantindo que uma troca de usuário provoque uma nova consulta
+ * dos Tenants disponíveis.
+ */
 export function TenantProvider({ children }: TenantProviderProps) {
+  const isAuthenticated = useIdentityStore(
+    (state) => state.isAuthenticated,
+  );
+
   const setTenants = useTenantStore((state) => state.setTenants);
   const clear = useTenantStore((state) => state.clear);
 
-  const initialized = useRef(false);
-
   useEffect(() => {
-    if (initialized.current) {
+    if (!isAuthenticated) {
+      clear();
       return;
     }
 
-    initialized.current = true;
+    let cancelled = false;
 
     async function loadTenants() {
       try {
         const tenants = await tenantService.listMine();
 
+        if (cancelled) {
+          return;
+        }
+
         setTenants(tenants);
       } catch {
+        if (cancelled) {
+          return;
+        }
+
         clear();
       }
     }
 
     void loadTenants();
-  }, [clear, setTenants]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clear, isAuthenticated, setTenants]);
 
   return <>{children}</>;
 }

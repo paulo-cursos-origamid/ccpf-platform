@@ -32,6 +32,7 @@ model User {
   verificationTokenExpiresAt DateTime?
 
   tenantMembers  TenantMember[]
+  platformRoles UserPlatformRole[]
   accountMembers AccountMember[]
 }
 
@@ -374,4 +375,72 @@ enum AccountType {
 enum AccountStatus {
   ACTIVE
   ARCHIVED
+}
+
+
+// Representa um papel global do usuário dentro da plataforma CCPF.
+// Diferente de TenantRole, este papel não depende de um Tenant específico.
+model PlatformRole {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+  isSystem    Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  permissions PlatformRolePermission[]
+  users       UserPlatformRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// Representa uma permissão global disponível na plataforma.
+// As permissões são mantidas como registros para permitir evolução
+// do sistema sem transformar cada nova permissão em uma migration.
+model PlatformPermission {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  roles PlatformRolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Relacionamento N:N entre PlatformRole e PlatformPermission.
+// Um papel pode possuir várias permissões e uma permissão pode
+// pertencer a vários papéis.
+model PlatformRolePermission {
+  roleId       String
+  permissionId String
+
+  role       PlatformRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission PlatformPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// Relacionamento N:N entre User e PlatformRole.
+// Um usuário pode possuir vários papéis globais simultaneamente.
+model UserPlatformRole {
+  userId String
+  roleId String
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role PlatformRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
 }
