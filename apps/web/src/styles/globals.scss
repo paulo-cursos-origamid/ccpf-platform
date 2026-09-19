@@ -1,11 +1,38 @@
 @use "@/styles/main";
 
-#root,
-__next {
+/**
+ * Estilos globais da aplicação.
+ *
+ * O tema é aplicado pelo ThemeProvider no elemento <html>
+ * através do atributo data-theme.
+ *
+ * Os elementos globais utilizam exclusivamente os tokens
+ * oficiais definidos nos temas light e dark.
+ */
+
+html {
+  min-width: 100%;
+  min-height: 100%;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+}
+
+body {
   min-width: 100%;
   min-height: 100vh;
-  
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: var(--surface-primary);
+  color: var(--text-primary);
 }
+
+#__next {
+  min-width: 100%;
+  min-height: 100vh;
+}
+
 ::selection {
+  color: var(--text-on-accent);
   background: rgba(var(--accent-primary-rgb), 0.18);
 }

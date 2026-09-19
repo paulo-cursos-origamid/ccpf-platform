@@ -11,3 +11,5 @@ export { Pricing } from "./Pricing";
 export { FAQ } from "./FAQ";
 export { FinalCta } from "./FinalCta";
 export { LandingFooter } from "./LandingFooter";
+
+export { AnimatedBackground } from "./AnimatedBackground/AnimatedBackground";
