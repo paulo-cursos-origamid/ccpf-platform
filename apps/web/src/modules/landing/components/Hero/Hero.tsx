@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AnimatedBackground } from "../AnimatedBackground/AnimatedBackground";
+import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 import styles from "./Hero.module.scss";
 
 /**

@@ -58,6 +58,11 @@
 
   border-radius: var(--radius-sm);
 }
+
+/* ==========================================================
+   CREATE ACCOUNT
+========================================================== */
+
 .createAccount {
   width: 100%;
 
@@ -72,11 +77,9 @@
   border: 1px solid var(--accent-primary);
   border-radius: var(--radius-md);
 
-  // color: var(--text-primary);
-  color: blue;
+  color: var(--accent-primary);
 
-  // background: var(--accent-primary);
-  background: #fb5;
+  background: transparent;
 
   font-size: var(--font-md);
   font-weight: var(--font-weight-bold);
@@ -86,11 +89,14 @@
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
+    color var(--transition-fast),
     transform var(--transition-fast);
 }
 
 .createAccount:hover {
   border-color: var(--accent-primary-hover);
+
+  color: var(--text-on-accent);
 
   background: var(--accent-primary-hover);
 
@@ -128,7 +134,7 @@
 }
 
 .dividerText {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 
   font-size: var(--font-sm);
 
@@ -148,7 +154,7 @@
 
   margin-top: var(--spacing-xl);
 
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 
   font-size: var(--font-xs);
 

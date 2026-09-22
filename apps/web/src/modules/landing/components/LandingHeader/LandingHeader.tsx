@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+
+import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
 
 import styles from "./LandingHeader.module.scss";
 
@@ -8,8 +12,12 @@ import styles from "./LandingHeader.module.scss";
  * Responsabilidades:
  * - apresentar a identidade do CCPF;
  * - permitir navegação pelas principais seções;
+ * - disponibilizar o controle global de tema;
  * - direcionar usuários existentes para login;
  * - direcionar novos usuários para cadastro.
+ *
+ * O controle de tema reutiliza o ThemeSwitch existente da aplicação.
+ * A responsabilidade de aplicar o tema permanece no ThemeProvider.
  */
 export function LandingHeader() {
   return (
@@ -28,6 +36,8 @@ export function LandingHeader() {
         </nav>
 
         <div className={styles.actions}>
+          <ThemeSwitch />
+
           <Link href="/login" className={styles.login}>
             Entrar
           </Link>
