@@ -32,7 +32,7 @@ model User {
   verificationTokenExpiresAt DateTime?
 
   tenantMembers  TenantMember[]
-  platformRoles UserPlatformRole[]
+  platformRoles  UserPlatformRole[]
   accountMembers AccountMember[]
 }
 
@@ -130,6 +130,8 @@ model Plan {
   price           Decimal
   currency        String          @default("BRL")
   billingInterval BillingInterval
+  maxUsers        Int
+  isPublic        Boolean         @default(true)
   isActive        Boolean         @default(true)
 
   features      PlanFeature[]
@@ -203,6 +205,7 @@ model Subscription {
 }
 
 enum SubscriptionStatus {
+  PENDING
   TRIALING
   ACTIVE
   PAST_DUE
@@ -376,7 +379,6 @@ enum AccountStatus {
   ACTIVE
   ARCHIVED
 }
-
 
 // Representa um papel global do usuário dentro da plataforma CCPF.
 // Diferente de TenantRole, este papel não depende de um Tenant específico.

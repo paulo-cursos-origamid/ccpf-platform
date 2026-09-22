@@ -39,6 +39,19 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
   }
 
   /**
+   * Busca uma associação pelo seu identificador.
+   */
+  async findById(id: string): Promise<TenantMemberEntity | null> {
+    const member = await this.prisma.tenantMember.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    return member ? this.toDomain(member) : null;
+  }
+
+  /**
    * Busca a associação entre um usuário e um Tenant.
    *
    * A combinação tenantId + userId é única no banco.
@@ -89,6 +102,23 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
     });
 
     return members.map((member) => this.toDomain(member));
+  }
+
+  /**
+   * Conta os usuários que ocupam vagas no Tenant.
+   *
+   * Membros REMOVED não são considerados, pois não possuem
+   * mais acesso ao Tenant e não devem consumir o limite do plano.
+   */
+  async countByTenant(tenantId: string): Promise<number> {
+    return this.prisma.tenantMember.count({
+      where: {
+        tenantId,
+        status: {
+          not: 'REMOVED',
+        },
+      },
+    });
   }
 
   /**

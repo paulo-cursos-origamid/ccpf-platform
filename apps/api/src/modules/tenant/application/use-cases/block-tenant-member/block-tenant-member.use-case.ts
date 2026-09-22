@@ -29,11 +29,10 @@ export class BlockTenantMemberUseCase {
   ) {}
 
   async execute(input: BlockTenantMemberInput): Promise<void> {
-    const currentMember =
-      await this.tenantMemberRepository.findByTenantAndUser(
-        input.tenantId,
-        input.userId,
-      );
+    const currentMember = await this.tenantMemberRepository.findByTenantAndUser(
+      input.tenantId,
+      input.userId,
+    );
 
     if (!currentMember) {
       throw new ForbiddenException('User does not belong to this Tenant');

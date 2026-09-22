@@ -11,6 +11,7 @@ import { TenantMemberEntity } from '../../../domain/entities/tenant-member.entit
 import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.enum';
 import { TenantRole } from '../../../domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../../domain/repositories/tenant-member.repository';
+import { TenantPlanLimitsRepository } from '../../../domain/repositories/tenant-plan-limits.repository';
 
 export interface AddTenantMemberInput {
   tenantId: string;
@@ -29,11 +30,15 @@ export interface AddTenantMemberInput {
  * - existir na plataforma;
  * - estar ativo;
  * - ainda não possuir vínculo com o Tenant.
+ *
+ * A quantidade de membros também é limitada pelo plano
+ * da assinatura vigente do Tenant.
  */
 @Injectable()
 export class AddTenantMemberUseCase {
   constructor(
     private readonly tenantMemberRepository: TenantMemberRepository,
+    private readonly tenantPlanLimitsRepository: TenantPlanLimitsRepository,
     private readonly userRepository: UserRepository,
   ) {}
 
@@ -80,6 +85,8 @@ export class AddTenantMemberUseCase {
       throw new ConflictException('User is already a member of this Tenant');
     }
 
+    await this.validatePlanLimit(input.tenantId);
+
     const member = new TenantMemberEntity({
       tenantId: input.tenantId,
       userId: input.memberUserId,
@@ -88,5 +95,33 @@ export class AddTenantMemberUseCase {
     });
 
     await this.tenantMemberRepository.create(member);
+  }
+
+  /**
+   * Valida se o Tenant possui uma assinatura utilizável
+   * e se ainda existe capacidade para adicionar um usuário.
+   */
+  private async validatePlanLimit(tenantId: string): Promise<void> {
+    const maxUsers =
+      await this.tenantPlanLimitsRepository.findMaxUsersByTenant(tenantId);
+
+    if (maxUsers === null) {
+      throw new ForbiddenException(
+        'O Tenant não possui uma assinatura ativa ou em período de teste.',
+      );
+    }
+
+    if (maxUsers === -1) {
+      return;
+    }
+
+    const currentUsers =
+      await this.tenantMemberRepository.countByTenant(tenantId);
+
+    if (currentUsers >= maxUsers) {
+      throw new ForbiddenException(
+        'O limite de usuários do plano foi atingido.',
+      );
+    }
   }
 }

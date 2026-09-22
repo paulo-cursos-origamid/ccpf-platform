@@ -102,6 +102,18 @@ export class TenantMemberEntity {
     this.touch();
   }
 
+  /**
+   * Remove o vínculo ativo do usuário com o Tenant.
+   *
+   * O registro permanece persistido com status REMOVED
+   * para preservar o histórico da associação e permitir
+   * que o limite de usuários deixe de contabilizá-lo.
+   */
+  remove(): void {
+    this._status = TenantMemberStatus.REMOVED;
+    this.touch();
+  }
+
   private validateTenantId(tenantId: string): void {
     if (!tenantId.trim()) {
       throw new Error('TenantMember tenantId is required');

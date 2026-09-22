@@ -22,18 +22,23 @@ import {
 
 import type { AuthenticatedUser } from '../../../identity/infrastructure/auth';
 
+import { CreateTenantUseCase } from '../../application/use-cases/create-tenant/create-tenant.use-case';
 import { AddTenantMemberUseCase } from '../../application/use-cases/add-tenant-member/add-tenant-member.use-case';
 import { BlockTenantMemberUseCase } from '../../application/use-cases/block-tenant-member/block-tenant-member.use-case';
 import { ListMyTenantsUseCase } from '../../application/use-cases/list-my-tenants.use-case';
 import { ListTenantMembersUseCase } from '../../application/use-cases/list-tenant-members/list-tenant-members.use-case';
 import { UnblockTenantMemberUseCase } from '../../application/use-cases/unblock-tenant-member/unblock-tenant-member.use-case';
+import { RemoveTenantMemberUseCase } from '../../application/use-cases/remove-tenant-member/remove-tenant-member.use-case';
 import { UpdateTenantMemberRoleUseCase } from '../../application/use-cases/update-tenant-member-role/update-tenant-member-role.use-case';
 
-import type { TenantContext } from '../interfaces/tenant-context.interface';
+import { CreateTenantDto } from '../dto/create-tenant.dto';
 import { AddTenantMemberDto } from '../dto/add-tenant-member.dto';
 import { MyTenantResponseDto } from '../dto/my-tenant-response.dto';
 import { TenantMemberResponseDto } from '../dto/tenant-member-response.dto';
 import { UpdateTenantMemberRoleDto } from '../dto/update-tenant-member-role.dto';
+
+import type { TenantContext } from '../interfaces/tenant-context.interface';
+
 import { CurrentTenant } from '../decorators/tenant-context.decorator';
 import { TenantContextGuard } from '../guards/tenant-context.guard';
 
@@ -47,13 +52,56 @@ import { TenantContextGuard } from '../guards/tenant-context.guard';
 @UseGuards(JwtAuthGuard)
 export class TenantController {
   constructor(
+    private readonly createTenantUseCase: CreateTenantUseCase,
     private readonly listMyTenantsUseCase: ListMyTenantsUseCase,
     private readonly listTenantMembersUseCase: ListTenantMembersUseCase,
     private readonly addTenantMemberUseCase: AddTenantMemberUseCase,
     private readonly updateTenantMemberRoleUseCase: UpdateTenantMemberRoleUseCase,
     private readonly blockTenantMemberUseCase: BlockTenantMemberUseCase,
     private readonly unblockTenantMemberUseCase: UnblockTenantMemberUseCase,
+    private readonly removeTenantMemberUseCase: RemoveTenantMemberUseCase,
   ) {}
+
+  /**
+   * Cria um novo Tenant para o usuário autenticado.
+   *
+   * O usuário autenticado é automaticamente definido como OWNER.
+   *
+   * Este endpoint não exige X-Tenant-Id porque o Tenant
+   * ainda está sendo criado.
+   */
+  @Post()
+  @ApiOperation({
+    summary: 'Criar Tenant',
+    description:
+      'Cria um novo Tenant e define o usuário autenticado como OWNER. A criação do Tenant e do proprietário ocorre de forma atômica.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Tenant criado com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos para criação do Tenant.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Já existe um Tenant utilizando o slug informado.',
+  })
+  async createTenant(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateTenantDto,
+  ) {
+    return this.createTenantUseCase.execute({
+      name: dto.name,
+      slug: dto.slug,
+      ownerUserId: user.sub,
+    });
+  }
 
   /**
    * Lista os Tenants aos quais o usuário autenticado possui acesso.
@@ -258,16 +306,53 @@ export class TenantController {
     status: 403,
     description: 'Usuário sem permissão.',
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Membro não encontrado.',
-  })
   async unblockTenantMember(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
     @Param('memberId') memberId: string,
   ): Promise<void> {
     await this.unblockTenantMemberUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: user.sub,
+      memberId,
+    });
+  }
+
+  /**
+   * Remove o acesso de um membro ao Tenant.
+   *
+   * A remoção é lógica: o vínculo permanece persistido
+   * com status REMOVED para preservar seu histórico.
+   */
+  @Post('members/:memberId/remove')
+  @UseGuards(TenantContextGuard)
+  @ApiOperation({
+    summary: 'Remover membro do Tenant',
+    description:
+      'Remove o acesso de um membro ao Tenant. Somente OWNER e ADMIN podem executar esta operação. O vínculo permanece persistido com status REMOVED.',
+  })
+  @ApiParam({
+    name: 'memberId',
+    description: 'ID do usuário que será removido.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Membro removido com sucesso.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário sem permissão ou operação não permitida.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Membro não encontrado.',
+  })
+  async removeTenantMember(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('memberId') memberId: string,
+  ): Promise<void> {
+    await this.removeTenantMemberUseCase.execute({
       tenantId: tenant.tenantId,
       userId: user.sub,
       memberId,

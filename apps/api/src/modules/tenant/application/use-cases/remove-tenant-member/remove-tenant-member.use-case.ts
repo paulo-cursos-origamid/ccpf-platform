@@ -8,28 +8,33 @@ import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.e
 import { TenantRole } from '../../../domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../../domain/repositories/tenant-member.repository';
 
-export interface UpdateTenantMemberRoleInput {
+/**
+ * Define os dados necessários para remover
+ * um membro de um Tenant.
+ */
+export interface RemoveTenantMemberInput {
   tenantId: string;
   userId: string;
   memberId: string;
-  role: TenantRole;
 }
 
 /**
- * Altera o papel de um membro dentro do Tenant.
+ * Remove o acesso de um membro ao Tenant.
  *
- * Somente OWNER e ADMIN podem administrar os papéis.
+ * Somente OWNER e ADMIN podem remover membros.
  *
- * O próprio OWNER não pode ser rebaixado por esta operação.
- * Isso evita que o Tenant fique sem seu responsável principal.
+ * A remoção é lógica: o registro permanece persistido
+ * com status REMOVED para preservar o histórico da associação.
+ *
+ * Membros REMOVED não ocupam vagas no limite do plano.
  */
 @Injectable()
-export class UpdateTenantMemberRoleUseCase {
+export class RemoveTenantMemberUseCase {
   constructor(
     private readonly tenantMemberRepository: TenantMemberRepository,
   ) {}
 
-  async execute(input: UpdateTenantMemberRoleInput): Promise<void> {
+  async execute(input: RemoveTenantMemberInput): Promise<void> {
     const currentMember = await this.tenantMemberRepository.findByTenantAndUser(
       input.tenantId,
       input.userId,
@@ -52,29 +57,31 @@ export class UpdateTenantMemberRoleUseCase {
       );
     }
 
-    const targetMember = await this.tenantMemberRepository.findByTenantAndUser(
-      input.tenantId,
+    const targetMember = await this.tenantMemberRepository.findById(
       input.memberId,
     );
 
-    if (!targetMember) {
+    if (!targetMember || targetMember.tenantId !== input.tenantId) {
       throw new NotFoundException('Tenant member not found');
     }
 
-    if (targetMember.status === TenantMemberStatus.REMOVED) {
-      throw new ForbiddenException('Tenant member has been removed');
-    }
-
-    if (
-      targetMember.role === TenantRole.OWNER &&
-      input.role !== TenantRole.OWNER
-    ) {
+    if (targetMember.userId === input.userId) {
       throw new ForbiddenException(
-        'The Tenant OWNER cannot be demoted through this operation',
+        'You cannot remove your own Tenant membership',
       );
     }
 
-    targetMember.changeRole(input.role);
+    if (targetMember.role === TenantRole.OWNER) {
+      throw new ForbiddenException(
+        'The Tenant OWNER cannot be removed through this operation',
+      );
+    }
+
+    if (targetMember.status === TenantMemberStatus.REMOVED) {
+      return;
+    }
+
+    targetMember.remove();
 
     await this.tenantMemberRepository.update(targetMember);
   }
