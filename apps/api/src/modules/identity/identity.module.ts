@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 
 import { UserRepository } from './domain/repositories/user.repository';
+import { PublicUserProvisioningRepository } from './domain/repositories/public-user-provisioning.repository';
 
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
+import { PrismaPublicUserProvisioningRepository } from './infrastructure/persistence/prisma-public-user-provisioning.repository';
 
 import { CreateUserUseCase } from './application/use-cases/create-user/create-user.use-case';
+import { CreatePublicUserUseCase } from './application/use-cases/create-public-user/create-public-user.use-case';
 import { IdentityController } from './presentation/controllers/identity.controller';
 
 import { BcryptPasswordHasherService } from './infrastructure/security/bcrypt-password-hasher.service';
@@ -55,6 +58,7 @@ import { PlatformPermissionGuard } from './presentation/guards/platform-permissi
       useClass: PrismaPlatformAuthorizationRepository,
     },
     CreateUserUseCase,
+    CreatePublicUserUseCase,
     LoginUseCase,
     LogoutUseCase,
     VerifyEmailUseCase,
@@ -71,6 +75,10 @@ import { PlatformPermissionGuard } from './presentation/guards/platform-permissi
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: PublicUserProvisioningRepository,
+      useClass: PrismaPublicUserProvisioningRepository,
     },
     {
       provide: PasswordHasherContract,

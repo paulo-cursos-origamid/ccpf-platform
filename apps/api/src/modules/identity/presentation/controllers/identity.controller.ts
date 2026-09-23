@@ -25,6 +25,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
+import { CreatePublicUserUseCase } from '../../application/use-cases/create-public-user/create-public-user.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user/delete-user.use-case';
 import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
@@ -72,6 +73,7 @@ import { PlatformPermissionGuard } from '../guards/platform-permission.guard';
 export class IdentityController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
+    private readonly createPublicUserUseCase: CreatePublicUserUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
@@ -113,6 +115,44 @@ export class IdentityController {
   })
   async create(@Body() dto: CreateUserDto) {
     return this.createUserUseCase.execute({
+      name: dto.name,
+      email: dto.email,
+      password: dto.password,
+    });
+  }
+
+  /**
+   * Realiza o cadastro público de um novo cliente SaaS.
+   *
+   * O fluxo provisiona User, Tenant, OWNER e Subscription TRIALING
+   * em uma única transação.
+   */
+  @Post('register')
+  @ApiOperation({
+    summary: 'Realizar cadastro público',
+    description:
+      'Cria o usuário, seu Tenant, o vínculo como OWNER e uma assinatura TRIALING de 14 dias.',
+  })
+  @ApiBody({
+    type: CreateUserDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Cadastro realizado com sucesso.',
+    schema: {
+      example: {
+        id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+        name: 'João da Silva',
+        email: 'joao@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'O e-mail informado já está cadastrado.',
+  })
+  async register(@Body() dto: CreateUserDto) {
+    return this.createPublicUserUseCase.execute({
       name: dto.name,
       email: dto.email,
       password: dto.password,
