@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
+import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
 import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
-import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
 
 /**
  * Caso de uso responsável por consultar a assinatura vigente
@@ -14,7 +14,7 @@ import { SubscriptionRepository } from '../../domain/repositories/subscription.r
 @Injectable()
 export class GetTenantSubscriptionUseCase {
   constructor(
-    private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
   ) {}
 
   /**
@@ -24,6 +24,6 @@ export class GetTenantSubscriptionUseCase {
    * retorna null.
    */
   async execute(tenantId: string): Promise<SubscriptionEntity | null> {
-    return this.subscriptionRepository.findActiveByTenant(tenantId);
+    return this.subscriptionLifecycleService.resolveCurrent(tenantId);
   }
 }

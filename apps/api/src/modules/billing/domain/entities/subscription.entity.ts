@@ -43,6 +43,37 @@ export class SubscriptionEntity {
   }
 
   /**
+   * Indica se o período gratuito terminou.
+   *
+   * A regra só se aplica enquanto a assinatura estiver em TRIALING.
+   */
+  hasTrialExpired(referenceDate: Date = new Date()): boolean {
+    return (
+      this.isTrial &&
+      this.trialEndsAt !== null &&
+      this.trialEndsAt.getTime() <= referenceDate.getTime()
+    );
+  }
+
+  /**
+   * Indica se a assinatura permite utilização dos recursos comerciais.
+   *
+   * Somente assinaturas ACTIVE e TRIALING ainda válido permitem
+   * acesso aos recursos protegidos por Billing.
+   */
+  get hasCommercialAccess(): boolean {
+    if (this.isActive) {
+      return true;
+    }
+
+    if (this.isTrial) {
+      return !this.hasTrialExpired();
+    }
+
+    return false;
+  }
+
+  /**
    * Indica se a assinatura não deve mais permitir utilização
    * normal dos recursos do plano.
    */

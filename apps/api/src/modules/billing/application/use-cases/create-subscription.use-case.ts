@@ -11,6 +11,7 @@ import { BillingInterval } from '../../domain/enums/billing-interval.enum';
 import { SubscriptionStatus } from '../../domain/enums/subscription-status.enum';
 import { PlanRepository } from '../../domain/repositories/plan.repository';
 import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
+import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
 
 /**
  * Dados necessários para criar uma assinatura.
@@ -37,6 +38,7 @@ export class CreateSubscriptionUseCase {
   constructor(
     private readonly planRepository: PlanRepository,
     private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
   ) {}
 
   async execute(input: CreateSubscriptionInput): Promise<SubscriptionEntity> {
@@ -57,7 +59,7 @@ export class CreateSubscriptionUseCase {
     }
 
     const currentSubscription =
-      await this.subscriptionRepository.findActiveByTenant(input.tenantId);
+      await this.subscriptionLifecycleService.resolveCurrent(input.tenantId);
 
     if (currentSubscription) {
       throw new BadRequestException(

@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 
 import { TenantModule } from '../tenant/tenant.module';
 
+import { SubscriptionLifecycleService } from './application/services/subscription-lifecycle.service';
 import { CreateSubscriptionUseCase } from './application/use-cases/create-subscription.use-case';
 import { BillingController } from './presentation/controllers/billing.controller';
+import { SubscriptionAccessGuard } from './presentation/guards/subscription-access.guard';
 import { GetTenantSubscriptionUseCase } from './application/use-cases/get-tenant-subscription.use-case';
 import { ListPublicPlansUseCase } from './application/use-cases/list-public-plans.use-case';
 
@@ -31,6 +33,8 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     ListPublicPlansUseCase,
     GetTenantSubscriptionUseCase,
     CreateSubscriptionUseCase,
+    SubscriptionLifecycleService,
+    SubscriptionAccessGuard,
 
     {
       provide: PlanRepository,
@@ -49,6 +53,8 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     ListPublicPlansUseCase,
     GetTenantSubscriptionUseCase,
     CreateSubscriptionUseCase,
+    SubscriptionLifecycleService,
+    SubscriptionAccessGuard,
   ],
 })
 export class BillingModule {}

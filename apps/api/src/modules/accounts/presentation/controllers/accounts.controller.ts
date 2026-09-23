@@ -24,6 +24,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { SubscriptionAccessGuard } from '../../../billing/presentation/guards/subscription-access.guard';
+
 import {
   CurrentUser,
   JwtAuthGuard,
@@ -66,7 +68,7 @@ import { UpdateAccountDto } from '../dto/update-account.dto';
   example: 'tenant-uuid',
 })
 @Controller('accounts')
-@UseGuards(JwtAuthGuard, TenantContextGuard)
+@UseGuards(JwtAuthGuard, TenantContextGuard, SubscriptionAccessGuard)
 export class AccountsController {
   constructor(
     private readonly createAccountUseCase: CreateAccountUseCase,
