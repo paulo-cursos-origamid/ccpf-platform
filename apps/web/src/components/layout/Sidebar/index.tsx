@@ -19,6 +19,8 @@ import {
   X,
 } from "@/components/icons";
 
+import { SubscriptionSummary } from "@/modules/billing";
+
 import { useIdentityStore } from "@/modules/identity/stores/identity.store";
 
 import { useTenantStore } from "@/modules/tenant/stores";
@@ -38,23 +40,6 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-/**
-
-* Estrutura de navegação principal da aplicação.
-*
-* As seções representam as áreas funcionais do CCPF:
-*
-* * Principal: acesso ao dashboard do Tenant.
-* * Financeiro: recursos financeiros compartilhados pelo Tenant.
-* * Domínios: módulos especializados que utilizam o núcleo financeiro.
-* * Administração: recursos exclusivos da administração da plataforma.
-* * Configurações: configurações do Tenant atualmente selecionado.
-*
-* A autorização definitiva permanece no backend.
-*
-* As propriedades adminOnly e tenantRequired servem apenas para
-* controlar a visibilidade da navegação no frontend.
-  */
 const menuSections: MenuSection[] = [
   {
     label: "Principal",
@@ -140,25 +125,8 @@ export function Sidebar() {
 
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
 
-  /**
-
-* Platform Role.
-*
-* Esta verificação usa a role do usuário na plataforma.
-* Ela não deve ser confundida com TenantRole (OWNER, ADMIN,
-* MEMBER ou VIEWER), que pertence ao vínculo do usuário com
-* o Tenant ativo.
-  */
   const isPlatformAdmin = user?.role === "ADMIN";
 
-  /**
-
-* Remove da navegação os itens que não fazem sentido para
-* o contexto atual do usuário.
-*
-* A filtragem é apenas uma preocupação de UX.
-* O backend continua sendo responsável por autorizar cada operação.
-  */
   const visibleSections = menuSections
     .map((section) => ({
       ...section,
@@ -176,17 +144,6 @@ export function Sidebar() {
     }))
     .filter((section) => section.items.length > 0);
 
-  /**
-
-* Considera a rota ativa quando:
-*
-* * a URL é exatamente igual ao href; ou
-* * a URL está dentro da área daquela funcionalidade.
-*
-* A exceção do /dashboard evita que o Dashboard fique ativo
-* simultaneamente quando o usuário está em /dashboard/accounts,
-* /dashboard/transactions etc.
-  */
   function isActive(href: string) {
     if (href === "/dashboard") {
       return pathname === href;
@@ -195,29 +152,31 @@ export function Sidebar() {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
-  /**
-
-* Alterna entre o Sidebar expandido e recolhido.
-  */
   function toggleSidebar() {
     setCollapsed((current) => !current);
   }
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
-      {" "}
+    <aside
+      className={`${styles.sidebar} ${
+        collapsed ? styles.collapsed : ""
+      }`}
+    >
       <div className={styles.header}>
-        {" "}
         <div className={styles.headerContent}>
-          {" "}
-          <span className={styles.logo}></span>{" "}
+          <span className={styles.logo} />
         </div>
+
         <button
           type="button"
           className={styles.toggleButton}
           onClick={toggleSidebar}
-          aria-label={collapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
-          title={collapsed ? "Abrir menu lateral" : "Fechar menu lateral"}
+          aria-label={
+            collapsed ? "Abrir menu lateral" : "Fechar menu lateral"
+          }
+          title={
+            collapsed ? "Abrir menu lateral" : "Fechar menu lateral"
+          }
         >
           <span
             className={`${styles.toggleIcon} ${
@@ -229,10 +188,19 @@ export function Sidebar() {
           </span>
         </button>
       </div>
-      <nav className={styles.nav} aria-label="Navegação principal">
+
+      <nav
+        className={styles.nav}
+        aria-label="Navegação principal"
+      >
         {visibleSections.map((section) => (
-          <section key={section.label} className={styles.section}>
-            <h2 className={styles.sectionTitle}>{section.label}</h2>
+          <section
+            key={section.label}
+            className={styles.section}
+          >
+            <h2 className={styles.sectionTitle}>
+              {section.label}
+            </h2>
 
             <div className={styles.sectionItems}>
               {section.items.map((item) => {
@@ -244,7 +212,9 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`${styles.item} ${active ? styles.active : ""}`}
+                    className={`${styles.item} ${
+                      active ? styles.active : ""
+                    }`}
                     aria-current={active ? "page" : undefined}
                     title={collapsed ? item.label : undefined}
                   >
@@ -252,7 +222,9 @@ export function Sidebar() {
                       <Icon size={20} />
                     </span>
 
-                    <span className={styles.label}>{item.label}</span>
+                    <span className={styles.label}>
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}
@@ -260,6 +232,10 @@ export function Sidebar() {
           </section>
         ))}
       </nav>
+
+      <div className={styles.subscription}>
+        <SubscriptionSummary collapsed={collapsed} />
+      </div>
     </aside>
   );
 }

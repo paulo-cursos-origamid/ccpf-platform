@@ -1,8 +1,10 @@
+
 export * from "./useLogin";
 export * from "./useLogout";
 export * from "./useRequireAuth";
 export * from "./useUsers";
-export * from "./useRegister";  
+export * from "./useRegister";
+export * from "./useCreateUser";
 export * from "./useUpdateUser";
 export * from "./useDeleteUser";
 export * from "./useForgotPassword";

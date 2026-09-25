@@ -24,9 +24,17 @@ class IdentityService {
     });
   }
 
-  // Cadastro também não depende de Tenant.
+  // Cadastro público.
+//
+// O endpoint de registro provisiona automaticamente:
+// - User
+// - Tenant
+// - TenantMember como OWNER
+// - Subscription em TRIALING
+//
+// Por ser um fluxo público, não depende de Tenant.
   register(dto: RegisterDto) {
-    return api.post<User>("/identity/users", dto, {
+    return api.post<User>("/identity/register", dto, {
       tenantAware: false,
     });
   }

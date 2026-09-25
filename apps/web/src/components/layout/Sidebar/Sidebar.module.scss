@@ -30,8 +30,6 @@
 
   padding: 0 var(--spacing-md);
 
-  // border-bottom: 1px solid var(--border-primary);
-
   flex-shrink: 0;
 
   transition:
@@ -307,6 +305,25 @@
   opacity: 0;
 }
 
+/* ============================================================
+ * Assinatura comercial
+ *
+ * Mantém o resumo da assinatura separado da navegação.
+ * O componente possui seu próprio estado visual para o modo
+ * expandido e recolhido.
+ * ============================================================ */
+
+.subscription {
+  flex-shrink: 0;
+
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.collapsed .subscription {
+  padding-left: var(--spacing-sm);
+  padding-right: var(--spacing-sm);
+}
+
 @media (max-width: 768px) {
   .sidebar,
   .collapsed {
@@ -370,5 +387,9 @@
     width: auto;
 
     opacity: 1;
+  }
+
+  .subscription {
+    padding: var(--spacing-sm);
   }
 }

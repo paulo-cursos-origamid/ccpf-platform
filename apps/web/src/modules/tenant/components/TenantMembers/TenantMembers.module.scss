@@ -60,13 +60,24 @@
 
 .memberItem {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(150px, 190px) auto auto;
+
+  /*
+   * A primeira coluna ocupa todo o espaço disponível.
+   * Role, status e ações possuem larguras previsíveis,
+   * mantendo o alinhamento visual entre todas as linhas.
+   */
+  grid-template-columns: minmax(220px, 1fr) 190px 120px 84px;
+
   align-items: center;
   gap: var(--spacing-md);
+
+  min-height: 66px;
   padding: var(--spacing-md);
+
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   background: var(--surface-hover);
+
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast);
@@ -78,6 +89,7 @@
 
 .memberIdentity {
   min-width: 0;
+
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -86,19 +98,24 @@
 .avatar {
   width: 40px;
   height: 40px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   flex-shrink: 0;
+
   border-radius: 50%;
   background: var(--surface-tertiary);
   color: var(--accent-primary);
+
   font-size: var(--font-sm);
   font-weight: var(--font-weight-semibold);
 }
 
 .memberDetails {
   min-width: 0;
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
@@ -107,9 +124,11 @@
 .memberDetails strong {
   min-width: 0;
   overflow: hidden;
+
   color: var(--text-primary);
   font-size: var(--font-sm);
   font-weight: var(--font-weight-medium);
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -117,14 +136,17 @@
 .memberDetails span {
   min-width: 0;
   overflow: hidden;
+
   color: var(--text-secondary);
   font-size: var(--font-sm);
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .memberRole {
   min-width: 0;
+  width: 100%;
 }
 
 .memberRole select {
@@ -135,10 +157,14 @@
 .statusBadge {
   display: inline-flex;
   align-items: center;
+
   padding: var(--spacing-xs) var(--spacing-sm);
+
   border-radius: var(--radius-full);
+
   font-size: var(--font-sm);
   font-weight: var(--font-weight-medium);
+
   white-space: nowrap;
 }
 
@@ -150,6 +176,8 @@
 .memberStatus {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .statusBadge {
@@ -177,61 +205,162 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-xs);
+
+  min-width: 84px;
 }
 
 .memberActions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 34px;
   height: 34px;
-  padding: 0;
-}
 
-.editIndicator {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
+
+  flex-shrink: 0;
+
+  padding: 0;
 }
 
 .loading,
 .empty {
   padding: var(--spacing-xl);
+
   text-align: center;
+
   color: var(--text-secondary);
   font-size: var(--font-sm);
 }
 
 .error {
   padding: var(--spacing-md);
+
   border: 1px solid var(--border-error);
   border-radius: var(--radius-md);
+
   background: var(--surface-error);
   color: var(--text-error);
+
   font-size: var(--font-sm);
 }
 
+.planLimit {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+
+  background: var(--surface-secondary);
+}
+
+.planLimitHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+
+  margin-bottom: var(--spacing-sm);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+.progressTrack {
+  width: 100%;
+  height: 7px;
+
+  overflow: hidden;
+
+  border-radius: var(--radius-full);
+
+  background: var(--surface-tertiary);
+}
+
+.progressBar {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: var(--accent-primary);
+
+  transition: width var(--transition-fast);
+}
+
+.planLimitReached {
+  border-color: var(--border-error);
+  background: var(--surface-error);
+
+  .progressBar {
+    background: var(--text-error);
+  }
+}
+
+.limitMessage {
+  margin: var(--spacing-sm) 0 0;
+
+  color: var(--text-error);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+.limitHint {
+  margin: var(--spacing-sm) 0 0;
+
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+/*
+ * Tablet
+ *
+ * Mantém a identidade na primeira coluna e reorganiza
+ * role/status/ações na segunda linha quando o espaço
+ * horizontal fica limitado.
+ */
 @media (max-width: 900px) {
   .memberItem {
-    grid-template-columns: minmax(200px, 1fr) auto;
-    align-items: start;
+    grid-template-columns: minmax(220px, 1fr) 160px;
+    grid-template-areas:
+      "identity role"
+      "status actions";
+
+    align-items: center;
+  }
+
+  .memberIdentity {
+    grid-area: identity;
   }
 
   .memberRole {
-    justify-self: start;
+    grid-area: role;
   }
 
   .memberStatus {
-    justify-self: start;
+    grid-area: status;
   }
 
-  .memberActions,
-  .editIndicator {
+  .memberActions {
+    grid-area: actions;
+
     justify-self: end;
   }
 }
 
+/*
+ * Mobile
+ *
+ * Cada informação passa a ocupar sua própria linha.
+ */
 @media (max-width: 768px) {
   .header {
     align-items: flex-start;
@@ -244,14 +373,29 @@
 
   .memberItem {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "identity"
+      "role"
+      "status"
+      "actions";
+
     align-items: stretch;
+    gap: var(--spacing-sm);
   }
 
+  .memberIdentity,
   .memberRole,
   .memberStatus,
-  .memberActions,
-  .editIndicator {
-    justify-self: start;
+  .memberActions {
+    width: 100%;
+  }
+
+  .memberRole {
+    max-width: 100%;
+  }
+
+  .memberStatus {
+    justify-content: flex-start;
   }
 
   .memberActions {

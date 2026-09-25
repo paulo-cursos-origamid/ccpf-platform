@@ -18,10 +18,13 @@ export interface UpdateTenantMemberRoleInput {
 /**
  * Altera o papel de um membro dentro do Tenant.
  *
- * Somente OWNER e ADMIN podem administrar os papéis.
+ * OWNER e ADMIN podem administrar os papéis dos membros.
  *
- * O próprio OWNER não pode ser rebaixado por esta operação.
- * Isso evita que o Tenant fique sem seu responsável principal.
+ * O OWNER é protegido contra rebaixamento e o endpoint
+ * não permite criar um segundo OWNER.
+ *
+ * Uma futura transferência de propriedade deverá possuir
+ * uma operação específica, com regras próprias.
  */
 @Injectable()
 export class UpdateTenantMemberRoleUseCase {
@@ -52,12 +55,11 @@ export class UpdateTenantMemberRoleUseCase {
       );
     }
 
-    const targetMember = await this.tenantMemberRepository.findByTenantAndUser(
-      input.tenantId,
+    const targetMember = await this.tenantMemberRepository.findById(
       input.memberId,
     );
 
-    if (!targetMember) {
+    if (!targetMember || targetMember.tenantId !== input.tenantId) {
       throw new NotFoundException('Tenant member not found');
     }
 
@@ -65,12 +67,27 @@ export class UpdateTenantMemberRoleUseCase {
       throw new ForbiddenException('Tenant member has been removed');
     }
 
+    if (targetMember.userId === input.userId) {
+      throw new ForbiddenException(
+        'You cannot change your own Tenant role through this operation',
+      );
+    }
+
+    /**
+     * O OWNER é único por Tenant.
+     *
+     * Não permitimos alterar o OWNER através deste endpoint
+     * nem atribuir OWNER a outro membro.
+     *
+     * Uma eventual transferência de propriedade deverá ser
+     * implementada separadamente.
+     */
     if (
-      targetMember.role === TenantRole.OWNER &&
-      input.role !== TenantRole.OWNER
+      targetMember.role === TenantRole.OWNER ||
+      input.role === TenantRole.OWNER
     ) {
       throw new ForbiddenException(
-        'The Tenant OWNER cannot be demoted through this operation',
+        'The Tenant OWNER cannot be changed through this operation',
       );
     }
 

@@ -21,6 +21,9 @@ export interface BlockTenantMemberInput {
  *
  * O usuário não pode bloquear a própria associação ao Tenant.
  * O OWNER também não pode ser bloqueado através desta operação.
+ *
+ * O memberId recebido pela operação representa o ID da entidade
+ * TenantMember, e não o ID do usuário.
  */
 @Injectable()
 export class BlockTenantMemberUseCase {
@@ -51,12 +54,15 @@ export class BlockTenantMemberUseCase {
       );
     }
 
-    const targetMember = await this.tenantMemberRepository.findByTenantAndUser(
-      input.tenantId,
+    /**
+     * O parâmetro memberId identifica diretamente a associação
+     * TenantMember que será bloqueada.
+     */
+    const targetMember = await this.tenantMemberRepository.findById(
       input.memberId,
     );
 
-    if (!targetMember) {
+    if (!targetMember || targetMember.tenantId !== input.tenantId) {
       throw new NotFoundException('Tenant member not found');
     }
 

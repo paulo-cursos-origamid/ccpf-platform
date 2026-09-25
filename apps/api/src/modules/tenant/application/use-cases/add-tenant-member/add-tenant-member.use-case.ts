@@ -21,7 +21,8 @@ export interface AddTenantMemberInput {
 }
 
 /**
- * Adiciona um usuário existente da plataforma ao Tenant.
+ * Adiciona ou reativa um usuário existente da plataforma
+ * no Tenant.
  *
  * O usuário que executa a operação precisa ser OWNER ou ADMIN
  * dentro do Tenant.
@@ -29,7 +30,10 @@ export interface AddTenantMemberInput {
  * O usuário que será adicionado precisa:
  * - existir na plataforma;
  * - estar ativo;
- * - ainda não possuir vínculo com o Tenant.
+ * - não possuir vínculo ativo com o Tenant.
+ *
+ * Quando já existe uma associação com status REMOVED,
+ * o mesmo registro é reutilizado e reativado.
  *
  * A quantidade de membros também é limitada pelo plano
  * da assinatura vigente do Tenant.
@@ -81,6 +85,26 @@ export class AddTenantMemberUseCase {
         input.memberUserId,
       );
 
+    /**
+     * Quando o usuário já possui uma associação REMOVED,
+     * o vínculo existente é reativado em vez de criar
+     * um novo registro.
+     */
+    if (existingMember?.status === TenantMemberStatus.REMOVED) {
+      await this.validatePlanLimit(input.tenantId);
+
+      existingMember.changeRole(input.role);
+      existingMember.restore();
+
+      await this.tenantMemberRepository.update(existingMember);
+
+      return;
+    }
+
+    /**
+     * Qualquer associação diferente de REMOVED ainda
+     * representa um vínculo existente com o Tenant.
+     */
     if (existingMember) {
       throw new ConflictException('User is already a member of this Tenant');
     }

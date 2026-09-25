@@ -1,9 +1,15 @@
 import { api } from "@/lib/api/client";
 
-import type { Tenant, TenantMember, TenantRole } from "../types";
+import type {
+  AvailableTenantUser,
+  Tenant,
+  TenantMember,
+  TenantRole,
+} from "../types";
 
 /**
- * Dados necessários para adicionar um usuário existente ao Tenant.
+ * Dados necessários para adicionar um usuário existente
+ * como membro do Tenant atualmente selecionado.
  */
 export interface AddTenantMemberInput {
   userId: string;
@@ -11,25 +17,25 @@ export interface AddTenantMemberInput {
 }
 
 /**
- * Dados necessários para alterar o papel de um membro.
+ * Dados necessários para alterar a role de um membro
+ * dentro do Tenant atualmente selecionado.
  */
 export interface UpdateTenantMemberRoleInput {
   role: TenantRole;
 }
 
 /**
- * Centraliza as chamadas HTTP relacionadas ao domínio Tenant.
+ * Serviço responsável pela comunicação HTTP do domínio Tenant.
  *
- * O Tenant ativo não é recebido explicitamente pelos métodos.
- * O ApiClient adiciona automaticamente o header X-Tenant-Id
- * usando o activeTenantId mantido pelo TenantStore.
+ * O serviço conhece apenas os contratos da API e não contém
+ * regras de autorização ou regras de negócio.
  */
 class TenantService {
   /**
-   * Obtém os Tenants aos quais o usuário autenticado possui acesso.
+   * Lista os Tenants aos quais o usuário autenticado pertence.
    *
-   * Este endpoint é utilizado para descobrir os Tenants disponíveis
-   * e, por isso, não deve enviar o header X-Tenant-Id.
+   * A requisição não utiliza X-Tenant-Id porque seu objetivo
+   * é justamente descobrir os Tenants disponíveis.
    */
   listMine() {
     return api.get<Tenant[]>("/tenants/me", {
@@ -45,31 +51,54 @@ class TenantService {
   }
 
   /**
-   * Adiciona um usuário existente ao Tenant ativo.
+   * Lista usuários globais que ainda não possuem vínculo
+   * com o Tenant atualmente selecionado.
+   *
+   * O backend retorna somente usuários ativos e disponíveis.
    */
-  addMember(input: AddTenantMemberInput) {
-    return api.post<TenantMember>("/tenants/members", input);
+  listAvailableUsers() {
+    return api.get<AvailableTenantUser[]>("/tenants/members/available-users");
   }
 
   /**
-   * Altera o papel de um membro dentro do Tenant ativo.
+   * Adiciona um usuário existente ao Tenant atual.
+   *
+   * A autorização definitiva e as regras de limite do plano
+   * permanecem no backend.
+   */
+  addMember(input: AddTenantMemberInput) {
+    return api.post<void>("/tenants/members", input);
+  }
+
+  /**
+   * Altera a role de um membro dentro do Tenant.
    */
   updateMemberRole(memberId: string, input: UpdateTenantMemberRoleInput) {
     return api.patch<TenantMember>(`/tenants/members/${memberId}/role`, input);
   }
 
   /**
-   * Bloqueia um membro do Tenant ativo.
+   * Bloqueia um membro do Tenant.
    */
   blockMember(memberId: string) {
     return api.post<TenantMember>(`/tenants/members/${memberId}/block`);
   }
 
   /**
-   * Desbloqueia um membro do Tenant ativo.
+   * Desbloqueia um membro do Tenant.
    */
   unblockMember(memberId: string) {
     return api.post<TenantMember>(`/tenants/members/${memberId}/unblock`);
+  }
+
+    /**
+   * Remove logicamente um membro do Tenant.
+   *
+   * O backend mantém o vínculo persistido com status REMOVED
+   * para preservar o histórico e liberar a vaga do plano.
+   */
+  removeMember(memberId: string) {
+    return api.post<void>(`/tenants/members/${memberId}/remove`);
   }
 }
 

@@ -4,6 +4,9 @@
 
 export type {
   BillingInterval,
+  CreateSubscriptionInput,
   PlanFeatureCode,
   PublicPlan,
+  Subscription,
+  SubscriptionStatus,
 } from "./billing.types";

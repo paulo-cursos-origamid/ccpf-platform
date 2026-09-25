@@ -95,9 +95,20 @@ export class TenantMemberEntity {
   }
 
   /**
-   * Restaura o acesso do usuário ao Tenant.
+   * Restaura o acesso de um membro bloqueado.
    */
   unblock(): void {
+    this._status = TenantMemberStatus.ACTIVE;
+    this.touch();
+  }
+
+  /**
+   * Reativa uma associação que havia sido removida.
+   *
+   * A associação existente é reutilizada para preservar
+   * o histórico do vínculo com o Tenant.
+   */
+  restore(): void {
     this._status = TenantMemberStatus.ACTIVE;
     this.touch();
   }

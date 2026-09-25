@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -27,6 +28,7 @@ import { AddTenantMemberUseCase } from '../../application/use-cases/add-tenant-m
 import { BlockTenantMemberUseCase } from '../../application/use-cases/block-tenant-member/block-tenant-member.use-case';
 import { ListMyTenantsUseCase } from '../../application/use-cases/list-my-tenants.use-case';
 import { ListTenantMembersUseCase } from '../../application/use-cases/list-tenant-members/list-tenant-members.use-case';
+import { ListAvailableTenantUsersUseCase } from '../../application/use-cases/list-available-tenant-users/list-available-tenant-users.use-case';
 import { UnblockTenantMemberUseCase } from '../../application/use-cases/unblock-tenant-member/unblock-tenant-member.use-case';
 import { RemoveTenantMemberUseCase } from '../../application/use-cases/remove-tenant-member/remove-tenant-member.use-case';
 import { UpdateTenantMemberRoleUseCase } from '../../application/use-cases/update-tenant-member-role/update-tenant-member-role.use-case';
@@ -35,6 +37,7 @@ import { CreateTenantDto } from '../dto/create-tenant.dto';
 import { AddTenantMemberDto } from '../dto/add-tenant-member.dto';
 import { MyTenantResponseDto } from '../dto/my-tenant-response.dto';
 import { TenantMemberResponseDto } from '../dto/tenant-member-response.dto';
+import { AvailableTenantUserResponseDto } from '../dto/available-tenant-user-response.dto';
 import { UpdateTenantMemberRoleDto } from '../dto/update-tenant-member-role.dto';
 
 import type { TenantContext } from '../interfaces/tenant-context.interface';
@@ -55,6 +58,7 @@ export class TenantController {
     private readonly createTenantUseCase: CreateTenantUseCase,
     private readonly listMyTenantsUseCase: ListMyTenantsUseCase,
     private readonly listTenantMembersUseCase: ListTenantMembersUseCase,
+    private readonly listAvailableTenantUsersUseCase: ListAvailableTenantUsersUseCase,
     private readonly addTenantMemberUseCase: AddTenantMemberUseCase,
     private readonly updateTenantMemberRoleUseCase: UpdateTenantMemberRoleUseCase,
     private readonly blockTenantMemberUseCase: BlockTenantMemberUseCase,
@@ -168,18 +172,57 @@ export class TenantController {
   }
 
   /**
+   * Lista usuários globais disponíveis para associação ao Tenant.
+   *
+   * Usuários sem vínculo com o Tenant ou cujo vínculo anterior
+   * esteja com status REMOVED podem ser disponibilizados novamente.
+   */
+  @Get('members/available-users')
+  @UseGuards(TenantContextGuard)
+  @ApiOperation({
+    summary: 'Listar usuários disponíveis para o Tenant',
+    description:
+      'Retorna usuários ativos da plataforma que ainda não possuem vínculo ativo com o Tenant. Usuários com vínculo REMOVED também podem ser reativados. Requer X-Tenant-Id.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Lista de usuários disponíveis para associação ou reativação no Tenant.',
+    type: AvailableTenantUserResponseDto,
+    isArray: true,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado ou contexto do Tenant inválido.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui acesso ao Tenant.',
+  })
+  async listAvailableTenantUsers(
+    @CurrentTenant() tenant: TenantContext,
+  ): Promise<AvailableTenantUserResponseDto[]> {
+    return this.listAvailableTenantUsersUseCase.execute({
+      tenantId: tenant.tenantId,
+    });
+  }
+
+  /**
    * Adiciona um usuário existente da plataforma ao Tenant ativo.
+   *
+   * Também pode reativar um vínculo anteriormente removido.
    */
   @Post('members')
+  @HttpCode(204)
   @UseGuards(TenantContextGuard)
   @ApiOperation({
     summary: 'Adicionar membro ao Tenant',
     description:
-      'Adiciona um usuário existente da plataforma ao Tenant ativo. Somente OWNER e ADMIN podem executar esta operação.',
+      'Adiciona um usuário existente da plataforma ao Tenant ativo ou reativa um vínculo REMOVED. Somente OWNER e ADMIN podem executar esta operação.',
   })
   @ApiResponse({
-    status: 201,
-    description: 'Membro adicionado com sucesso.',
+    status: 204,
+    description: 'Membro adicionado ou reativado com sucesso.',
   })
   @ApiResponse({
     status: 403,
@@ -191,7 +234,7 @@ export class TenantController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Usuário já pertence ao Tenant.',
+    description: 'Usuário já possui um vínculo ativo com o Tenant.',
   })
   async addTenantMember(
     @CurrentTenant() tenant: TenantContext,
@@ -208,8 +251,12 @@ export class TenantController {
 
   /**
    * Altera o papel de um membro do Tenant.
+   *
+   * A operação não retorna o recurso atualizado porque
+   * o frontend recarrega a lista após a alteração.
    */
   @Patch('members/:memberId/role')
+  @HttpCode(204)
   @UseGuards(TenantContextGuard)
   @ApiOperation({
     summary: 'Alterar papel de membro',
@@ -218,10 +265,10 @@ export class TenantController {
   })
   @ApiParam({
     name: 'memberId',
-    description: 'ID do usuário que receberá o novo papel.',
+    description: 'ID do vínculo TenantMember que terá o papel alterado.',
   })
   @ApiResponse({
-    status: 200,
+    status: 204,
     description: 'Papel alterado com sucesso.',
   })
   @ApiResponse({
@@ -248,20 +295,24 @@ export class TenantController {
 
   /**
    * Bloqueia o acesso de um membro ao Tenant.
+   *
+   * O vínculo permanece persistido e continua ocupando uma vaga
+   * no limite de usuários do plano.
    */
   @Post('members/:memberId/block')
+  @HttpCode(204)
   @UseGuards(TenantContextGuard)
   @ApiOperation({
     summary: 'Bloquear membro do Tenant',
     description:
-      'Bloqueia o acesso de um membro ao Tenant. Somente OWNER e ADMIN podem executar esta operação.',
+      'Bloqueia o acesso de um membro ao Tenant. Somente OWNER e ADMIN podem executar esta operação. O membro permanece vinculado ao Tenant e continua ocupando uma vaga no limite do plano.',
   })
   @ApiParam({
     name: 'memberId',
-    description: 'ID do usuário que será bloqueado.',
+    description: 'ID do vínculo TenantMember que será bloqueado.',
   })
   @ApiResponse({
-    status: 201,
+    status: 204,
     description: 'Membro bloqueado com sucesso.',
   })
   @ApiResponse({
@@ -288,6 +339,7 @@ export class TenantController {
    * Desbloqueia o acesso de um membro ao Tenant.
    */
   @Post('members/:memberId/unblock')
+  @HttpCode(204)
   @UseGuards(TenantContextGuard)
   @ApiOperation({
     summary: 'Desbloquear membro do Tenant',
@@ -296,15 +348,19 @@ export class TenantController {
   })
   @ApiParam({
     name: 'memberId',
-    description: 'ID do usuário que será desbloqueado.',
+    description: 'ID do vínculo TenantMember que será desbloqueado.',
   })
   @ApiResponse({
-    status: 201,
+    status: 204,
     description: 'Membro desbloqueado com sucesso.',
   })
   @ApiResponse({
     status: 403,
     description: 'Usuário sem permissão.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Membro não encontrado.',
   })
   async unblockTenantMember(
     @CurrentTenant() tenant: TenantContext,
@@ -323,20 +379,23 @@ export class TenantController {
    *
    * A remoção é lógica: o vínculo permanece persistido
    * com status REMOVED para preservar seu histórico.
+   *
+   * Membros REMOVED deixam de ocupar uma vaga no plano.
    */
   @Post('members/:memberId/remove')
+  @HttpCode(204)
   @UseGuards(TenantContextGuard)
   @ApiOperation({
     summary: 'Remover membro do Tenant',
     description:
-      'Remove o acesso de um membro ao Tenant. Somente OWNER e ADMIN podem executar esta operação. O vínculo permanece persistido com status REMOVED.',
+      'Remove o acesso de um membro ao Tenant. Somente o OWNER pode executar esta operação. O vínculo permanece persistido com status REMOVED e deixa de ocupar uma vaga no limite do plano.',
   })
   @ApiParam({
     name: 'memberId',
-    description: 'ID do usuário que será removido.',
+    description: 'ID do vínculo TenantMember que será removido.',
   })
   @ApiResponse({
-    status: 201,
+    status: 204,
     description: 'Membro removido com sucesso.',
   })
   @ApiResponse({

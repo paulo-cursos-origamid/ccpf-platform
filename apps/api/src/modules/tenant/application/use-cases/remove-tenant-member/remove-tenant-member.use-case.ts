@@ -21,7 +21,7 @@ export interface RemoveTenantMemberInput {
 /**
  * Remove o acesso de um membro ao Tenant.
  *
- * Somente OWNER e ADMIN podem remover membros.
+ * Somente o OWNER pode remover membros.
  *
  * A remoção é lógica: o registro permanece persistido
  * com status REMOVED para preservar o histórico da associação.
@@ -48,13 +48,14 @@ export class RemoveTenantMemberUseCase {
       throw new ForbiddenException('User access to this Tenant is not active');
     }
 
-    if (
-      currentMember.role !== TenantRole.OWNER &&
-      currentMember.role !== TenantRole.ADMIN
-    ) {
-      throw new ForbiddenException(
-        'You do not have permission to manage Tenant members',
-      );
+    /**
+     * Remoção é uma operação administrativa do proprietário.
+     *
+     * ADMIN continua podendo administrar acesso e roles,
+     * mas não pode retirar definitivamente um membro do Tenant.
+     */
+    if (currentMember.role !== TenantRole.OWNER) {
+      throw new ForbiddenException('Only the Tenant OWNER can remove members');
     }
 
     const targetMember = await this.tenantMemberRepository.findById(
