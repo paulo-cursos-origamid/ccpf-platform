@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { TenantModule } from '../tenant/tenant.module';
 
 import { SubscriptionLifecycleService } from './application/services/subscription-lifecycle.service';
+import { ChangeSubscriptionPlanUseCase } from './application/use-cases/change-subscription-plan/change-subscription-plan.use-case';
 import { CreateSubscriptionUseCase } from './application/use-cases/create-subscription.use-case';
 import { BillingController } from './presentation/controllers/billing.controller';
 import { SubscriptionAccessGuard } from './presentation/guards/subscription-access.guard';
@@ -33,6 +34,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     ListPublicPlansUseCase,
     GetTenantSubscriptionUseCase,
     CreateSubscriptionUseCase,
+    ChangeSubscriptionPlanUseCase,
     SubscriptionLifecycleService,
     SubscriptionAccessGuard,
 
@@ -53,6 +55,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     ListPublicPlansUseCase,
     GetTenantSubscriptionUseCase,
     CreateSubscriptionUseCase,
+    ChangeSubscriptionPlanUseCase,
     SubscriptionLifecycleService,
     SubscriptionAccessGuard,
   ],

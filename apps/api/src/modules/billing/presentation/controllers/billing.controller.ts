@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -6,17 +6,23 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { ChangeSubscriptionPlanUseCase } from '../../application/use-cases/change-subscription-plan/change-subscription-plan.use-case';
 import { CreateSubscriptionUseCase } from '../../application/use-cases/create-subscription.use-case';
 import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-tenant-subscription.use-case';
 import { ListPublicPlansUseCase } from '../../application/use-cases/list-public-plans.use-case';
 
+import { ChangeSubscriptionPlanDto } from '../dto/change-subscription-plan.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 
 import type { TenantContext } from '../../../tenant/presentation/interfaces/tenant-context.interface';
 import { CurrentTenant } from '../../../tenant/presentation/decorators/tenant-context.decorator';
 import { TenantContextGuard } from '../../../tenant/presentation/guards/tenant-context.guard';
 
-import { JwtAuthGuard } from '../../../identity/infrastructure/auth';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+  JwtAuthGuard,
+} from '../../../identity/infrastructure/auth';
 
 /**
  * Controller responsável pelos endpoints relacionados
@@ -29,6 +35,7 @@ export class BillingController {
     private readonly listPublicPlansUseCase: ListPublicPlansUseCase,
     private readonly getTenantSubscriptionUseCase: GetTenantSubscriptionUseCase,
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
+    private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
   ) {}
 
   /**
@@ -80,6 +87,60 @@ export class BillingController {
   })
   async getTenantSubscription(@CurrentTenant() tenant: TenantContext) {
     return this.getTenantSubscriptionUseCase.execute(tenant.tenantId);
+  }
+
+  /**
+   * Altera o plano da assinatura corrente do Tenant ativo.
+   *
+   * Somente o OWNER pode executar esta operação.
+   *
+   * ACTIVE troca imediatamente de plano.
+   * TRIALING convertido para plano pago passa para PENDING
+   * até que a confirmação do pagamento seja implementada.
+   */
+  @Patch('subscription/plan')
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Alterar plano da assinatura',
+    description:
+      'Altera o plano da assinatura corrente. ACTIVE troca imediatamente. TRIALING convertido para plano pago entra em PENDING até confirmação do pagamento. Downgrades que ultrapassem o limite de membros são rejeitados.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Plano da assinatura alterado com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'A assinatura ou o plano de destino não permite a alteração.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui permissão para alterar o plano.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Plano ou assinatura não encontrados.',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'O plano já é o atual ou a quantidade atual de membros excede a capacidade do plano de destino.',
+  })
+  async changeSubscriptionPlan(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangeSubscriptionPlanDto,
+  ) {
+    return this.changeSubscriptionPlanUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: user.sub,
+      planCode: dto.planCode,
+    });
   }
 
   /**

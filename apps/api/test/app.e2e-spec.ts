@@ -1,29 +1,61 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+import { AppModule } from '../src/app.module';
 
-  beforeEach(async () => {
+describe('Billing API (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
+
+    // Mantém o ambiente E2E alinhado ao runtime real definido em main.ts.
+    app.setGlobalPrefix('api/v1');
+
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterAll(async () => {
+    await app.close();
   });
 
-  afterEach(async () => {
-    await app.close();
+  /**
+   * Valida uma rota pública real da API.
+   *
+   * O teste confirma que:
+   * - o AppModule inicializa;
+   * - o prefixo global /api/v1 está aplicado;
+   * - o BillingModule está disponível;
+   * - os planos públicos podem ser consultados.
+   */
+  it('GET /api/v1/billing/plans', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/billing/plans')
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.length).toBeGreaterThan(0);
+
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'TRIAL',
+        }),
+        expect.objectContaining({
+          code: 'BASIC',
+        }),
+        expect.objectContaining({
+          code: 'PRO',
+        }),
+        expect.objectContaining({
+          code: 'PREMIUM',
+        }),
+      ]),
+    );
   });
 });

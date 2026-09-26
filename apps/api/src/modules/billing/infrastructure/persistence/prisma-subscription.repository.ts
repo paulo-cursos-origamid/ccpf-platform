@@ -102,6 +102,7 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
         id: subscription.id,
       },
       data: {
+        planId: subscription.planId,
         status: subscription.status,
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,

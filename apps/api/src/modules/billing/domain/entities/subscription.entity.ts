@@ -9,7 +9,7 @@ export class SubscriptionEntity {
   constructor(
     public readonly id: string,
     public readonly tenantId: string,
-    public readonly planId: string,
+    public planId: string,
     public status: SubscriptionStatus,
     public readonly startedAt: Date,
     public currentPeriodStart: Date,
@@ -83,6 +83,30 @@ export class SubscriptionEntity {
       SubscriptionStatus.EXPIRED,
       SubscriptionStatus.SUSPENDED,
     ].includes(this.status);
+  }
+
+  /**
+   * Altera o plano associado à assinatura.
+   *
+   * A decisão sobre permitir ou não a troca pertence ao
+   * caso de uso. A entidade apenas altera o estado interno.
+   */
+  changePlan(planId: string, updatedAt: Date = new Date()): void {
+    this.planId = planId;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Coloca a assinatura aguardando confirmação de pagamento.
+   *
+   * Utilizado quando um Tenant em Trial converte a assinatura
+   * para um plano pago.
+   */
+  markAsPending(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.PENDING;
+    this.cancelledAt = null;
+    this.trialEndsAt = null;
+    this.updatedAt = updatedAt;
   }
 
   /**
