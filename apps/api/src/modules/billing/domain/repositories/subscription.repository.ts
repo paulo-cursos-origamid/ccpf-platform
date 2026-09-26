@@ -12,7 +12,19 @@ export abstract class SubscriptionRepository {
 
   abstract findById(id: string): Promise<SubscriptionEntity | null>;
 
-  abstract findActiveByTenant(
+  /**
+   * Retorna a assinatura corrente do Tenant.
+   *
+   * São consideradas correntes as assinaturas que ainda
+   * representam um ciclo comercial não encerrado:
+   *
+   * - PENDING
+   * - TRIALING
+   * - ACTIVE
+   * - PAST_DUE
+   * - SUSPENDED
+   */
+  abstract findCurrentByTenant(
     tenantId: string,
   ): Promise<SubscriptionEntity | null>;
 

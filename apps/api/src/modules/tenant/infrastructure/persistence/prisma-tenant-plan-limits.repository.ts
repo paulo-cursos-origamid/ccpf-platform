@@ -23,18 +23,34 @@ export class PrismaTenantPlanLimitsRepository implements TenantPlanLimitsReposit
    * Retorna o limite de usuários do plano da
    * assinatura atualmente utilizável pelo Tenant.
    *
-   * Assinaturas PENDING, PAST_DUE, SUSPENDED,
-   * CANCELLED e EXPIRED não liberam capacidade.
+   * Somente:
+   * - ACTIVE;
+   * - TRIALING cujo trial ainda não terminou
+   *
+   * liberam capacidade.
+   *
+   * Assinaturas PENDING, TRIALING expirado, PAST_DUE,
+   * SUSPENDED, CANCELLED e EXPIRED não liberam capacidade.
    *
    * O valor -1 representa usuários ilimitados.
    */
   async findMaxUsersByTenant(tenantId: string): Promise<number | null> {
+    const now = new Date();
+
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         tenantId,
-        status: {
-          in: [SubscriptionStatus.TRIALING, SubscriptionStatus.ACTIVE],
-        },
+        OR: [
+          {
+            status: SubscriptionStatus.ACTIVE,
+          },
+          {
+            status: SubscriptionStatus.TRIALING,
+            trialEndsAt: {
+              gt: now,
+            },
+          },
+        ],
       },
       orderBy: {
         createdAt: 'desc',

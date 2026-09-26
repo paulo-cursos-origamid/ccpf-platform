@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 import { PlanEntity } from '../../domain/entities/plan.entity';
@@ -28,10 +30,13 @@ export interface CreateSubscriptionInput {
  * - o plano precisa existir;
  * - o plano precisa estar ativo;
  * - o plano precisa estar disponível publicamente para contratação;
- * - o Tenant não pode possuir outra assinatura vigente;
+ * - o Tenant não pode possuir outra assinatura corrente;
  * - o plano TRIAL inicia como TRIALING;
  * - planos pagos iniciam como PENDING;
  * - pagamentos não são processados neste caso de uso.
+ *
+ * A integridade de banco também impede duas assinaturas correntes
+ * para o mesmo Tenant em operações concorrentes.
  */
 @Injectable()
 export class CreateSubscriptionUseCase {
@@ -94,7 +99,25 @@ export class CreateSubscriptionUseCase {
       now,
     );
 
-    return this.subscriptionRepository.create(subscription);
+    try {
+      return await this.subscriptionRepository.create(subscription);
+    } catch (error) {
+      /**
+       * A verificação anterior é necessária para a experiência normal.
+       * A restrição do banco é a proteção contra duas requisições
+       * concorrentes tentando criar subscriptions para o mesmo Tenant.
+       */
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'O Tenant já possui uma assinatura vigente.',
+        );
+      }
+
+      throw error;
+    }
   }
 
   /**

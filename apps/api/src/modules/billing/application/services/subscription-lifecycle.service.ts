@@ -17,14 +17,14 @@ export class SubscriptionLifecycleService {
   ) {}
 
   /**
-   * Retorna a assinatura comercial atual do Tenant.
+   * Retorna a assinatura corrente do Tenant.
    *
    * Quando uma assinatura TRIALING já ultrapassou trialEndsAt,
-   * ela é marcada como EXPIRED e deixa de ser considerada vigente.
+   * ela é marcada como EXPIRED e deixa de ser considerada corrente.
    */
   async resolveCurrent(tenantId: string): Promise<SubscriptionEntity | null> {
     const subscription =
-      await this.subscriptionRepository.findActiveByTenant(tenantId);
+      await this.subscriptionRepository.findCurrentByTenant(tenantId);
 
     if (!subscription) {
       return null;

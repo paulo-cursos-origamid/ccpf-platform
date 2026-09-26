@@ -53,7 +53,7 @@ export class BillingController {
   }
 
   /**
-   * Retorna a assinatura vigente do Tenant ativo.
+   * Retorna a assinatura corrente do Tenant ativo.
    *
    * O Tenant é identificado através do header X-Tenant-Id,
    * validado pelo TenantContextGuard.
@@ -64,7 +64,7 @@ export class BillingController {
   @ApiOperation({
     summary: 'Consultar assinatura do Tenant',
     description:
-      'Retorna a assinatura vigente do Tenant ativo. Caso não exista uma assinatura vigente, retorna null.',
+      'Retorna a assinatura corrente do Tenant ativo. Caso não exista uma assinatura corrente, retorna null.',
   })
   @ApiResponse({
     status: 200,
@@ -105,6 +105,11 @@ export class BillingController {
     status: 400,
     description:
       'Plano inválido, plano indisponível ou Tenant já possui uma assinatura vigente.',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Conflito de concorrência: o Tenant já recebeu uma assinatura vigente.',
   })
   @ApiResponse({
     status: 401,

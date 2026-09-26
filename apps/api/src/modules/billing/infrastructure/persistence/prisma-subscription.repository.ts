@@ -49,7 +49,13 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
     return this.toDomain(subscription);
   }
 
-  async findActiveByTenant(
+  /**
+   * Retorna a assinatura corrente do Tenant.
+   *
+   * A integridade do banco garante que exista no máximo
+   * uma assinatura corrente por Tenant.
+   */
+  async findCurrentByTenant(
     tenantId: string,
   ): Promise<SubscriptionEntity | null> {
     const subscription = await this.prisma.subscription.findFirst({
