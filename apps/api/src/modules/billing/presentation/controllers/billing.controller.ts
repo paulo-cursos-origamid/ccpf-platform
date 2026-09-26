@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -19,6 +27,11 @@ import type { TenantContext } from '../../../tenant/presentation/interfaces/tena
 import { CurrentTenant } from '../../../tenant/presentation/decorators/tenant-context.decorator';
 import { TenantContextGuard } from '../../../tenant/presentation/guards/tenant-context.guard';
 
+import { ActivateSubscriptionUseCase } from '../../application/use-cases/activate-subscription.use-case';
+
+import { RequirePlatformPermission } from '../../../identity/presentation/decorators/platform-permission.decorator';
+import { PlatformPermissionGuard } from '../../../identity/presentation/guards/platform-permission.guard';
+
 import {
   CurrentUser,
   type AuthenticatedUser,
@@ -38,6 +51,7 @@ export class BillingController {
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
     private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
     private readonly cancelSubscriptionUseCase: CancelSubscriptionUseCase,
+    private readonly activateSubscriptionUseCase: ActivateSubscriptionUseCase,
   ) {}
 
   /**
@@ -184,6 +198,50 @@ export class BillingController {
     });
   }
 
+  /**
+   * Ativa administrativamente uma assinatura PENDING.
+   *
+   * Esta operação representa a confirmação interna do pagamento.
+   *
+   * Não utiliza TenantContextGuard porque o operador é um
+   * administrador da plataforma que pode atuar sobre qualquer Tenant
+   * para o qual possua a permissão BILLING_MANAGE.
+   */
+  @Patch('subscriptions/:subscriptionId/activate')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Ativar assinatura',
+    description:
+      'Confirma administrativamente uma assinatura PENDING e altera seu estado para ACTIVE. Exige a permissão global BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assinatura ativada com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'A assinatura não está em estado PENDING ou já está ativa.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Usuário autenticado não possui a permissão global BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Assinatura não encontrada.',
+  })
+  async activateSubscription(@Param('subscriptionId') subscriptionId: string) {
+    return this.activateSubscriptionUseCase.execute({
+      subscriptionId,
+    });
+  }
   /**
    * Cria uma assinatura para o Tenant ativo.
    *

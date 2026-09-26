@@ -18,6 +18,9 @@ import { SubscriptionRepository } from './domain/repositories/subscription.repos
 import { PrismaPlanRepository } from './infrastructure/persistence/prisma-plan.repository';
 import { PrismaSubscriptionRepository } from './infrastructure/persistence/prisma-subscription.repository';
 
+import { IdentityModule } from '../identity/identity.module';
+import { ActivateSubscriptionUseCase } from './application/use-cases/activate-subscription.use-case';
+
 /**
  * Módulo responsável pelo domínio de Billing.
  *
@@ -28,7 +31,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
  * - consumir recursos do TenantModule quando necessário.
  */
 @Module({
-  imports: [TenantModule],
+  imports: [TenantModule, IdentityModule],
 
   controllers: [BillingController],
 
@@ -38,6 +41,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     CreateSubscriptionUseCase,
     ChangeSubscriptionPlanUseCase,
     CancelSubscriptionUseCase,
+    ActivateSubscriptionUseCase,
     SubscriptionLifecycleService,
     SubscriptionAccessGuard,
 
@@ -60,6 +64,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     CreateSubscriptionUseCase,
     ChangeSubscriptionPlanUseCase,
     CancelSubscriptionUseCase,
+    ActivateSubscriptionUseCase,
     SubscriptionLifecycleService,
     SubscriptionAccessGuard,
   ],

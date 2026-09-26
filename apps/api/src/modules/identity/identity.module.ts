@@ -102,6 +102,8 @@ import { PlatformPermissionGuard } from './presentation/guards/platform-permissi
     LoginUseCase,
     PasswordHasherContract,
     UserRepository,
+    PlatformPermissionGuard,
+    PlatformAuthorizationRepository,
   ],
 })
 export class IdentityModule {}
