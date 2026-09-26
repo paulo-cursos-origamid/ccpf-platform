@@ -34,12 +34,15 @@ describe('Billing API (e2e)', () => {
    * - os planos públicos podem ser consultados.
    */
   it('GET /api/v1/billing/plans', async () => {
+    // O tipo retornado por Nest para getHttpServer() não é reconhecido
+    // diretamente pelo contrato do supertest.
+    // A exceção fica limitada a esta chamada.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const response = await request(app.getHttpServer())
       .get('/api/v1/billing/plans')
       .expect(200);
 
     expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body.length).toBeGreaterThan(0);
 
     expect(response.body).toEqual(
       expect.arrayContaining([

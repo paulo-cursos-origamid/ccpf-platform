@@ -6,6 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { CancelSubscriptionUseCase } from '../../application/use-cases/cancel-subscription.use-case';
 import { ChangeSubscriptionPlanUseCase } from '../../application/use-cases/change-subscription-plan/change-subscription-plan.use-case';
 import { CreateSubscriptionUseCase } from '../../application/use-cases/create-subscription.use-case';
 import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-tenant-subscription.use-case';
@@ -36,6 +37,7 @@ export class BillingController {
     private readonly getTenantSubscriptionUseCase: GetTenantSubscriptionUseCase,
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
     private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
+    private readonly cancelSubscriptionUseCase: CancelSubscriptionUseCase,
   ) {}
 
   /**
@@ -140,6 +142,45 @@ export class BillingController {
       tenantId: tenant.tenantId,
       userId: user.sub,
       planCode: dto.planCode,
+    });
+  }
+
+  /**
+   * Cancela imediatamente a assinatura corrente do Tenant.
+   *
+   * Somente o OWNER pode executar esta operação.
+   *
+   * O cancelamento altera o estado para CANCELLED e encerra
+   * imediatamente o acesso comercial concedido pela assinatura.
+   */
+  @Patch('subscription/cancel')
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Cancelar assinatura',
+    description:
+      'Cancela imediatamente a assinatura corrente do Tenant. Somente o OWNER pode executar esta operação. Após o cancelamento, a assinatura fica em estado CANCELLED e deixa de conceder acesso comercial.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Assinatura cancelada com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Usuário sem acesso ao Tenant, sem permissão de OWNER ou Tenant sem assinatura corrente.',
+  })
+  async cancelSubscription(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.cancelSubscriptionUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: user.sub,
     });
   }
 
