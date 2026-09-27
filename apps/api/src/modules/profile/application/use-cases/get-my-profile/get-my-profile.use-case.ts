@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ProfileRepository } from 'src/modules/profile/domain/repositories/profile.repository';
+import { ProfileRepository } from '../../../domain/repositories/profile.repository';
 
 export interface GetMyProfileInput {
   userId: string;

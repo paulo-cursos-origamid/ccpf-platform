@@ -5,7 +5,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { UserRepository } from '../../../domain/repositories/user.repository';
 
-import { PasswordResetNotifierContract } from 'src/modules/identity/domain/contracts/password-reset-notifier.contract';
+import { PasswordResetNotifierContract } from '../../../domain/contracts/password-reset-notifier.contract';
 
 export interface ForgotPasswordInput {
   email: string;

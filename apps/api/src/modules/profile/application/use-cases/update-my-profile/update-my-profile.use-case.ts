@@ -8,7 +8,7 @@ import {
   ProfileData,
   ProfileRepository,
 } from '../../../domain/repositories/profile.repository';
-import { ProfileEmailAlreadyExistsError } from 'src/modules/profile/domain/contracts/profile-errors';
+import { ProfileEmailAlreadyExistsError } from '../../../domain/contracts/profile-errors';
 
 export interface UpdateMyProfileInput {
   userId: string;
