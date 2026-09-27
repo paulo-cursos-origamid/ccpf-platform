@@ -11,10 +11,11 @@ import { AccountMemberStatus } from '../../../domain/enums/account-member-status
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 
 /**
- * Entrada para a listagem dos membros de uma conta.
+ * Dados necessários para listar os membros de uma conta.
  */
 export interface ListAccountMembersInput {
   userId: string;
+  tenantId: string;
   accountId: string;
 }
 
@@ -35,8 +36,7 @@ export interface ListAccountMembersOutput {
 /**
  * Lista os membros de uma conta.
  *
- * O membro atual precisa estar ativo para acessar a administração
- * de membros. Um membro bloqueado não pode utilizar esta operação.
+ * Todas as consultas são restritas ao Tenant ativo.
  */
 @Injectable()
 export class ListAccountMembersUseCase {
@@ -48,24 +48,30 @@ export class ListAccountMembersUseCase {
   async execute(
     input: ListAccountMembersInput,
   ): Promise<ListAccountMembersOutput[]> {
+    // Valida o acesso do usuário atual à conta dentro do Tenant.
     const currentMember =
       await this.accountMemberRepository.findByAccountIdAndUserId(
         input.accountId,
         input.userId,
+        input.tenantId,
       );
 
     if (!currentMember) {
       throw new NotFoundException('Account not found');
     }
 
+    // Membros bloqueados não podem consultar os demais membros.
     if (currentMember.status !== AccountMemberStatus.ACTIVE) {
       throw new ForbiddenException('Account access is blocked');
     }
 
+    // Busca somente os membros da conta pertencentes ao Tenant.
     const members = await this.accountMemberRepository.findManyByAccountId(
       input.accountId,
+      input.tenantId,
     );
 
+    // Complementa o vínculo AccountMember com os dados do Identity.
     return Promise.all(
       members.map(async (member) => {
         const user = await this.userRepository.findById(member.userId);

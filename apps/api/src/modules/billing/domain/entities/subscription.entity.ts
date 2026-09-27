@@ -1,0 +1,153 @@
+import { SubscriptionStatus } from '../enums/subscription-status.enum';
+
+/**
+ * Representa uma assinatura de um Tenant a um plano comercial.
+ *
+ * A entidade controla o estado da assinatura dentro do domínio.
+ */
+export class SubscriptionEntity {
+  constructor(
+    public readonly id: string,
+    public readonly tenantId: string,
+    public planId: string,
+    public status: SubscriptionStatus,
+    public readonly startedAt: Date,
+    public currentPeriodStart: Date,
+    public currentPeriodEnd: Date,
+    public trialEndsAt: Date | null,
+    public cancelledAt: Date | null,
+    public readonly createdAt: Date,
+    public updatedAt: Date,
+  ) {}
+
+  /**
+   * Indica se a assinatura está em período de avaliação.
+   */
+  get isTrial(): boolean {
+    return this.status === SubscriptionStatus.TRIALING;
+  }
+
+  /**
+   * Indica se a assinatura está ativa.
+   */
+  get isActive(): boolean {
+    return this.status === SubscriptionStatus.ACTIVE;
+  }
+
+  /**
+   * Indica se a assinatura está aguardando confirmação
+   * de pagamento.
+   */
+  get isPending(): boolean {
+    return this.status === SubscriptionStatus.PENDING;
+  }
+
+  /**
+   * Indica se o período gratuito terminou.
+   *
+   * A regra só se aplica enquanto a assinatura estiver em TRIALING.
+   */
+  hasTrialExpired(referenceDate: Date = new Date()): boolean {
+    return (
+      this.isTrial &&
+      this.trialEndsAt !== null &&
+      this.trialEndsAt.getTime() <= referenceDate.getTime()
+    );
+  }
+
+  /**
+   * Indica se a assinatura permite utilização dos recursos comerciais.
+   *
+   * Somente assinaturas ACTIVE e TRIALING ainda válido permitem
+   * acesso aos recursos protegidos por Billing.
+   */
+  get hasCommercialAccess(): boolean {
+    if (this.isActive) {
+      return true;
+    }
+
+    if (this.isTrial) {
+      return !this.hasTrialExpired();
+    }
+
+    return false;
+  }
+
+  /**
+   * Indica se a assinatura não deve mais permitir utilização
+   * normal dos recursos do plano.
+   */
+  get isInactive(): boolean {
+    return [
+      SubscriptionStatus.CANCELLED,
+      SubscriptionStatus.EXPIRED,
+      SubscriptionStatus.SUSPENDED,
+    ].includes(this.status);
+  }
+
+  /**
+   * Altera o plano associado à assinatura.
+   *
+   * A decisão sobre permitir ou não a troca pertence ao
+   * caso de uso. A entidade apenas altera o estado interno.
+   */
+  changePlan(planId: string, updatedAt: Date = new Date()): void {
+    this.planId = planId;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Coloca a assinatura aguardando confirmação de pagamento.
+   *
+   * Utilizado quando um Tenant em Trial converte a assinatura
+   * para um plano pago.
+   */
+  markAsPending(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.PENDING;
+    this.cancelledAt = null;
+    this.trialEndsAt = null;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Cancela a assinatura.
+   */
+  cancel(cancelledAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.CANCELLED;
+    this.cancelledAt = cancelledAt;
+    this.updatedAt = cancelledAt;
+  }
+
+  /**
+   * Ativa a assinatura após confirmação do pagamento.
+   */
+  activate(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.ACTIVE;
+    this.cancelledAt = null;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Coloca a assinatura em atraso.
+   */
+  markAsPastDue(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.PAST_DUE;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Suspende a assinatura.
+   */
+  suspend(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.SUSPENDED;
+    this.updatedAt = updatedAt;
+  }
+
+  /**
+   * Expira a assinatura.
+   */
+  expire(updatedAt: Date = new Date()): void {
+    this.status = SubscriptionStatus.EXPIRED;
+    this.updatedAt = updatedAt;
+  }
+}

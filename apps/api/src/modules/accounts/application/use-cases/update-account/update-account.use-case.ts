@@ -6,13 +6,20 @@ import { AccountType } from '../../../domain/enums/account-type.enum';
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 import { AccountRepository } from '../../../domain/repositories/account.repository';
 
+/**
+ * Dados necessários para atualizar uma conta.
+ */
 export interface UpdateAccountInput {
   userId: string;
+  tenantId: string;
   accountId: string;
   name: string;
   type: AccountType;
 }
 
+/**
+ * Dados retornados após a atualização da conta.
+ */
 export interface UpdateAccountOutput {
   id: string;
   name: string;
@@ -26,6 +33,13 @@ export interface UpdateAccountOutput {
   updatedAt: Date;
 }
 
+/**
+ * Atualiza os dados cadastrais de uma conta.
+ *
+ * A alteração é permitida somente para OWNER e MANAGER.
+ * A entidade AccountEntity permanece responsável pelas
+ * regras próprias de alteração da conta.
+ */
 @Injectable()
 export class UpdateAccountUseCase {
   constructor(
@@ -33,18 +47,13 @@ export class UpdateAccountUseCase {
     private readonly accountMemberRepository: AccountMemberRepository,
   ) {}
 
-  /**
-   * Atualiza os dados cadastrais de uma conta.
-   *
-   * A alteração é permitida somente para OWNER e MANAGER.
-   * A regra de negócio da própria entidade AccountEntity
-   * permanece responsável por validar se a conta pode ser modificada.
-   */
   async execute(input: UpdateAccountInput): Promise<UpdateAccountOutput> {
+    // Valida o vínculo do usuário com a conta dentro do Tenant.
     const currentMember =
       await this.accountMemberRepository.findByAccountIdAndUserId(
         input.accountId,
         input.userId,
+        input.tenantId,
       );
 
     // Não expõe a existência da conta para usuários sem vínculo.
@@ -60,7 +69,11 @@ export class UpdateAccountUseCase {
       throw new NotFoundException('Account not found');
     }
 
-    const account = await this.accountRepository.findById(input.accountId);
+    // Busca a conta dentro do Tenant ativo.
+    const account = await this.accountRepository.findById(
+      input.accountId,
+      input.tenantId,
+    );
 
     if (!account) {
       throw new NotFoundException('Account not found');
@@ -69,7 +82,11 @@ export class UpdateAccountUseCase {
     // A entidade aplica as regras de domínio para alteração.
     account.updateDetails(input.name, input.type);
 
-    const updatedAccount = await this.accountRepository.update(account);
+    // Persiste a alteração mantendo o Tenant explícito.
+    const updatedAccount = await this.accountRepository.update(
+      account,
+      input.tenantId,
+    );
 
     return {
       id: updatedAccount.id,

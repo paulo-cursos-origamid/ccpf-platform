@@ -17,12 +17,14 @@ import { AddAccountMemberUseCase } from './application/use-cases/add-account-mem
 import { ListAccountMembersUseCase } from './application/use-cases/list-account-members/list-account-members.use-case';
 import { ListAvailableAccountUsersUseCase } from './application/use-cases/list-available-account-users/list-available-account-users.use-case';
 import { IdentityModule } from '../identity/identity.module';
+import { TenantModule } from '../tenant/tenant.module';
+import { BillingModule } from '../billing/billing.module';
 import { UpdateAccountMemberRoleUseCase } from './application/use-cases/update-account-member-role/update-account-member-role.use-case';
 import { BlockAccountMemberUseCase } from './application/use-cases/block-account-member/block-account-member.use-case';
 import { UnblockAccountMemberUseCase } from './application/use-cases/unblock-account-member/unblock-account-member.use-case';
 
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, TenantModule, BillingModule],
   controllers: [AccountsController],
 
   providers: [

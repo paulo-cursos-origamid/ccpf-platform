@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================
+// IDENTITY
+// ============================================================
+
+// Usuário global da plataforma.
+// O usuário pode participar de vários Tenants através de TenantMember.
 model User {
   id                         String    @id @default(uuid())
   name                       String
@@ -25,6 +31,8 @@ model User {
   verificationToken          String?
   verificationTokenExpiresAt DateTime?
 
+  tenantMembers  TenantMember[]
+  platformRoles  UserPlatformRole[]
   accountMembers AccountMember[]
 }
 
@@ -35,8 +43,317 @@ enum UserRole {
   SUPPORT
 }
 
+// ============================================================
+// TENANT
+// ============================================================
+
+// Representa o ambiente/cliente isolado dentro da plataforma SaaS.
+//
+// Todo dado financeiro pertencente ao cliente deverá estar
+// associado ao Tenant correspondente.
+model Tenant {
+  id     String       @id @default(uuid())
+  name   String
+  slug   String       @unique
+  status TenantStatus @default(ACTIVE)
+
+  members       TenantMember[]
+  accounts      Account[]
+  subscriptions Subscription[]
+  invoices      Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Estado operacional do Tenant.
+// O status da assinatura é controlado separadamente por Subscription.
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// Vínculo entre um usuário e um Tenant.
+//
+// Um mesmo usuário pode pertencer a vários Tenants.
+// O papel aqui é diferente do papel global de User
+// e diferente do papel de AccountMember.
+model TenantMember {
+  id       String @id @default(uuid())
+  tenantId String
+  userId   String
+
+  role   TenantRole
+  status TenantMemberStatus @default(ACTIVE)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum TenantMemberStatus {
+  ACTIVE
+  INVITED
+  BLOCKED
+  REMOVED
+}
+
+// ============================================================
+// PLANS
+// ============================================================
+
+// Plano comercial disponibilizado pela plataforma.
+//
+// O plano descreve o produto contratado pelo Tenant.
+// Regras de acesso devem preferencialmente utilizar features,
+// evitando regras espalhadas como "if plan === PREMIUM".
+model Plan {
+  id              String          @id @default(uuid())
+  name            String
+  code            String          @unique
+  description     String?
+  price           Decimal
+  currency        String          @default("BRL")
+  billingInterval BillingInterval
+  maxUsers        Int
+  isPublic        Boolean         @default(true)
+  isActive        Boolean         @default(true)
+
+  features      PlanFeature[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Recursos disponíveis em cada plano.
+model PlanFeature {
+  id      String          @id @default(uuid())
+  planId  String
+  feature PlanFeatureCode
+  enabled Boolean         @default(true)
+
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@unique([planId, feature])
+  @@index([planId])
+}
+
+// Features comerciais iniciais.
+// Novas features podem ser adicionadas conforme os módulos
+// comerciais do CCPF forem implementados.
+enum PlanFeatureCode {
+  DOMESTIC
+  HEALTH
+  TRANSPORT
+  VEHICLES
+  INVESTMENTS
+  OTHER
+  BASIC_REPORTS
+  ADVANCED_REPORTS
+}
+
+// ============================================================
+// SUBSCRIPTIONS
+// ============================================================
+
+// Assinatura comercial de um Tenant.
+//
+// Um Tenant pode possuir várias assinaturas ao longo da vida,
+// permitindo histórico de planos.
+// A regra de apenas uma assinatura ativa simultaneamente
+// será controlada na camada de domínio/aplicação.
+model Subscription {
+  id       String @id @default(uuid())
+  tenantId String
+  planId   String
+
+  status SubscriptionStatus @default(TRIALING)
+
+  startedAt          DateTime
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  cancelledAt        DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([planId])
+  @@index([status])
+}
+
+enum SubscriptionStatus {
+  PENDING
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+// Meio de pagamento aceito pelo CCPF.
+// O domínio começa com PIX e BOLETO e pode receber novos meios
+// futuramente sem depender de um provedor específico.
+enum PaymentMethod {
+  PIX
+  BANK_SLIP
+}
+
+// ============================================================
+// BILLING
+// ============================================================
+
+// Fatura comercial emitida para um Tenant.
+//
+// Invoice representa a cobrança do CCPF pelo uso da plataforma.
+// Ela NÃO representa uma transação financeira da conta do cliente.
+model Invoice {
+  id             String @id @default(uuid())
+  tenantId       String
+  subscriptionId String
+
+  number   String        @unique
+  status   InvoiceStatus
+  amount   Decimal
+  currency String        @default("BRL")
+  dueAt    DateTime
+  paidAt   DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  payments     Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([dueAt])
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+// Pagamento associado a uma Invoice.
+//
+// Uma Invoice pode possuir múltiplas tentativas de pagamento.
+model Payment {
+  id        String @id @default(uuid())
+  invoiceId String
+
+  // Referência interna única da tentativa de pagamento.
+  // É usada para conciliação manual e poderá ser associada
+  // posteriormente ao identificador externo de um gateway.
+  reference String @unique
+
+  // Meio de pagamento utilizado na tentativa.
+  method PaymentMethod
+
+  status   PaymentStatus
+  amount   Decimal
+  currency String @default("BRL")
+  paidAt   DateTime?
+
+  // Data limite para pagamento ou expiração da tentativa.
+  expiresAt DateTime?
+
+  // Identificação abstrata do provedor.
+  //
+  // Durante a operação manual poderá ser "MANUAL".
+  // Futuramente poderá receber o código de um gateway.
+  provider          String?
+  providerPaymentId String?
+
+  // Identificador externo da cobrança.
+  //
+  // Exemplos futuros:
+  // - txid de uma cobrança PIX;
+  // - identificador externo do boleto;
+  // - identificador equivalente fornecido pelo gateway.
+  externalReference String?
+
+  // Dados necessários para cobrança PIX manual.
+  //
+  // O payload de copia e cola pode ser armazenado aqui.
+  // O QR Code pode ser gerado/apresentado pela camada de apresentação
+  // a partir do payload ou persistido separadamente futuramente.
+  pixCopyPaste String?
+
+  // Dados necessários para boleto manual.
+  bankSlipBarcode       String? @map("boletoBarcode")
+  bankSlipDigitableLine String? @map("boletoDigitableLine")
+
+  // Dados adicionais específicos de um provedor.
+  //
+  // Mantém o domínio preparado para campos que surjam em futuras
+  // integrações sem amarrar o schema a um fornecedor.
+  metadata Json?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([status])
+  @@index([method])
+  @@index([provider, providerPaymentId])
+  @@index([externalReference])
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ============================================================
+// ACCOUNTS
+// ============================================================
+
+// Conta financeira pertencente a um Tenant.
+//
+// A conta deixa de ser global e passa a estar isolada
+// dentro de um Tenant.
 model Account {
-  id String @id @default(uuid())
+  id       String @id @default(uuid())
+  tenantId String
 
   name           String
   type           AccountType
@@ -47,16 +364,20 @@ model Account {
   status     AccountStatus
   archivedAt DateTime?
 
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  accountMembers AccountMember[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accountMembers AccountMember[]
-
+  @@index([tenantId])
   @@index([status])
 }
 
 // Representa um vínculo entre um usuário e uma conta financeira.
-// O status controla o acesso daquele usuário especificamente àquela conta.
+//
+// O acesso a uma conta é independente do papel do usuário
+// dentro do Tenant.
 model AccountMember {
   id        String @id @default(uuid())
   accountId String
@@ -65,11 +386,11 @@ model AccountMember {
   role   AccountMemberRole
   status AccountMemberStatus @default(ACTIVE)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
   account Account @relation(fields: [accountId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([accountId, userId])
   @@index([accountId])
@@ -77,6 +398,7 @@ model AccountMember {
   @@index([status])
 }
 
+// Papel do usuário especificamente dentro de uma Account.
 enum AccountMemberRole {
   OWNER
   MANAGER
@@ -85,6 +407,7 @@ enum AccountMemberRole {
 }
 
 // Define se o vínculo do usuário com a conta está ativo ou bloqueado.
+//
 // O bloqueio é específico da conta e não desativa o usuário globalmente.
 enum AccountMemberStatus {
   ACTIVE
@@ -103,4 +426,71 @@ enum AccountType {
 enum AccountStatus {
   ACTIVE
   ARCHIVED
+}
+
+// Representa um papel global do usuário dentro da plataforma CCPF.
+// Diferente de TenantRole, este papel não depende de um Tenant específico.
+model PlatformRole {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+  isSystem    Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  permissions PlatformRolePermission[]
+  users       UserPlatformRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// Representa uma permissão global disponível na plataforma.
+// As permissões são mantidas como registros para permitir evolução
+// do sistema sem transformar cada nova permissão em uma migration.
+model PlatformPermission {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  roles PlatformRolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Relacionamento N:N entre PlatformRole e PlatformPermission.
+// Um papel pode possuir várias permissões e uma permissão pode
+// pertencer a vários papéis.
+model PlatformRolePermission {
+  roleId       String
+  permissionId String
+
+  role       PlatformRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission PlatformPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// Relacionamento N:N entre User e PlatformRole.
+// Um usuário pode possuir vários papéis globais simultaneamente.
+model UserPlatformRole {
+  userId String
+  roleId String
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role PlatformRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
 }

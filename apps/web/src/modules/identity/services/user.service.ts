@@ -2,8 +2,13 @@ import { api } from "@/lib/api/client";
 
 import type { ListUsersQuery, ListUsersResponse } from "../types/user-list";
 import type { UpdateUserInput } from "../types/update-user";
+import type { RegisterDto } from "../types/register.dto";
+import type { User } from "../types/user";
 
 class UserService {
+  /**
+   * Lista os usuários administrados pelo contexto atual.
+   */
   list(query: ListUsersQuery = {}) {
     const params = new URLSearchParams();
 
@@ -27,12 +32,30 @@ class UserService {
 
     return api.get<ListUsersResponse>(path);
   }
+
+  /**
+   * Cria um usuário através do fluxo administrativo.
+   *
+   * Diferente do cadastro público, este endpoint não deve
+   * provisionar automaticamente Tenant, OWNER ou Subscription.
+   */
+  create(dto: RegisterDto) {
+    return api.post<User>("/identity/users", dto);
+  }
+
+  /**
+   * Atualiza um usuário existente.
+   */
   update(id: string, data: UpdateUserInput) {
     return api.patch<ListUsersResponse["users"][number]>(
       `/identity/users/${id}`,
       data,
     );
   }
+
+  /**
+   * Remove/desativa um usuário através do fluxo administrativo.
+   */
   delete(id: string) {
     return api.delete<void>(`/identity/users/${id}`);
   }

@@ -1,4 +1,11 @@
 import {
+  CurrentTenant,
+  TenantContextGuard,
+} from '../../../tenant/presentation';
+
+import type { TenantContext } from '../../../tenant/presentation';
+
+import {
   Body,
   Controller,
   Get,
@@ -10,11 +17,14 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+
+import { SubscriptionAccessGuard } from '../../../billing/presentation/guards/subscription-access.guard';
 
 import {
   CurrentUser,
@@ -51,8 +61,14 @@ import { UpdateAccountDto } from '../dto/update-account.dto';
  */
 @ApiTags('Accounts')
 @ApiBearerAuth('access-token')
+@ApiHeader({
+  name: 'X-Tenant-Id',
+  description: 'Identificador do Tenant ativo para a requisição.',
+  required: true,
+  example: 'tenant-uuid',
+})
 @Controller('accounts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantContextGuard, SubscriptionAccessGuard)
 export class AccountsController {
   constructor(
     private readonly createAccountUseCase: CreateAccountUseCase,
@@ -148,9 +164,13 @@ export class AccountsController {
     status: 401,
     description: 'Token de acesso ausente, inválido ou expirado.',
   })
-  async findAll(@CurrentUser() user: AuthenticatedUser) {
+  async findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
+  ) {
     return this.listAccountsUseCase.execute({
-      userId: user.sub,
+      userId: tenant.userId,
+      tenantId: tenant.tenantId,
     });
   }
 
@@ -197,10 +217,12 @@ export class AccountsController {
   })
   async findOne(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
   ) {
     return this.getAccountUseCase.execute({
-      userId: user.sub,
+      userId: tenant.userId,
+      tenantId: tenant.tenantId,
       accountId,
     });
   }
@@ -267,11 +289,13 @@ export class AccountsController {
   })
   async update(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
     @Body() dto: UpdateAccountDto,
   ) {
     return this.updateAccountUseCase.execute({
-      userId: user.sub,
+      userId: tenant.userId,
+      tenantId: tenant.tenantId,
       accountId,
       name: dto.name,
       type: dto.type,
@@ -353,10 +377,12 @@ export class AccountsController {
   })
   async findMembers(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
   ) {
     return this.listAccountMembersUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
     });
   }
@@ -410,10 +436,12 @@ export class AccountsController {
   })
   async findAvailableUsers(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
   ) {
     return this.listAvailableAccountUsersUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
     });
   }
@@ -474,10 +502,12 @@ export class AccountsController {
   })
   async create(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Body() dto: CreateAccountDto,
   ) {
     return this.createAccountUseCase.execute({
-      userId: user.sub,
+      userId: tenant.userId,
+      tenantId: tenant.tenantId,
       name: dto.name,
       type: dto.type,
       currency: dto.currency,
@@ -539,11 +569,13 @@ export class AccountsController {
   })
   async addMember(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
     @Body() dto: AddAccountMemberDto,
   ) {
     await this.addAccountMemberUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
       memberUserId: dto.userId,
       role: dto.role,
@@ -612,12 +644,14 @@ export class AccountsController {
   })
   async updateMemberRole(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
     @Param('memberId') memberId: string,
     @Body() dto: UpdateAccountMemberRoleDto,
   ) {
     await this.updateAccountMemberRoleUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
       memberId,
       role: dto.role,
@@ -674,11 +708,13 @@ export class AccountsController {
   })
   async blockMember(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
     @Param('memberId') memberId: string,
   ) {
     await this.blockAccountMemberUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
       memberId,
     });
@@ -734,11 +770,13 @@ export class AccountsController {
   })
   async unblockMember(
     @CurrentUser() user: AuthenticatedUser,
+    @CurrentTenant() tenant: TenantContext,
     @Param('id') accountId: string,
     @Param('memberId') memberId: string,
   ) {
     await this.unblockAccountMemberUseCase.execute({
       userId: user.sub,
+      tenantId: tenant.tenantId,
       accountId,
       memberId,
     });

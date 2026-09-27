@@ -18,6 +18,9 @@ import { AccountMemberRepository } from '../../domain/repositories/account-membe
  * Responsável exclusivamente por traduzir entre:
  * - entidades do domínio;
  * - registros persistidos pelo Prisma.
+ *
+ * Como Account pertence a Tenant, as consultas utilizam a relação
+ * Account -> Tenant para garantir isolamento dos dados.
  */
 @Injectable()
 export class PrismaAccountMemberRepository implements AccountMemberRepository {
@@ -25,6 +28,9 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
 
   /**
    * Persiste um novo vínculo de usuário com uma conta.
+   *
+   * A validação de que a conta e o usuário pertencem ao Tenant correto
+   * deve ocorrer na camada de aplicação antes desta operação.
    */
   async create(member: AccountMemberEntity): Promise<AccountMemberEntity> {
     const createdMember = await this.prisma.accountMember.create({
@@ -42,6 +48,8 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
 
   /**
    * Atualiza papel e status do membro.
+   *
+   * A associação já deve ter sido validada pelo use case.
    */
   async update(member: AccountMemberEntity): Promise<AccountMemberEntity> {
     const updatedMember = await this.prisma.accountMember.update({
@@ -60,8 +68,8 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
   /**
    * Remove definitivamente o vínculo do membro.
    *
-   * Continua disponível para futuras operações administrativas,
-   * mas o bloqueio normal deve utilizar block() em vez de delete().
+   * Continua disponível para operações administrativas.
+   * O bloqueio normal deve utilizar o status BLOCKED.
    */
   async delete(member: AccountMemberEntity): Promise<void> {
     await this.prisma.accountMember.delete({
@@ -73,16 +81,20 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
 
   /**
    * Busca um membro específico pelo par conta + usuário.
+   *
+   * A conta também precisa pertencer ao Tenant informado.
    */
   async findByAccountIdAndUserId(
     accountId: string,
     userId: string,
+    tenantId: string,
   ): Promise<AccountMemberEntity | null> {
-    const member = await this.prisma.accountMember.findUnique({
+    const member = await this.prisma.accountMember.findFirst({
       where: {
-        accountId_userId: {
-          accountId,
-          userId,
+        accountId,
+        userId,
+        account: {
+          tenantId,
         },
       },
     });
@@ -92,11 +104,20 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
 
   /**
    * Lista todos os membros de uma conta.
+   *
+   * A consulta é restrita ao Tenant informado através
+   * da relação Account -> Tenant.
    */
-  async findManyByAccountId(accountId: string): Promise<AccountMemberEntity[]> {
+  async findManyByAccountId(
+    accountId: string,
+    tenantId: string,
+  ): Promise<AccountMemberEntity[]> {
     const members = await this.prisma.accountMember.findMany({
       where: {
         accountId,
+        account: {
+          tenantId,
+        },
       },
       orderBy: {
         createdAt: 'asc',
@@ -107,12 +128,18 @@ export class PrismaAccountMemberRepository implements AccountMemberRepository {
   }
 
   /**
-   * Lista todos os vínculos de um usuário.
+   * Lista todos os vínculos de um usuário dentro do Tenant informado.
    */
-  async findManyByUserId(userId: string): Promise<AccountMemberEntity[]> {
+  async findManyByUserId(
+    userId: string,
+    tenantId: string,
+  ): Promise<AccountMemberEntity[]> {
     const members = await this.prisma.accountMember.findMany({
       where: {
         userId,
+        account: {
+          tenantId,
+        },
       },
       orderBy: {
         createdAt: 'asc',

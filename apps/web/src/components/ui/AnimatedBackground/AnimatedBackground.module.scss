@@ -1,0 +1,574 @@
+/**
+ * Sistema visual do background animado da Landing.
+ *
+ * Utiliza os tokens oficiais do tema para funcionar
+ * corretamente em light e dark mode.
+ */
+
+.background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.grid {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(to right, var(--border-secondary) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-secondary) 1px, transparent 1px);
+  background-size: 64px 64px;
+  transform: perspective(900px) rotateX(58deg) translateY(18%);
+  transform-origin: center bottom;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.9) 35%,
+    rgba(0, 0, 0, 0.55) 70%,
+    transparent 100%
+  );
+  animation: gridMove 24s linear infinite;
+}
+
+/* ============================================================
+   GLOWS
+   ============================================================ */
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.22;
+  will-change: transform;
+}
+
+.glowPrimary {
+  width: 520px;
+  height: 520px;
+  top: -220px;
+  left: -160px;
+  background: rgba(var(--accent-primary-rgb), 0.5);
+  animation: glowPrimary 16s ease-in-out infinite alternate;
+}
+
+.glowSecondary {
+  width: 460px;
+  height: 460px;
+  top: 15%;
+  right: -180px;
+  background: rgba(var(--accent-secondary-rgb), 0.42);
+  animation: glowSecondary 19s ease-in-out infinite alternate;
+}
+
+.glowTertiary {
+  width: 380px;
+  height: 380px;
+  bottom: -180px;
+  left: 38%;
+  background: rgba(var(--info-rgb), 0.22);
+  animation: glowTertiary 21s ease-in-out infinite alternate;
+}
+
+/* ============================================================
+   MOEDAS
+   ============================================================ */
+
+.coin {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 150px;
+  height: 150px;
+  color: var(--accent-secondary);
+  opacity: 0.5;
+  filter: drop-shadow(0 0 22px rgba(var(--accent-secondary-rgb), 0.22));
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.coin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.coinOne {
+  top: 9%;
+  left: 7%;
+  color: var(--accent-secondary);
+  animation: coinFloatOne 15s ease-in-out infinite;
+}
+
+.coinTwo {
+  top: 53%;
+  right: 9%;
+  width: 105px;
+  height: 105px;
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 20px rgba(var(--accent-primary-rgb), 0.3));
+  animation: coinFloatTwo 12s ease-in-out infinite;
+}
+
+.coinThree {
+  bottom: 10%;
+  left: 27%;
+  width: 75px;
+  height: 75px;
+  color: var(--info);
+  filter: drop-shadow(0 0 18px rgba(var(--info-rgb), 0.25));
+  animation: coinFloatThree 10s ease-in-out infinite;
+}
+
+/* ============================================================
+   LINHAS FINANCEIRAS
+   ============================================================ */
+
+.financialLines {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+}
+
+.financialLines span {
+  position: absolute;
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--accent-primary-rgb), 0.15),
+    rgba(var(--accent-primary-rgb), 0.8),
+    rgba(var(--accent-secondary-rgb), 0.45),
+    transparent
+  );
+  filter: blur(0.2px);
+}
+
+.lineOne {
+  width: 420px;
+  top: 27%;
+  left: -80px;
+  transform: rotate(17deg);
+  animation: financialLineOne 8s ease-in-out infinite;
+}
+
+.lineTwo {
+  width: 520px;
+  top: 63%;
+  right: -140px;
+  transform: rotate(-13deg);
+  animation: financialLineTwo 10s ease-in-out infinite;
+}
+
+.lineThree {
+  width: 340px;
+  bottom: 17%;
+  left: 18%;
+  transform: rotate(-7deg);
+  animation: financialLineThree 9s ease-in-out infinite;
+}
+
+/* ============================================================
+   CIFRÕES
+   ============================================================ */
+
+.particles {
+  position: absolute;
+  inset: 0;
+}
+
+.particles span {
+  position: absolute;
+  display: block;
+  width: 18px;
+  height: 24px;
+  color: var(--accent-primary);
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 24px;
+  text-align: center;
+  text-shadow: 0 0 14px rgba(var(--accent-primary-rgb), 0.55);
+  opacity: 0;
+  animation: particleFloat 7s ease-in-out infinite;
+}
+
+.particles span:nth-child(1) {
+  top: 17%;
+  left: 19%;
+  animation-delay: -1s;
+}
+
+.particles span:nth-child(2) {
+  top: 29%;
+  left: 42%;
+  animation-delay: -4s;
+}
+
+.particles span:nth-child(3) {
+  top: 13%;
+  right: 22%;
+  animation-delay: -2s;
+}
+
+.particles span:nth-child(4) {
+  top: 44%;
+  right: 7%;
+  animation-delay: -5s;
+}
+
+.particles span:nth-child(5) {
+  top: 66%;
+  right: 27%;
+  animation-delay: -3s;
+}
+
+.particles span:nth-child(6) {
+  bottom: 19%;
+  right: 43%;
+  animation-delay: -6s;
+}
+
+.particles span:nth-child(7) {
+  bottom: 27%;
+  left: 11%;
+  animation-delay: -2.5s;
+}
+
+.particles span:nth-child(8) {
+  bottom: 12%;
+  left: 45%;
+  animation-delay: -5.5s;
+}
+
+.particles span:nth-child(9) {
+  top: 74%;
+  left: 34%;
+  animation-delay: -1.5s;
+}
+
+.particles span:nth-child(10) {
+  top: 37%;
+  left: 5%;
+  animation-delay: -4.5s;
+}
+
+.particles span:nth-child(11) {
+  top: 81%;
+  right: 8%;
+  animation-delay: -3.5s;
+}
+
+.particles span:nth-child(12) {
+  top: 8%;
+  left: 67%;
+  animation-delay: -6.5s;
+}
+
+/* ============================================================
+   REDE DE CONEXÕES
+   ============================================================ */
+
+.connectionNetwork {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+}
+
+.connectionNetwork::before,
+.connectionNetwork::after {
+  content: "";
+  position: absolute;
+  height: 1px;
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-hover),
+    transparent
+  );
+}
+
+.connectionNetwork::before {
+  width: 300px;
+  top: 30%;
+  left: 18%;
+  transform: rotate(24deg);
+}
+
+.connectionNetwork::after {
+  width: 360px;
+  top: 58%;
+  right: 13%;
+  transform: rotate(-20deg);
+}
+
+.connectionNetwork span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-primary);
+  background: var(--surface-primary);
+  box-shadow: 0 0 16px rgba(var(--accent-primary-rgb), 0.45);
+  animation: nodePulse 4s ease-in-out infinite;
+}
+
+.nodeOne {
+  top: 29%;
+  left: 19%;
+}
+
+.nodeTwo {
+  top: 42%;
+  left: 36%;
+  animation-delay: -1s !important;
+}
+
+.nodeThree {
+  top: 55%;
+  right: 30%;
+  animation-delay: -2s !important;
+}
+
+.nodeFour {
+  top: 61%;
+  right: 14%;
+  animation-delay: -3s !important;
+}
+
+.nodeFive {
+  bottom: 21%;
+  left: 31%;
+  animation-delay: -1.5s !important;
+}
+
+/* ============================================================
+   VIGNETTE
+   ============================================================ */
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 40%,
+    transparent 0%,
+    transparent 35%,
+    rgba(2, 6, 23, 0.035) 100%
+  );
+}
+
+/* ============================================================
+   ANIMAÇÕES
+   ============================================================ */
+
+@keyframes gridMove {
+  from {
+    transform: perspective(900px) rotateX(58deg) translateY(18%);
+  }
+
+  to {
+    transform: perspective(900px) rotateX(58deg) translateY(24%);
+  }
+}
+
+@keyframes glowPrimary {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(80px, 50px, 0) scale(1.16);
+  }
+}
+
+@keyframes glowSecondary {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(-90px, 60px, 0) scale(1.12);
+  }
+}
+
+@keyframes glowTertiary {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.92);
+  }
+
+  100% {
+    transform: translate3d(50px, -70px, 0) scale(1.1);
+  }
+}
+
+/* Moeda dourada */
+@keyframes coinFloatOne {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-8deg) rotateY(0deg);
+  }
+
+  50% {
+    transform: translate3d(42px, -32px, 0) rotate(8deg) rotateY(180deg);
+  }
+}
+
+/* Moeda verde */
+@keyframes coinFloatTwo {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(6deg) rotateY(180deg);
+  }
+
+  50% {
+    transform: translate3d(-32px, 35px, 0) rotate(-8deg) rotateY(0deg);
+  }
+}
+
+/* Moeda azul */
+@keyframes coinFloatThree {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-4deg) rotateY(0deg);
+  }
+
+  50% {
+    transform: translate3d(26px, -26px, 0) rotate(7deg) rotateY(180deg);
+  }
+}
+
+@keyframes financialLineOne {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateX(0) rotate(17deg);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: translateX(100px) rotate(19deg);
+  }
+}
+
+@keyframes financialLineTwo {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateX(0) rotate(-13deg);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: translateX(-100px) rotate(-16deg);
+  }
+}
+
+@keyframes financialLineThree {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateX(0) rotate(-7deg);
+  }
+
+  50% {
+    opacity: 0.65;
+    transform: translateX(80px) rotate(-4deg);
+  }
+}
+
+@keyframes particleFloat {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.65) rotate(-8deg);
+  }
+
+  25% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.75;
+    transform: translate3d(0, -24px, 0) scale(1) rotate(6deg);
+  }
+
+  75% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .grid {
+    background-size: 48px 48px;
+  }
+
+  .glow {
+    filter: blur(70px);
+    opacity: 0.17;
+  }
+
+  .coinOne {
+    width: 110px;
+    height: 110px;
+    left: -25px;
+  }
+
+  .coinTwo {
+    width: 80px;
+    height: 80px;
+    right: -15px;
+  }
+
+  .coinThree {
+    width: 55px;
+    height: 55px;
+  }
+
+  .financialLines {
+    opacity: 0.35;
+  }
+
+  .connectionNetwork {
+    opacity: 0.2;
+  }
+}
+
+/* ============================================================
+   ACESSIBILIDADE
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .grid,
+  .glow,
+  .coin,
+  .financialLines span,
+  .particles span,
+  .connectionNetwork span {
+    animation: none !important;
+  }
+}

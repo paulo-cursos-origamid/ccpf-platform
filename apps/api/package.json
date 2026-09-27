@@ -5,7 +5,8 @@
   "author": "",
   "private": true,
   "prisma": {
-    "schema": "prisma/schema.prisma"
+    "schema": "prisma/schema.prisma",
+    "seed": "ts-node prisma/seed.ts"
   },
   "license": "UNLICENSED",
   "scripts": {

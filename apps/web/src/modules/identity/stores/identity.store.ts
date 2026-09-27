@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useTenantStore } from "@/modules/tenant/stores";
 
 import type { User } from "../types/user";
 import type { LoginDto } from "../types/login.dto";
@@ -78,6 +79,8 @@ export const useIdentityStore = create<IdentityState>()((set) => ({
     try {
       await identityService.logout();
     } finally {
+      useTenantStore.getState().clear();
+
       set({
         user: null,
         isAuthenticated: false,

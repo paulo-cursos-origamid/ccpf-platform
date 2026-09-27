@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { UserRepository } from '../../../domain/repositories/user.repository';
 import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
 import { TokenProviderContract } from '../../../domain/contracts/token-provider.contract';
-import { UserRole } from 'src/modules/identity/domain/entities/user.entity';
+import { UserRole } from '../../../domain/entities/user.entity';
 
 export interface LoginInput {
   email: string;

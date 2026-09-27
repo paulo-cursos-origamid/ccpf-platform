@@ -25,6 +25,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { CreateUserUseCase } from '../../application/use-cases/create-user/create-user.use-case';
+import { CreatePublicUserUseCase } from '../../application/use-cases/create-public-user/create-public-user.use-case';
 import { DeleteUserUseCase } from '../../application/use-cases/delete-user/delete-user.use-case';
 import { ForgotPasswordUseCase } from '../../application/use-cases/forgot-password/forgot-password.use-case';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile/get-profile.use-case';
@@ -36,14 +37,7 @@ import { ResetPasswordUseCase } from '../../application/use-cases/reset-password
 import { UpdateUserUseCase } from '../../application/use-cases/update-user/update-user.use-case';
 import { VerifyEmailUseCase } from '../../application/use-cases/verify-email/verify-email.use-case';
 
-import { UserRole } from '../../domain/entities/user.entity';
-
-import {
-  CurrentUser,
-  Roles,
-  RolesGuard,
-  type AuthenticatedUser,
-} from '../../infrastructure/auth';
+import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -72,11 +66,14 @@ interface RefreshRequest extends Request {
  *
  * A regra de negócio permanece nos Use Cases e no domínio.
  */
+import { RequirePlatformPermission } from '../decorators/platform-permission.decorator';
+import { PlatformPermissionGuard } from '../guards/platform-permission.guard';
 @ApiTags('Identity')
 @Controller('identity')
 export class IdentityController {
   constructor(
     private readonly createUserUseCase: CreateUserUseCase,
+    private readonly createPublicUserUseCase: CreatePublicUserUseCase,
     private readonly loginUseCase: LoginUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly verifyEmailUseCase: VerifyEmailUseCase,
@@ -125,18 +122,56 @@ export class IdentityController {
   }
 
   /**
+   * Realiza o cadastro público de um novo cliente SaaS.
+   *
+   * O fluxo provisiona User, Tenant, OWNER e Subscription TRIALING
+   * em uma única transação.
+   */
+  @Post('register')
+  @ApiOperation({
+    summary: 'Realizar cadastro público',
+    description:
+      'Cria o usuário, seu Tenant, o vínculo como OWNER e uma assinatura TRIALING de 14 dias.',
+  })
+  @ApiBody({
+    type: CreateUserDto,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Cadastro realizado com sucesso.',
+    schema: {
+      example: {
+        id: 'c8d7f9d7-3d6e-4c0f-9b7f-123456789abc',
+        name: 'João da Silva',
+        email: 'joao@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'O e-mail informado já está cadastrado.',
+  })
+  async register(@Body() dto: CreateUserDto) {
+    return this.createPublicUserUseCase.execute({
+      name: dto.name,
+      email: dto.email,
+      password: dto.password,
+    });
+  }
+
+  /**
    * Lista usuários com paginação e busca.
    *
    * Acesso restrito a administradores autenticados.
    */
   @Get('users')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('USERS_READ')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Listar usuários',
     description:
-      'Retorna usuários paginados. O endpoint exige autenticação JWT e permissão ADMIN.',
+      'Retorna usuários paginados. O endpoint exige autenticação JWT e a permissão global USERS_READ.',
   })
   @ApiQuery({
     name: 'page',
@@ -195,7 +230,7 @@ export class IdentityController {
   })
   @ApiResponse({
     status: 403,
-    description: 'Usuário autenticado sem permissão ADMIN.',
+    description: 'Usuário autenticado sem a permissão global USERS_READ.',
   })
   async listUsers(@Query() query: ListUsersQueryDto) {
     return this.listUsersUseCase.execute({
@@ -334,13 +369,13 @@ export class IdentityController {
    * Acesso restrito a administradores autenticados.
    */
   @Patch('users/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('USERS_UPDATE')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Atualizar usuário',
     description:
-      'Atualiza os dados de um usuário. O endpoint exige autenticação JWT e permissão ADMIN.',
+      'Atualiza os dados de um usuário. O endpoint exige autenticação JWT e a permissão global USERS_UPDATE.',
   })
   @ApiParam({
     name: 'id',
@@ -383,13 +418,13 @@ export class IdentityController {
    * Acesso restrito a administradores autenticados.
    */
   @Delete('users/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('USERS_DELETE')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Excluir usuário',
     description:
-      'Executa a exclusão lógica de um usuário. O endpoint exige autenticação JWT e permissão ADMIN.',
+      'Executa a exclusão lógica de um usuário. O endpoint exige autenticação JWT e a permissão global USERS_DELETE.',
   })
   @ApiParam({
     name: 'id',

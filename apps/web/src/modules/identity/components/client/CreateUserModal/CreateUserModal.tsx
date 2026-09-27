@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay/Modal";
 
-import { useRegister } from "../../../hooks/client";
+import { useCreateUser } from "../../../hooks/client";
 
 import styles from "./CreateUserModal.module.scss";
 import { UserRound } from "@/components/icons";
@@ -27,7 +27,7 @@ export function CreateUserModal({
   onClose,
   onSuccess,
 }: CreateUserModalProps) {
-  const { register, loading, error } = useRegister();
+  const { createUser, loading, error } = useCreateUser();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -71,11 +71,11 @@ export function CreateUserModal({
     }
 
     try {
-      await register({
-        name: name.trim(),
-        email: email.trim(),
-        password,
-      });
+await createUser({
+  name: name.trim(),
+  email: email.trim(),
+  password,
+});
 
       await onSuccess();
 

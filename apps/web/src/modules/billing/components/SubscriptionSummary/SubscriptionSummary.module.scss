@@ -1,0 +1,303 @@
+.summary {
+  width: 100%;
+
+  padding: var(--spacing-sm);
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+
+  background: var(--surface-primary);
+
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.summary:hover {
+  border-color: var(--border-secondary);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+
+  gap: var(--spacing-sm);
+}
+
+.planIcon {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+}
+
+.planInfo {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+}
+
+.planTitle {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: var(--spacing-xs);
+
+  overflow: hidden;
+}
+
+.planCode {
+  overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+
+  letter-spacing: 0.04em;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.status {
+  overflow: hidden;
+
+  color: var(--text-secondary);
+
+  font-size: var(--font-xs);
+  font-weight: 500;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  margin-top: var(--spacing-sm);
+  padding-left: 40px;
+}
+
+.detail {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  color: var(--text-secondary);
+
+  font-size: var(--font-xs);
+  line-height: 1.4;
+}
+
+.detail svg {
+  flex-shrink: 0;
+}
+
+.detail span {
+  overflow: hidden;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.action {
+  margin-top: var(--spacing-sm);
+}
+
+.action button {
+  min-height: 32px;
+
+  padding-top: 6px;
+  padding-bottom: 6px;
+
+  font-size: var(--font-xs);
+}
+
+/* ============================================================
+ * Estados comerciais
+ * ============================================================ */
+
+.trial {
+  border-color: var(--accent-primary);
+}
+
+.trial .planIcon {
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+.active .planIcon {
+  background: var(--surface-tertiary);
+  color: var(--accent-primary);
+}
+
+.expired {
+  border-color: var(--border-primary);
+}
+
+.expired .planIcon {
+  background: var(--surface-tertiary);
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+ * Loading
+ * ============================================================ */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--spacing-sm);
+}
+
+.loadingHeader {
+  display: flex;
+  align-items: center;
+
+  gap: var(--spacing-sm);
+}
+
+.loadingIcon {
+  width: 32px;
+  height: 32px;
+
+  flex-shrink: 0;
+
+  border-radius: var(--radius-md);
+
+  background: var(--surface-tertiary);
+
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loadingContent {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.loadingLine,
+.loadingLineShort,
+.loadingDetail,
+.loadingDetailShort {
+  display: block;
+
+  border-radius: var(--radius-full);
+
+  background: var(--surface-tertiary);
+
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loadingLine {
+  width: 72px;
+  height: 10px;
+}
+
+.loadingLineShort {
+  width: 100px;
+  height: 8px;
+}
+
+.loadingDetail {
+  width: 90px;
+  height: 8px;
+}
+
+.loadingDetailShort {
+  width: 120px;
+  height: 8px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+ * Sidebar recolhido
+ * ============================================================ */
+
+.collapsedSummary {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0 auto;
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.collapsedSummary:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+
+  transform: translateY(-1px);
+}
+
+.collapsedSummary.trial {
+  border-color: var(--accent-primary);
+
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+}
+
+.collapsedSummary.active {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ============================================================
+ * Responsividade
+ * ============================================================ */
+
+@media (max-width: 768px) {
+  .summary {
+    max-width: none;
+  }
+}

@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 
 import { UserRepository } from './domain/repositories/user.repository';
+import { PublicUserProvisioningRepository } from './domain/repositories/public-user-provisioning.repository';
 
 import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository';
+import { PrismaPublicUserProvisioningRepository } from './infrastructure/persistence/prisma-public-user-provisioning.repository';
 
 import { CreateUserUseCase } from './application/use-cases/create-user/create-user.use-case';
+import { CreatePublicUserUseCase } from './application/use-cases/create-public-user/create-public-user.use-case';
 import { IdentityController } from './presentation/controllers/identity.controller';
 
 import { BcryptPasswordHasherService } from './infrastructure/security/bcrypt-password-hasher.service';
@@ -31,6 +34,9 @@ import { PasswordResetNotifierContract } from './domain/contracts/password-reset
 import { EmailVerificationNotifierContract } from './domain/contracts/email-verification-notifier.contract';
 import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/smtp-email-verification-notifier.service';
 
+import { PlatformAuthorizationRepository } from './domain/repositories/platform-authorization.repository';
+import { PrismaPlatformAuthorizationRepository } from './infrastructure/repositories/prisma-platform-authorization.repository';
+import { PlatformPermissionGuard } from './presentation/guards/platform-permission.guard';
 @Module({
   imports: [
     PassportModule.register({
@@ -46,7 +52,13 @@ import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/sm
   controllers: [IdentityController],
 
   providers: [
+    PlatformPermissionGuard,
+    {
+      provide: PlatformAuthorizationRepository,
+      useClass: PrismaPlatformAuthorizationRepository,
+    },
     CreateUserUseCase,
+    CreatePublicUserUseCase,
     LoginUseCase,
     LogoutUseCase,
     VerifyEmailUseCase,
@@ -63,6 +75,10 @@ import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/sm
     {
       provide: UserRepository,
       useClass: PrismaUserRepository,
+    },
+    {
+      provide: PublicUserProvisioningRepository,
+      useClass: PrismaPublicUserProvisioningRepository,
     },
     {
       provide: PasswordHasherContract,
@@ -86,6 +102,8 @@ import { SmtpEmailVerificationNotifier } from './infrastructure/notifications/sm
     LoginUseCase,
     PasswordHasherContract,
     UserRepository,
+    PlatformPermissionGuard,
+    PlatformAuthorizationRepository,
   ],
 })
 export class IdentityModule {}

@@ -1,15 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { AccountEntity } from '../../../domain/entities/account.entity';
+import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 import { AccountRepository } from '../../../domain/repositories/account.repository';
-import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
 
+/**
+ * Dados necessários para consultar uma conta.
+ */
 export interface GetAccountInput {
   userId: string;
+  tenantId: string;
   accountId: string;
 }
 
+/**
+ * Dados públicos da conta retornados pela aplicação.
+ */
 export interface GetAccountOutput {
   id: string;
   name: string;
@@ -24,6 +31,11 @@ export interface GetAccountOutput {
   updatedAt: Date;
 }
 
+/**
+ * Consulta uma conta respeitando o Tenant ativo.
+ *
+ * O acesso é determinado pelo vínculo AccountMember.
+ */
 @Injectable()
 export class GetAccountUseCase {
   constructor(
@@ -31,24 +43,24 @@ export class GetAccountUseCase {
     private readonly accountRepository: AccountRepository,
   ) {}
 
-  /**
-   * Retorna os dados de uma conta para um usuário autenticado.
-   *
-   * O acesso é validado através do vínculo AccountMember.
-   * O role retornado representa a permissão do usuário
-   * especificamente dentro desta conta.
-   */
   async execute(input: GetAccountInput): Promise<GetAccountOutput> {
+    // Valida que o usuário possui vínculo com a conta
+    // dentro do Tenant informado.
     const member = await this.accountMemberRepository.findByAccountIdAndUserId(
       input.accountId,
       input.userId,
+      input.tenantId,
     );
 
     if (!member) {
       throw new NotFoundException('Account not found');
     }
 
-    const account = await this.accountRepository.findById(input.accountId);
+    // A conta também é consultada de forma tenant-scoped.
+    const account = await this.accountRepository.findById(
+      input.accountId,
+      input.tenantId,
+    );
 
     if (!account) {
       throw new NotFoundException('Account not found');
@@ -60,8 +72,8 @@ export class GetAccountUseCase {
   /**
    * Converte a entidade de domínio para o contrato de saída da API.
    *
-   * O role é recebido separadamente porque pertence ao vínculo
-   * do usuário com a conta, e não à entidade Account.
+   * O role pertence ao vínculo do usuário com a conta,
+   * por isso é recebido separadamente da entidade Account.
    */
   private toOutput(
     account: AccountEntity,

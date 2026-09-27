@@ -25,11 +25,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Configura o acesso da aplicação web à API.
+  // Configura o acesso da aplicação web à API.
   app.enableCors({
     origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],
   });
 
   // Configura a documentação OpenAPI da API.
