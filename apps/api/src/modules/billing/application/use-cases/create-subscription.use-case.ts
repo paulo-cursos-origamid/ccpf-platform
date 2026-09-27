@@ -14,6 +14,7 @@ import { SubscriptionStatus } from '../../domain/enums/subscription-status.enum'
 import { PlanRepository } from '../../domain/repositories/plan.repository';
 import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
 import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
+import { CreateInvoiceUseCase } from './invoice/create-invoice.use-case';
 
 /**
  * Dados necessários para criar uma assinatura.
@@ -33,10 +34,9 @@ export interface CreateSubscriptionInput {
  * - o Tenant não pode possuir outra assinatura corrente;
  * - o plano TRIAL inicia como TRIALING;
  * - planos pagos iniciam como PENDING;
- * - pagamentos não são processados neste caso de uso.
+ * - planos pagos geram uma Invoice pendente para cobrança.
  *
- * A integridade de banco também impede duas assinaturas correntes
- * para o mesmo Tenant em operações concorrentes.
+ * O processamento do pagamento não pertence a este caso de uso.
  */
 @Injectable()
 export class CreateSubscriptionUseCase {
@@ -44,6 +44,7 @@ export class CreateSubscriptionUseCase {
     private readonly planRepository: PlanRepository,
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
+    private readonly createInvoiceUseCase: CreateInvoiceUseCase,
   ) {}
 
   async execute(input: CreateSubscriptionInput): Promise<SubscriptionEntity> {
@@ -73,12 +74,10 @@ export class CreateSubscriptionUseCase {
     }
 
     const now = new Date();
-
     const isTrial = plan.code === 'TRIAL';
 
     const currentPeriodStart = now;
     const currentPeriodEnd = this.calculatePeriodEnd(now, plan);
-
     const trialEndsAt = isTrial ? this.calculateTrialEnd(now) : null;
 
     const status = isTrial
@@ -100,12 +99,26 @@ export class CreateSubscriptionUseCase {
     );
 
     try {
-      return await this.subscriptionRepository.create(subscription);
+      const createdSubscription =
+        await this.subscriptionRepository.create(subscription);
+
+      /**
+       * Planos pagos geram imediatamente a obrigação financeira.
+       *
+       * O plano TRIAL não gera Invoice porque não existe
+       * cobrança comercial durante o período gratuito.
+       */
+      if (!isTrial) {
+        await this.createInvoiceUseCase.execute({
+          subscriptionId: createdSubscription.id,
+        });
+      }
+
+      return createdSubscription;
     } catch (error) {
       /**
        * A verificação anterior é necessária para a experiência normal.
-       * A restrição do banco é a proteção contra duas requisições
-       * concorrentes tentando criar subscriptions para o mesmo Tenant.
+       * A restrição do banco protege contra requisições concorrentes.
        */
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -121,8 +134,8 @@ export class CreateSubscriptionUseCase {
   }
 
   /**
-   * Calcula o final do período comercial da assinatura
-   * de acordo com o intervalo de cobrança definido pelo plano.
+   * Calcula o final do período comercial conforme
+   * o intervalo de cobrança definido pelo plano.
    */
   private calculatePeriodEnd(start: Date, plan: PlanEntity): Date {
     const end = new Date(start);

@@ -19,9 +19,15 @@ import { ChangeSubscriptionPlanUseCase } from '../../application/use-cases/chang
 import { CreateSubscriptionUseCase } from '../../application/use-cases/create-subscription.use-case';
 import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-tenant-subscription.use-case';
 import { ListPublicPlansUseCase } from '../../application/use-cases/list-public-plans.use-case';
+import { ListTenantInvoicesUseCase } from '../../application/use-cases/invoice/list-tenant-invoices.use-case';
+import { GetTenantInvoiceUseCase } from '../../application/use-cases/invoice/get-tenant-invoice.use-case';
+import { CreatePaymentUseCase } from '../../application/use-cases/payment/create-payment.use-case';
+import { ConfirmPaymentUseCase } from '../../application/use-cases/payment/confirm-payment.use-case';
 
 import { ChangeSubscriptionPlanDto } from '../dto/change-subscription-plan.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
+import { CreatePaymentDto } from '../dto/create-payment.dto';
+import { ConfirmPaymentDto } from '../dto/confirm-payment.dto';
 
 import type { TenantContext } from '../../../tenant/presentation/interfaces/tenant-context.interface';
 import { CurrentTenant } from '../../../tenant/presentation/decorators/tenant-context.decorator';
@@ -52,6 +58,10 @@ export class BillingController {
     private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
     private readonly cancelSubscriptionUseCase: CancelSubscriptionUseCase,
     private readonly activateSubscriptionUseCase: ActivateSubscriptionUseCase,
+    private readonly listTenantInvoicesUseCase: ListTenantInvoicesUseCase,
+    private readonly getTenantInvoiceUseCase: GetTenantInvoiceUseCase,
+    private readonly createPaymentUseCase: CreatePaymentUseCase,
+    private readonly confirmPaymentUseCase: ConfirmPaymentUseCase,
   ) {}
 
   /**
@@ -195,6 +205,166 @@ export class BillingController {
     return this.cancelSubscriptionUseCase.execute({
       tenantId: tenant.tenantId,
       userId: user.sub,
+    });
+  }
+
+  /**
+   * Lista as Invoices do Tenant ativo.
+   */
+  @Get('invoices')
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Listar Invoices do Tenant',
+    description: 'Retorna as Invoices pertencentes ao Tenant ativo.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoices retornadas com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário sem acesso ao Tenant.',
+  })
+  async listTenantInvoices(@CurrentTenant() tenant: TenantContext) {
+    return this.listTenantInvoicesUseCase.execute(tenant.tenantId);
+  }
+
+  /**
+   * Consulta uma Invoice específica dentro do Tenant ativo.
+   */
+  @Get('invoices/:invoiceId')
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Consultar Invoice',
+    description: 'Retorna uma Invoice pertencente ao Tenant ativo.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoice retornada com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'A Invoice pertence a outro Tenant.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invoice não encontrada.',
+  })
+  async getTenantInvoice(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('invoiceId') invoiceId: string,
+  ) {
+    return this.getTenantInvoiceUseCase.execute({
+      tenantId: tenant.tenantId,
+      invoiceId,
+    });
+  }
+
+  /**
+   * Cria uma tentativa de pagamento para uma Invoice.
+   *
+   * Somente o OWNER do Tenant pode iniciar o pagamento.
+   */
+  @Post('invoices/:invoiceId/payments')
+  @UseGuards(JwtAuthGuard, TenantContextGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Criar pagamento da Invoice',
+    description:
+      'Cria uma tentativa de pagamento manual utilizando PIX ou BANK_SLIP. Somente o OWNER pode iniciar o pagamento.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Pagamento criado com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados do pagamento ou estado da Invoice inválidos.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não é OWNER ou Invoice pertence a outro Tenant.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invoice não encontrada.',
+  })
+  async createPayment(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('invoiceId') invoiceId: string,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.createPaymentUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: user.sub,
+      invoiceId,
+      method: dto.method,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+      externalReference: dto.externalReference,
+      pixCopyPaste: dto.pixCopyPaste,
+      bankSlipBarcode: dto.bankSlipBarcode,
+      bankSlipDigitableLine: dto.bankSlipDigitableLine,
+      metadata: dto.metadata,
+    });
+  }
+
+  /**
+   * Confirma manualmente um Payment.
+   *
+   * Não utiliza TenantContextGuard porque a operação pertence
+   * ao controle financeiro global da plataforma.
+   */
+  @Patch('payments/:paymentId/confirm')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Confirmar pagamento',
+    description:
+      'Confirma manualmente um Payment e, quando aplicável, quita a Invoice e ativa a Subscription. Exige BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pagamento confirmado com sucesso.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Pagamento, Invoice ou Subscription em estado inválido.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Payment, Invoice ou Subscription não encontrados.',
+  })
+  async confirmPayment(
+    @Param('paymentId') paymentId: string,
+    @Body() dto: ConfirmPaymentDto,
+  ) {
+    return this.confirmPaymentUseCase.execute({
+      paymentId,
+      paidAt: dto.paidAt ? new Date(dto.paidAt) : undefined,
     });
   }
 

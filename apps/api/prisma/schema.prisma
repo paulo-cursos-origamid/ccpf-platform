@@ -219,6 +219,14 @@ enum BillingInterval {
   YEARLY
 }
 
+// Meio de pagamento aceito pelo CCPF.
+// O domínio começa com PIX e BOLETO e pode receber novos meios
+// futuramente sem depender de um provedor específico.
+enum PaymentMethod {
+  PIX
+  BANK_SLIP
+}
+
 // ============================================================
 // BILLING
 // ============================================================
@@ -266,16 +274,53 @@ model Payment {
   id        String @id @default(uuid())
   invoiceId String
 
+  // Referência interna única da tentativa de pagamento.
+  // É usada para conciliação manual e poderá ser associada
+  // posteriormente ao identificador externo de um gateway.
+  reference String @unique
+
+  // Meio de pagamento utilizado na tentativa.
+  method PaymentMethod
+
   status   PaymentStatus
   amount   Decimal
-  currency String        @default("BRL")
+  currency String @default("BRL")
   paidAt   DateTime?
 
+  // Data limite para pagamento ou expiração da tentativa.
+  expiresAt DateTime?
+
   // Identificação abstrata do provedor.
-  // A integração real com Stripe, Mercado Pago, Asaas etc.
-  // será adicionada posteriormente através de uma abstração.
+  //
+  // Durante a operação manual poderá ser "MANUAL".
+  // Futuramente poderá receber o código de um gateway.
   provider          String?
   providerPaymentId String?
+
+  // Identificador externo da cobrança.
+  //
+  // Exemplos futuros:
+  // - txid de uma cobrança PIX;
+  // - identificador externo do boleto;
+  // - identificador equivalente fornecido pelo gateway.
+  externalReference String?
+
+  // Dados necessários para cobrança PIX manual.
+  //
+  // O payload de copia e cola pode ser armazenado aqui.
+  // O QR Code pode ser gerado/apresentado pela camada de apresentação
+  // a partir do payload ou persistido separadamente futuramente.
+  pixCopyPaste String?
+
+  // Dados necessários para boleto manual.
+  bankSlipBarcode       String? @map("boletoBarcode")
+  bankSlipDigitableLine String? @map("boletoDigitableLine")
+
+  // Dados adicionais específicos de um provedor.
+  //
+  // Mantém o domínio preparado para campos que surjam em futuras
+  // integrações sem amarrar o schema a um fornecedor.
+  metadata Json?
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
@@ -284,6 +329,9 @@ model Payment {
 
   @@index([invoiceId])
   @@index([status])
+  @@index([method])
+  @@index([provider, providerPaymentId])
+  @@index([externalReference])
 }
 
 enum PaymentStatus {

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { SubscriptionStatus as PrismaSubscriptionStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
@@ -17,7 +18,10 @@ import { SubscriptionRepository } from '../../domain/repositories/subscription.r
  */
 @Injectable()
 export class PrismaSubscriptionRepository implements SubscriptionRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService | Prisma.TransactionClient,
+  ) {}
 
   async create(subscription: SubscriptionEntity): Promise<SubscriptionEntity> {
     const createdSubscription = await this.prisma.subscription.create({

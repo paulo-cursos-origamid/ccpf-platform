@@ -10,11 +10,12 @@ import { TenantMemberStatus } from '../../../../tenant/domain/enums/tenant-membe
 import { TenantRole } from '../../../../tenant/domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../../../tenant/domain/repositories/tenant-member.repository';
 
+import { SubscriptionEntity } from '../../../domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../../domain/enums/subscription-status.enum';
 import { PlanRepository } from '../../../domain/repositories/plan.repository';
 import { SubscriptionRepository } from '../../../domain/repositories/subscription.repository';
-import { SubscriptionEntity } from '../../../domain/entities/subscription.entity';
 import { SubscriptionLifecycleService } from '../../services/subscription-lifecycle.service';
+import { CreateInvoiceUseCase } from '../invoice/create-invoice.use-case';
 
 /**
  * Dados necessários para alterar o plano da assinatura.
@@ -36,6 +37,7 @@ export interface ChangeSubscriptionPlanInput {
  * - ACTIVE pode trocar imediatamente de plano;
  * - TRIALING pode converter para um plano pago;
  * - conversão de Trial para plano pago entra em PENDING;
+ * - conversão de Trial para plano pago gera uma Invoice PENDING;
  * - troca para o mesmo plano é rejeitada;
  * - redução de capacidade nunca pode deixar o Tenant acima
  *   do limite do plano destino;
@@ -48,6 +50,7 @@ export class ChangeSubscriptionPlanUseCase {
     private readonly planRepository: PlanRepository,
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
+    private readonly createInvoiceUseCase: CreateInvoiceUseCase,
   ) {}
 
   async execute(
@@ -120,9 +123,7 @@ export class ChangeSubscriptionPlanUseCase {
     }
 
     /**
-     * O Trial é uma condição inicial do Tenant e não deve
-     * ser utilizado como plano de destino de uma assinatura
-     * já existente.
+     * O Trial é reservado para contratação inicial.
      */
     if (targetPlan.code === 'TRIAL') {
       throw new BadRequestException(
@@ -132,11 +133,7 @@ export class ChangeSubscriptionPlanUseCase {
 
     /**
      * Qualquer mudança que reduza a capacidade máxima
-     * precisa respeitar a quantidade de membros que atualmente
-     * ocupam vagas.
-     *
-     * A contagem inclui ACTIVE, INVITED e BLOCKED.
-     * REMOVED não ocupa vaga.
+     * precisa respeitar a quantidade atual de membros.
      */
     const reducesCapacity =
       targetPlan.hasUnlimitedUsers || currentPlan.maxUsers === -1
@@ -145,7 +142,7 @@ export class ChangeSubscriptionPlanUseCase {
 
     /**
      * Uma redução de preço também representa um downgrade
-     * comercial, mesmo quando a capacidade não diminui.
+     * comercial, mesmo sem redução de capacidade.
      */
     const isCommercialDowngrade = targetPlan.price < currentPlan.price;
 
@@ -153,23 +150,40 @@ export class ChangeSubscriptionPlanUseCase {
       await this.validateTargetCapacity(input.tenantId, targetPlan.maxUsers);
     }
 
+    /**
+     * Capturamos o estado antes de alterar a entidade,
+     * pois a conversão depende de a assinatura estar em Trial.
+     */
+    const wasTrial = subscription.status === SubscriptionStatus.TRIALING;
     const now = new Date();
 
     subscription.changePlan(targetPlan.id, now);
 
     /**
-     * Um Tenant em Trial que escolhe um plano pago
-     * precisa aguardar a confirmação do pagamento antes
-     * de receber acesso comercial ao plano contratado.
+     * Conversão de Trial para plano pago aguarda
+     * a confirmação do pagamento.
      */
-    if (
-      subscription.status === SubscriptionStatus.TRIALING &&
-      targetPlan.code !== 'TRIAL'
-    ) {
+    if (wasTrial) {
       subscription.markAsPending(now);
     }
 
-    return this.subscriptionRepository.update(subscription);
+    const updatedSubscription =
+      await this.subscriptionRepository.update(subscription);
+
+    /**
+     * Somente a conversão Trial → plano pago gera
+     * a Invoice nesta etapa.
+     *
+     * ACTIVE → outro plano mantém o comportamento
+     * já validado de troca imediata.
+     */
+    if (wasTrial) {
+      await this.createInvoiceUseCase.execute({
+        subscriptionId: updatedSubscription.id,
+      });
+    }
+
+    return updatedSubscription;
   }
 
   /**
