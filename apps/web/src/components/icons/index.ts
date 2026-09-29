@@ -1,5 +1,6 @@
 export {
   ArrowLeftRight,
+  ArrowRight,
   ArrowLeft,
   Bell,
   Calendar,
@@ -14,6 +15,7 @@ export {
   DollarSign,
   Eye,
   FileChartColumn,
+  FileText,
   Landmark,
   LayoutDashboard,
   Lock,
@@ -24,6 +26,7 @@ export {
   Moon,
   Pencil,
   Plus,
+  Receipt,
   Search,
   Settings,
   ShieldUser,

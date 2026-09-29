@@ -183,6 +183,13 @@ model Subscription {
   tenantId String
   planId   String
 
+  // Alteração de plano pendente.
+  // O planId continua representando o plano atualmente efetivo.
+  pendingPlanId          String?
+  pendingPlanChangeType  SubscriptionPlanChangeType?
+  pendingPlanEffectiveAt DateTime?
+  pendingPlanInvoiceId   String?
+
   status SubscriptionStatus @default(TRIALING)
 
   startedAt          DateTime
@@ -202,6 +209,14 @@ model Subscription {
   @@index([tenantId])
   @@index([planId])
   @@index([status])
+  @@index([pendingPlanId])
+  @@index([pendingPlanEffectiveAt])
+  @@index([pendingPlanInvoiceId])
+}
+
+enum SubscriptionPlanChangeType {
+  UPGRADE
+  DOWNGRADE
 }
 
 enum SubscriptionStatus {
@@ -284,7 +299,7 @@ model Payment {
 
   status   PaymentStatus
   amount   Decimal
-  currency String @default("BRL")
+  currency String        @default("BRL")
   paidAt   DateTime?
 
   // Data limite para pagamento ou expiração da tentativa.

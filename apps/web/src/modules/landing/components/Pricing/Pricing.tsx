@@ -26,6 +26,7 @@ const featureLabels: Record<PlanFeatureCode, string> = {
   OTHER: "Outros",
   BASIC_REPORTS: "Relatórios básicos",
   ADVANCED_REPORTS: "Relatórios avançados",
+  BILLING: "Gestão de cobrança",
 };
 
 /**

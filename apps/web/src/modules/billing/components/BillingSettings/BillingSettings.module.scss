@@ -23,6 +23,7 @@
     margin: 6px 0 0;
     color: var(--text-secondary);
     font-size: 14px;
+    line-height: 1.45;
   }
 }
 
@@ -51,12 +52,14 @@
     color: var(--text-primary);
     font-size: 18px;
     font-weight: 700;
+    line-height: 1.3;
   }
 
   p {
     margin: 5px 0 0;
     color: var(--text-secondary);
     font-size: 13px;
+    line-height: 1.45;
   }
 }
 
@@ -82,6 +85,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  line-height: 1.3;
   text-transform: uppercase;
 }
 
@@ -91,6 +95,7 @@
   color: var(--text-primary);
   font-size: 21px;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .currentMain p {
@@ -110,6 +115,7 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
@@ -151,11 +157,12 @@
   align-items: center;
   gap: 12px;
   padding: 18px 24px;
-  background: var(--surface-secondary);
   color: var(--accent-primary);
+  background: var(--surface-secondary);
 
   div {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 3px;
   }
@@ -163,11 +170,16 @@
   span {
     color: var(--text-secondary);
     font-size: 12px;
+    line-height: 1.35;
   }
 
   strong {
+    overflow: hidden;
     color: var(--text-primary);
     font-size: 14px;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -182,6 +194,7 @@
   strong {
     color: var(--text-primary);
     font-size: 13px;
+    line-height: 1.4;
   }
 
   span {
@@ -215,9 +228,9 @@
   border: 1px solid var(--border-primary);
   border-radius: 14px;
   transition:
+    background 160ms ease,
     border-color 160ms ease,
-    transform 160ms ease,
-    background 160ms ease;
+    transform 160ms ease;
 
   &:hover {
     background: var(--surface-hover);
@@ -240,11 +253,13 @@
   border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
 .planHeader {
   margin-bottom: 12px;
+  padding-right: 72px;
 }
 
 .planDescription {
@@ -265,6 +280,7 @@
     color: var(--text-primary);
     font-size: 27px;
     font-weight: 800;
+    line-height: 1;
   }
 
   span {
@@ -281,6 +297,7 @@
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-primary);
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .features {
@@ -319,6 +336,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1.3;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -327,6 +345,11 @@
   &:hover:not(:disabled) {
     background: var(--surface-hover);
     border-color: var(--accent-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
   }
 
   &:disabled {
@@ -347,6 +370,7 @@
   border: 1px solid var(--border-primary);
   border-radius: 10px;
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .retryButton {
@@ -359,9 +383,15 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.3;
 
   &:hover {
     border-color: var(--accent-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
   }
 }
 
@@ -376,6 +406,7 @@
   background: var(--surface-secondary);
   border: 1px solid var(--border-primary);
   border-radius: 14px;
+  text-align: center;
 
   svg {
     color: var(--accent-primary);
@@ -384,10 +415,12 @@
   strong {
     color: var(--text-primary);
     font-size: 14px;
+    line-height: 1.4;
   }
 
   span {
     font-size: 13px;
+    line-height: 1.45;
   }
 }
 
@@ -482,5 +515,96 @@
   .feedbackError {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .planHeader {
+    padding-right: 0;
+  }
+}
+
+.confirmation {
+  margin-top: 24px;
+}
+
+.confirmationContent {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+}
+
+.confirmationContent h2 {
+  margin: 4px 0 8px;
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.confirmationContent p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.confirmationContent p + p {
+  margin-top: 8px;
+}
+
+.confirmationActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cancelButton {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.cancelButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+  .confirmationContent {
+    flex-direction: column;
+  }
+
+  .confirmationActions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .confirmationActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .confirmationActions button {
+    width: 100%;
   }
 }

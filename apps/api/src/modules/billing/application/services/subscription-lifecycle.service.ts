@@ -1,45 +1,90 @@
 import { Injectable } from '@nestjs/common';
 
+import { PlanRepository } from '../../domain/repositories/plan.repository';
 import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
+import { SubscriptionPlanChangeType } from '../../domain/enums/subscription-plan-change-type.enum';
 import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
 
-/**
- * Serviço responsável por resolver o estado atual da assinatura de um Tenant.
- *
- * Centraliza regras de ciclo de vida que precisam acontecer durante
- * uma consulta de Billing, evitando que cada consumidor implemente
- * sua própria interpretação de trial e expiração.
- */
 @Injectable()
 export class SubscriptionLifecycleService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly planRepository: PlanRepository,
   ) {}
 
-  /**
-   * Retorna a assinatura corrente do Tenant.
-   *
-   * Quando uma assinatura TRIALING já ultrapassou trialEndsAt,
-   * ela é marcada como EXPIRED e deixa de ser considerada corrente.
-   */
   async resolveCurrent(tenantId: string): Promise<SubscriptionEntity | null> {
     const subscription =
       await this.subscriptionRepository.findCurrentByTenant(tenantId);
 
-    if (!subscription) {
-      return null;
-    }
+    if (!subscription) return null;
 
-    if (subscription.hasTrialExpired()) {
-      const now = new Date();
+    const now = new Date();
 
+    if (subscription.hasTrialExpired(now)) {
       subscription.expire(now);
-
       await this.subscriptionRepository.update(subscription);
 
       return null;
     }
 
+    await this.applyScheduledDowngrade(subscription, now);
+
     return subscription;
+  }
+
+  private async applyScheduledDowngrade(
+    subscription: SubscriptionEntity,
+    referenceDate: Date,
+  ): Promise<void> {
+    if (
+      !subscription.hasPendingPlanChange ||
+      subscription.pendingPlanChangeType !==
+        SubscriptionPlanChangeType.DOWNGRADE ||
+      !subscription.pendingPlanEffectiveAt
+    ) {
+      return;
+    }
+
+    if (
+      subscription.pendingPlanEffectiveAt.getTime() > referenceDate.getTime()
+    ) {
+      return;
+    }
+
+    if (!subscription.pendingPlanId) {
+      return;
+    }
+
+    const targetPlan = await this.planRepository.findById(
+      subscription.pendingPlanId,
+    );
+
+    if (!targetPlan || !targetPlan.isActive || !targetPlan.isPublic) {
+      return;
+    }
+
+    const previousPeriodEnd = subscription.currentPeriodEnd;
+
+    subscription.applyPendingPlan(referenceDate);
+
+    subscription.currentPeriodStart = previousPeriodEnd;
+    subscription.currentPeriodEnd = this.calculatePeriodEnd(
+      referenceDate,
+      targetPlan.billingInterval,
+    );
+
+    await this.subscriptionRepository.update(subscription);
+  }
+
+  private calculatePeriodEnd(start: Date, billingInterval: string): Date {
+    const end = new Date(start);
+
+    if (billingInterval === 'YEARLY') {
+      end.setFullYear(end.getFullYear() + 1);
+      return end;
+    }
+
+    end.setMonth(end.getMonth() + 1);
+    return end;
   }
 }
