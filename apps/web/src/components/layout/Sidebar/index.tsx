@@ -1,148 +1,114 @@
 "use client";
 
 import { useState } from "react";
-
 import Link from "next/link";
-
 import { usePathname } from "next/navigation";
 
 import {
-  ArrowLeftRight,
-  Car,
-  FileChartColumn,
-  LayoutDashboard,
   Menu,
-  Settings,
-  Tags,
-  Users,
-  Wallet,
   X,
 } from "@/components/icons";
 
-import { SubscriptionSummary } from "@/modules/billing";
-
+import { SubscriptionSummary, useTenantSubscription } from "@/modules/billing";
+import { ComingSoonFeedback } from "@/components/ui";
+import { resolveModuleAccess } from "@/modules/product/access";
+import {
+  productModules,
+  type ProductModuleAccess,
+  type ProductModuleSection,
+} from "@/modules/product/catalog";
 import { useIdentityStore } from "@/modules/identity/stores/identity.store";
-
 import { useTenantStore } from "@/modules/tenant/stores";
 
 import styles from "./Sidebar.module.scss";
 
-interface MenuItem {
+interface VisibleModule {
+  code: string;
   label: string;
-  icon: typeof LayoutDashboard;
   href: string;
-  adminOnly?: boolean;
-  tenantRequired?: boolean;
+  icon: typeof productModules[number]["icon"];
+  access: ProductModuleAccess;
 }
 
-interface MenuSection {
-  label: string;
-  items: MenuItem[];
+interface VisibleSection {
+  label: ProductModuleSection;
+  items: VisibleModule[];
 }
 
-const menuSections: MenuSection[] = [
-  {
-    label: "Principal",
-    items: [
-      {
-        label: "Dashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard",
-        tenantRequired: true,
-      },
-    ],
-  },
-  {
-    label: "Financeiro",
-    items: [
-      {
-        label: "Contas",
-        icon: Wallet,
-        href: "/dashboard/accounts",
-        tenantRequired: true,
-      },
-      {
-        label: "Categorias",
-        icon: Tags,
-        href: "/dashboard/categories",
-        tenantRequired: true,
-      },
-      {
-        label: "Transações",
-        icon: ArrowLeftRight,
-        href: "/dashboard/transactions",
-        tenantRequired: true,
-      },
-      {
-        label: "Relatórios",
-        icon: FileChartColumn,
-        href: "/dashboard/reports",
-        tenantRequired: true,
-      },
-    ],
-  },
-  {
-    label: "Domínios",
-    items: [
-      {
-        label: "Veículos",
-        icon: Car,
-        href: "/dashboard/vehicles",
-        tenantRequired: true,
-      },
-    ],
-  },
-  {
-    label: "Administração",
-    items: [
-      {
-        label: "Usuários",
-        icon: Users,
-        href: "/dashboard/users",
-        adminOnly: true,
-      },
-    ],
-  },
-  {
-    label: "Configurações",
-    items: [
-      {
-        label: "Configurações",
-        icon: Settings,
-        href: "/settings",
-        tenantRequired: true,
-      },
-    ],
-  },
+/**
+ * Estados que não devem ser exibidos no menu lateral.
+ *
+ * O Sidebar é responsável somente pela apresentação.
+ * A regra que determina o estado pertence ao resolver.
+ */
+const HIDDEN_ACCESS_STATES: ProductModuleAccess[] = [
+  "NOT_INCLUDED",
+  "NO_COMMERCIAL_ACCESS",
+  "ADMIN_ONLY",
+  "NO_TENANT",
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   const [collapsed, setCollapsed] = useState(false);
+  const [comingSoonModule, setComingSoonModule] = useState<string | null>(
+    null,
+  );
 
   const user = useIdentityStore((state) => state.user);
-
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
+
+  const subscription = useTenantSubscription();
 
   const isPlatformAdmin = user?.role === "ADMIN";
 
-  const visibleSections = menuSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((item) => {
-        if (item.adminOnly && !isPlatformAdmin) {
-          return false;
-        }
-
-        if (item.tenantRequired && !activeTenantId) {
-          return false;
-        }
-
-        return true;
+  /**
+   * Resolve a visibilidade e o estado de cada módulo
+   * usando o catálogo central do produto.
+   */
+  const visibleSections: VisibleSection[] = productModules
+    .map((module) => ({
+      module,
+      access: resolveModuleAccess(module, {
+        subscription,
+        hasActiveTenant: Boolean(activeTenantId),
+        isPlatformAdmin,
       }),
     }))
-    .filter((section) => section.items.length > 0);
+    .filter(({ access }) => !HIDDEN_ACCESS_STATES.includes(access))
+    .reduce<VisibleSection[]>((sections, { module, access }) => {
+      const section = sections.find(
+        (item) => item.label === module.section,
+      );
+
+      const visibleModule: VisibleModule = {
+        code: module.code,
+        label: module.label,
+        href: module.href,
+        icon: module.icon,
+        access,
+      };
+
+      if (section) {
+        section.items.push(visibleModule);
+      } else {
+        sections.push({
+          label: module.section,
+          items: [visibleModule],
+        });
+      }
+
+      return sections;
+    }, []);
+
+  function toggleSidebar() {
+    setCollapsed((current) => !current);
+  }
+
+  function handleComingSoonClick(moduleName: string) {
+    setComingSoonModule(moduleName);
+  }
 
   function isActive(href: string) {
     if (href === "/dashboard") {
@@ -150,10 +116,6 @@ export function Sidebar() {
     }
 
     return pathname === href || pathname.startsWith(`${href}/`);
-  }
-
-  function toggleSidebar() {
-    setCollapsed((current) => !current);
   }
 
   return (
@@ -164,7 +126,9 @@ export function Sidebar() {
     >
       <div className={styles.header}>
         <div className={styles.headerContent}>
-          <span className={styles.logo} />
+          <span className={styles.logo}>
+            CCPF
+          </span>
         </div>
 
         <button
@@ -205,12 +169,33 @@ export function Sidebar() {
             <div className={styles.sectionItems}>
               {section.items.map((item) => {
                 const Icon = item.icon;
-
                 const active = isActive(item.href);
+                const comingSoon = item.access === "COMING_SOON";
+
+                if (comingSoon) {
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className={styles.item}
+                      title={`${item.label} — Em desenvolvimento`}
+                      aria-label={`${item.label} — funcionalidade em desenvolvimento`}
+                      onClick={() => handleComingSoonClick(item.label)}
+                    >
+                      <span className={styles.icon}>
+                        <Icon size={20} />
+                      </span>
+
+                      <span className={styles.label}>
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                }
 
                 return (
                   <Link
-                    key={item.href}
+                    key={item.code}
                     href={item.href}
                     className={`${styles.item} ${
                       active ? styles.active : ""
@@ -236,6 +221,11 @@ export function Sidebar() {
       <div className={styles.subscription}>
         <SubscriptionSummary collapsed={collapsed} />
       </div>
+
+      <ComingSoonFeedback
+        moduleName={comingSoonModule}
+        onClose={() => setComingSoonModule(null)}
+      />
     </aside>
   );
 }

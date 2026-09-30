@@ -1,0 +1,114 @@
+.feedback {
+  position: fixed;
+  right: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+  z-index: 1000;
+
+  display: flex;
+  align-items: flex-start;
+
+  width: min(420px, calc(100vw - (2 * var(--spacing-lg))));
+
+  padding: var(--spacing-md);
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+
+  background: var(--surface-primary);
+  color: var(--text-primary);
+
+  box-shadow: var(--shadow-lg);
+
+  animation: comingSoonEnter var(--transition-normal) ease-out;
+}
+
+.indicator {
+  width: 4px;
+  min-width: 4px;
+  align-self: stretch;
+
+  margin-right: var(--spacing-md);
+
+  border-radius: var(--radius-full);
+
+  background: var(--accent-primary);
+}
+
+.content {
+  min-width: 0;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  gap: var(--spacing-xs);
+}
+
+.title {
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.message {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.5;
+}
+
+.closeButton {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  margin-left: var(--spacing-md);
+  padding: 0;
+
+  border: 0;
+  border-radius: var(--radius-md);
+
+  background: transparent;
+  color: var(--text-secondary);
+
+  cursor: pointer;
+
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.closeButton:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+@keyframes comingSoonEnter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--spacing-sm));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .feedback {
+    right: var(--spacing-md);
+    bottom: var(--spacing-md);
+
+    width: calc(100vw - (2 * var(--spacing-md)));
+  }
+}
