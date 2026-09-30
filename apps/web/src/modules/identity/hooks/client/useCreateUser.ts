@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { userService } from "../../services/user.service";
 
-import type { RegisterDto } from "../../types/register.dto";
+import type { CreateUserDto } from "../../types/create-user.dto";
 import type { User } from "../../types/user";
 
 interface UseCreateUserState {
@@ -20,7 +20,7 @@ export function useCreateUser() {
     error: null,
   });
 
-  async function createUser(dto: RegisterDto) {
+  async function createUser(dto: CreateUserDto) {
     setState({
       data: null,
       loading: true,

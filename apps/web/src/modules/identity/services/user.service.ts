@@ -2,7 +2,7 @@ import { api } from "@/lib/api/client";
 
 import type { ListUsersQuery, ListUsersResponse } from "../types/user-list";
 import type { UpdateUserInput } from "../types/update-user";
-import type { RegisterDto } from "../types/register.dto";
+import type { CreateUserDto } from "../types/create-user.dto";
 import type { User } from "../types/user";
 
 class UserService {
@@ -39,7 +39,7 @@ class UserService {
    * Diferente do cadastro público, este endpoint não deve
    * provisionar automaticamente Tenant, OWNER ou Subscription.
    */
-  create(dto: RegisterDto) {
+  create(dto: CreateUserDto) {
     return api.post<User>("/identity/users", dto);
   }
 

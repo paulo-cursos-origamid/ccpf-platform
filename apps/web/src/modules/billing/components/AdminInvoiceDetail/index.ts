@@ -1,0 +1,1 @@
+export { AdminInvoiceDetail } from "./AdminInvoiceDetail";

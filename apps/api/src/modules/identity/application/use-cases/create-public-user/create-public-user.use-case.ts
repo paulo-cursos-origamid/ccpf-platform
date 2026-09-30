@@ -3,7 +3,6 @@ import {
   ConflictException,
   Injectable,
   Inject,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -20,6 +19,8 @@ import { TenantMemberStatus } from '../../../../tenant/domain/enums/tenant-membe
 import { TenantRole } from '../../../../tenant/domain/enums/tenant-role.enum';
 import { TenantStatus } from '../../../../tenant/domain/enums/tenant-status.enum';
 
+import { InvoiceEntity } from '../../../../billing/domain/entities/invoice.entity';
+import { InvoiceStatus } from '../../../../billing/domain/enums/invoice-status.enum';
 import { SubscriptionEntity } from '../../../../billing/domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../../../billing/domain/enums/subscription-status.enum';
 import { BillingInterval } from '../../../../billing/domain/enums/billing-interval.enum';
@@ -28,6 +29,7 @@ export interface CreatePublicUserInput {
   name: string;
   email: string;
   password: string;
+  planCode: string;
 }
 
 export interface CreatePublicUserOutput {
@@ -39,16 +41,17 @@ export interface CreatePublicUserOutput {
 /**
  * Caso de uso responsável pelo cadastro público de um novo cliente SaaS.
  *
- * Diferentemente do CreateUserUseCase, este caso de uso provisiona
- * todo o contexto inicial do cliente:
+ * O cadastro público provisiona, de forma atômica:
  *
  * - User;
  * - Tenant;
  * - TenantMember com papel OWNER;
- * - Subscription TRIALING vinculada ao plano TRIAL.
+ * - Subscription inicial;
+ * - Invoice inicial para planos pagos.
  *
- * A persistência das quatro estruturas ocorre em uma única transação
- * através do PublicUserProvisioningRepository.
+ * A escolha do plano é uma intenção enviada pelo cliente.
+ * A autoridade sobre o plano continua sendo o backend, que
+ * consulta o catálogo público de planos antes do provisionamento.
  */
 @Injectable()
 export class CreatePublicUserUseCase {
@@ -67,6 +70,7 @@ export class CreatePublicUserUseCase {
   async execute(input: CreatePublicUserInput): Promise<CreatePublicUserOutput> {
     const name = input.name.trim();
     const email = input.email.trim().toLowerCase();
+    const planCode = input.planCode.trim().toUpperCase();
 
     if (!name) {
       throw new BadRequestException('Nome é obrigatório.');
@@ -76,18 +80,22 @@ export class CreatePublicUserUseCase {
       throw new BadRequestException('E-mail é obrigatório.');
     }
 
+    if (!planCode) {
+      throw new BadRequestException('Plano é obrigatório.');
+    }
+
     const existingUser = await this.userRepository.findByEmail(email);
 
     if (existingUser) {
       throw new ConflictException('Email already registered');
     }
 
-    const trialPlan =
-      await this.publicUserProvisioningRepository.findPublicTrialPlan();
+    const plan =
+      await this.publicUserProvisioningRepository.findPublicPlan(planCode);
 
-    if (!trialPlan) {
-      throw new ServiceUnavailableException(
-        'O cadastro público está indisponível no momento.',
+    if (!plan) {
+      throw new BadRequestException(
+        'O plano selecionado não está disponível para contratação.',
       );
     }
 
@@ -130,19 +138,27 @@ export class CreatePublicUserUseCase {
       updatedAt: now,
     });
 
+    const isTrial = plan.code === 'TRIAL';
+
     const currentPeriodStart = now;
     const currentPeriodEnd = this.calculatePeriodEnd(
       currentPeriodStart,
-      trialPlan.billingInterval,
+      plan.billingInterval,
     );
 
-    const trialEndsAt = this.calculateTrialEnd(currentPeriodStart);
+    const trialEndsAt = isTrial
+      ? this.calculateTrialEnd(currentPeriodStart)
+      : null;
+
+    const subscriptionStatus = isTrial
+      ? SubscriptionStatus.TRIALING
+      : SubscriptionStatus.PENDING;
 
     const subscription = new SubscriptionEntity(
       randomUUID(),
       tenant.id,
-      trialPlan.id,
-      SubscriptionStatus.TRIALING,
+      plan.id,
+      subscriptionStatus,
       now,
       currentPeriodStart,
       currentPeriodEnd,
@@ -152,11 +168,22 @@ export class CreatePublicUserUseCase {
       now,
     );
 
+    /**
+     * Planos pagos criam imediatamente uma obrigação financeira.
+     *
+     * A Invoice é construída aqui, mas sua persistência acontece
+     * dentro da mesma transação do User, Tenant, OWNER e Subscription.
+     */
+    const invoice = isTrial
+      ? null
+      : this.createInitialInvoice(subscription, plan.price, plan.currency, now);
+
     let result: {
       user: UserEntity;
       tenant: TenantEntity;
       owner: TenantMemberEntity;
       subscription: SubscriptionEntity;
+      invoice: InvoiceEntity | null;
     };
 
     try {
@@ -165,6 +192,7 @@ export class CreatePublicUserUseCase {
         tenant,
         owner,
         subscription,
+        invoice,
       );
     } catch (error) {
       if (
@@ -191,6 +219,66 @@ export class CreatePublicUserUseCase {
   }
 
   /**
+   * Cria a Invoice inicial de uma contratação paga.
+   *
+   * A Invoice começa como PENDING porque o pagamento ainda
+   * não foi confirmado.
+   */
+  private createInitialInvoice(
+    subscription: SubscriptionEntity,
+    amount: number,
+    currency: string,
+    referenceDate: Date,
+  ): InvoiceEntity {
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'O valor do plano selecionado deve ser maior que zero.',
+      );
+    }
+
+    const dueAt = this.calculateInvoiceDueAt(referenceDate);
+
+    return new InvoiceEntity(
+      randomUUID(),
+      subscription.tenantId,
+      subscription.id,
+      this.generateInvoiceNumber(referenceDate),
+      InvoiceStatus.PENDING,
+      amount,
+      currency,
+      dueAt,
+      null,
+      referenceDate,
+      referenceDate,
+    );
+  }
+
+  /**
+   * Define o vencimento padrão da primeira Invoice.
+   *
+   * A regra segue o comportamento existente do Billing:
+   * sete dias após a criação.
+   */
+  private calculateInvoiceDueAt(referenceDate: Date): Date {
+    const dueAt = new Date(referenceDate);
+
+    dueAt.setDate(dueAt.getDate() + 7);
+
+    return dueAt;
+  }
+
+  /**
+   * Gera o identificador público da Invoice.
+   */
+  private generateInvoiceNumber(referenceDate: Date): string {
+    const year = referenceDate.getFullYear();
+    const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
+    const suffix = randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase();
+
+    return `CCPF-${year}-${month}-${suffix}`;
+  }
+
+  /**
    * Gera um slug determinístico e único para o Tenant recém-criado.
    *
    * O UUID parcial evita colisões entre usuários com o mesmo nome.
@@ -209,11 +297,8 @@ export class CreatePublicUserUseCase {
   }
 
   /**
-   * Calcula o final do período comercial.
-   *
-   * O plano TRIAL atualmente utiliza intervalo mensal.
-   * A regra permanece baseada no BillingInterval para manter
-   * o comportamento consistente com o Billing.
+   * Calcula o final do período comercial conforme
+   * o intervalo de cobrança definido pelo plano.
    */
   private calculatePeriodEnd(
     start: Date,

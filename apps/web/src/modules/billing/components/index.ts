@@ -7,3 +7,6 @@ export { InvoiceList } from "./InvoiceList/InvoiceList";
 export { InvoicePayment } from "./InvoicePayment/InvoicePayment";
 export { InvoiceStatusBadge } from "./InvoiceStatusBadge/InvoiceStatusBadge";
 export { SubscriptionSummary } from "./SubscriptionSummary/SubscriptionSummary";
+export { AdminInvoiceList } from "./AdminInvoiceList";
+
+export { AdminInvoiceDetail } from "./AdminInvoiceDetail";

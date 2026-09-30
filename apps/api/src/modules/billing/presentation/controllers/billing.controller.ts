@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Query,
   Patch,
   Post,
   UseGuards,
@@ -21,6 +22,8 @@ import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-te
 import { ListPublicPlansUseCase } from '../../application/use-cases/list-public-plans.use-case';
 import { ListTenantInvoicesUseCase } from '../../application/use-cases/invoice/list-tenant-invoices.use-case';
 import { GetTenantInvoiceUseCase } from '../../application/use-cases/invoice/get-tenant-invoice.use-case';
+import { GetAdminInvoiceUseCase } from '../../application/use-cases/admin/get-admin-invoice.use-case';
+import { ListAdminInvoicesUseCase } from '../../application/use-cases/admin/list-admin-invoices.use-case';
 import { CreatePaymentUseCase } from '../../application/use-cases/payment/create-payment.use-case';
 import { ConfirmPaymentUseCase } from '../../application/use-cases/payment/confirm-payment.use-case';
 
@@ -28,6 +31,7 @@ import { ChangeSubscriptionPlanDto } from '../dto/change-subscription-plan.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { ConfirmPaymentDto } from '../dto/confirm-payment.dto';
+import { ListAdminInvoicesQueryDto } from '../dto/list-admin-invoices.query.dto';
 
 import type { TenantContext } from '../../../tenant/presentation/interfaces/tenant-context.interface';
 import { CurrentTenant } from '../../../tenant/presentation/decorators/tenant-context.decorator';
@@ -62,6 +66,8 @@ export class BillingController {
     private readonly getTenantInvoiceUseCase: GetTenantInvoiceUseCase,
     private readonly createPaymentUseCase: CreatePaymentUseCase,
     private readonly confirmPaymentUseCase: ConfirmPaymentUseCase,
+    private readonly listAdminInvoicesUseCase: ListAdminInvoicesUseCase,
+    private readonly getAdminInvoiceUseCase: GetAdminInvoiceUseCase,
   ) {}
 
   /**
@@ -205,6 +211,73 @@ export class BillingController {
     return this.cancelSubscriptionUseCase.execute({
       tenantId: tenant.tenantId,
       userId: user.sub,
+    });
+  }
+
+  /**
+   * Lista globalmente as Invoices para o painel administrativo.
+   *
+   * Este endpoint não utiliza TenantContextGuard.
+   * O acesso é controlado pela permissão global BILLING_MANAGE.
+   */
+  @Get('admin/invoices')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Listar Invoices no Admin',
+    description:
+      'Retorna uma lista global e paginada de Invoices de todos os Tenants. Permite busca por número da Invoice, nome do Tenant ou slug e filtro por status.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista administrativa de Invoices retornada com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui a permissão global BILLING_MANAGE.',
+  })
+  async listAdminInvoices(@Query() query: ListAdminInvoicesQueryDto) {
+    return this.listAdminInvoicesUseCase.execute(query);
+  }
+
+  /**
+   * Consulta globalmente uma Invoice para o painel administrativo.
+   *
+   * O resultado inclui Tenant, Subscription, Plan e Payments.
+   */
+  @Get('admin/invoices/:invoiceId')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Consultar Invoice no Admin',
+    description:
+      'Retorna os dados completos de uma Invoice para o painel administrativo, incluindo Tenant, Subscription, Plan e Payments.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invoice administrativa retornada com sucesso.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Usuário não autenticado.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui a permissão global BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invoice não encontrada.',
+  })
+  async getAdminInvoice(@Param('invoiceId') invoiceId: string) {
+    return this.getAdminInvoiceUseCase.execute({
+      invoiceId,
     });
   }
 

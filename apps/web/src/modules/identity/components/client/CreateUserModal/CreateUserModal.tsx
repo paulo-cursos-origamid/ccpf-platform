@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { UserRound } from "@/components/icons";
 import {
   Button,
   EmailInput,
@@ -13,19 +14,22 @@ import { Modal } from "@/components/ui/overlay/Modal";
 
 import { useCreateUser } from "../../../hooks/client";
 
+import type { User } from "../../../types/user";
+
 import styles from "./CreateUserModal.module.scss";
-import { UserRound } from "@/components/icons";
 
 interface CreateUserModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void> | void;
+  onCreated?: (user: User) => Promise<void> | void;
 }
 
 export function CreateUserModal({
   open,
   onClose,
   onSuccess,
+  onCreated,
 }: CreateUserModalProps) {
   const { createUser, loading, error } = useCreateUser();
 
@@ -34,11 +38,12 @@ export function CreateUserModal({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(
+    null,
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
 
     setValidationError(null);
 
@@ -58,10 +63,9 @@ export function CreateUserModal({
     }
 
     if (password.length < 8) {
-      const message = "A senha deve possuir pelo menos 8 caracteres.";
-
-
-      setValidationError(message);
+      setValidationError(
+        "A senha deve possuir pelo menos 8 caracteres.",
+      );
       return;
     }
 
@@ -71,17 +75,23 @@ export function CreateUserModal({
     }
 
     try {
-await createUser({
-  name: name.trim(),
-  email: email.trim(),
-  password,
-});
+      const user = await createUser({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      if (onCreated) {
+        await onCreated(user);
+      }
 
       await onSuccess();
 
       handleClose();
     } catch {
-      // O erro já está disponível através do hook.
+      // O erro da API permanece disponível através do hook.
+      // Erros do fluxo complementar também impedem o fechamento
+      // para que a operação possa ser tratada pelo fluxo chamador.
     }
   }
 
@@ -102,9 +112,13 @@ await createUser({
   const errorMessage =
     validationError ?? (error instanceof Error ? error.message : null);
 
-
   return (
-    <Modal open={open} onClose={handleClose} title="Novo usuário">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Novo usuário"
+      closeOnOverlayClick={!loading}
+    >
       <form className={styles.form} onSubmit={handleSubmit}>
         <Field label="Nome" htmlFor="create-user-name" required>
           <TextInput
