@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 import {
   ArrowLeft,
@@ -9,29 +8,36 @@ import {
   CalendarDays,
   ChevronRight,
   Search,
-} from "@/components/icons";
+  X,
+} from "lucide-react";
+import Link from "next/link";
 
-import { useAdminInvoices } from "../../hooks/client";
-import type {
-  AdminInvoice,
-  AdminInvoiceListParams,
-} from "../../types";
+import { Button, SearchInput } from "@/components/ui/forms";
+
 import { InvoiceStatusBadge } from "../InvoiceStatusBadge/InvoiceStatusBadge";
+import { useAdminInvoices } from "../../hooks";
+import type {
+  AdminInvoiceListParams,
+  AdminInvoiceListResponse,
+} from "../../types";
 
 import styles from "./AdminInvoiceList.module.scss";
 
 const PAGE_SIZE = 20;
 
-const STATUS_OPTIONS: Array<{
-  value: NonNullable<AdminInvoiceListParams["status"]> | "";
-  label: string;
-}> = [
+const STATUS_OPTIONS = [
   { value: "", label: "Todos os status" },
   { value: "PENDING", label: "Pendente" },
-  { value: "PAID", label: "Paga" },
+  { value: "PAID", label: "Pago" },
   { value: "OVERDUE", label: "Vencida" },
   { value: "CANCELLED", label: "Cancelada" },
-];
+] as const;
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+  }).format(new Date(value));
+}
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat("pt-BR", {
@@ -40,15 +46,9 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount);
 }
 
-function formatDate(value: string | null) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(value));
-}
-
-function getPaymentLabel(invoice: AdminInvoice) {
+function getPaymentLabel(
+  invoice: AdminInvoiceListResponse["invoices"][number],
+) {
   if (!invoice.latestPayment) {
     return "Sem pagamento";
   }
@@ -101,12 +101,31 @@ export function AdminInvoiceList() {
   const pagination = data?.pagination;
   const totalPages = pagination?.totalPages ?? 1;
 
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function handleClearSearch() {
+    setSearch("");
+    setPage(1);
+  }
+
+  function handleStatusChange(value: string) {
+    setStatus(
+      value as NonNullable<AdminInvoiceListParams["status"]> | "",
+    );
+    setPage(1);
+  }
+
   return (
     <section className={styles.container}>
       <div className={styles.header}>
         <div>
           <span className={styles.eyebrow}>Faturamento</span>
+
           <h1 className={styles.title}>Faturas</h1>
+
           <p className={styles.description}>
             Consulte e acompanhe as faturas de todos os tenants da plataforma.
           </p>
@@ -114,32 +133,43 @@ export function AdminInvoiceList() {
       </div>
 
       <div className={styles.filters}>
-        <label className={styles.searchField}>
-          <span className={styles.srOnly}>Buscar fatura</span>
-          <Search size={18} aria-hidden="true" />
-          <input
-            type="search"
+        <div className={styles.searchWrapper}>
+          <SearchInput
+            className={styles.searchInput}
             value={search}
             placeholder="Buscar por número ou tenant..."
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
+            aria-label="Buscar faturas por número ou tenant"
+            leftIcon={
+              <Search
+                size={18}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            }
+            rightIcon={
+              search ? (
+                <button
+                  type="button"
+                  className={styles.clearSearchButton}
+                  aria-label="Limpar busca"
+                  title="Limpar busca"
+                  onClick={handleClearSearch}
+                >
+                  <X size={16} strokeWidth={1.8} />
+                </button>
+              ) : undefined
+            }
+            onChange={(event) => handleSearchChange(event.target.value)}
           />
-        </label>
+        </div>
 
         <label className={styles.statusField}>
           <span className={styles.srOnly}>Filtrar por status</span>
+
           <select
             value={status}
-            onChange={(event) => {
-              setStatus(
-                event.target.value as
-                  | NonNullable<AdminInvoiceListParams["status"]>
-                  | "",
-              );
-              setPage(1);
-            }}
+            aria-label="Filtrar faturas por status"
+            onChange={(event) => handleStatusChange(event.target.value)}
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -174,10 +204,16 @@ export function AdminInvoiceList() {
                   <td colSpan={8}>
                     <div className={styles.feedback}>
                       <strong>Não foi possível carregar as faturas.</strong>
+
                       <span>{error}</span>
-                      <button type="button" onClick={reload}>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={reload}
+                      >
                         Tentar novamente
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -186,6 +222,7 @@ export function AdminInvoiceList() {
                   <td colSpan={8}>
                     <div className={styles.feedback}>
                       <strong>Nenhuma fatura encontrada.</strong>
+
                       <span>
                         Ajuste os filtros ou tente realizar uma nova busca.
                       </span>
@@ -198,6 +235,7 @@ export function AdminInvoiceList() {
                     <td>
                       <div className={styles.invoiceCell}>
                         <strong>{invoice.number}</strong>
+
                         <span>
                           Criada em {formatDate(invoice.createdAt)}
                         </span>
@@ -207,6 +245,7 @@ export function AdminInvoiceList() {
                     <td>
                       <div className={styles.tenantCell}>
                         <strong>{invoice.tenant.name}</strong>
+
                         <span>{invoice.tenant.slug}</span>
                       </div>
                     </td>
@@ -214,12 +253,13 @@ export function AdminInvoiceList() {
                     <td>
                       <div className={styles.planCell}>
                         <strong>{invoice.subscription.plan.name}</strong>
+
                         <span>{invoice.subscription.plan.code}</span>
                       </div>
                     </td>
 
                     <td>
-                      <strong>
+                      <strong className={styles.amount}>
                         {formatCurrency(invoice.amount, invoice.currency)}
                       </strong>
                     </td>
@@ -227,6 +267,7 @@ export function AdminInvoiceList() {
                     <td>
                       <div className={styles.dateCell}>
                         <CalendarDays size={15} aria-hidden="true" />
+
                         <span>{formatDate(invoice.dueAt)}</span>
                       </div>
                     </td>
@@ -248,6 +289,7 @@ export function AdminInvoiceList() {
                         aria-label={`Ver detalhes da fatura ${invoice.number}`}
                       >
                         <span>Detalhes</span>
+
                         <ChevronRight size={16} aria-hidden="true" />
                       </Link>
                     </td>
