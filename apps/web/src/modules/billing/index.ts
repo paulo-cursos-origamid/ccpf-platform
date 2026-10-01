@@ -7,14 +7,25 @@
 
 export { billingService } from "./services";
 
-export { useTenantSubscription } from "./hooks";
+export {
+  useInvoice,
+  useTenantInvoices,
+  useTenantSubscription,
+} from "./hooks";
 
 export type { TenantSubscriptionState } from "./hooks";
 
-export { SubscriptionSummary } from "./components";
+export {
+  InvoiceDetails,
+  InvoiceList,
+  InvoiceStatusBadge,
+  SubscriptionSummary,
+} from "./components";
 
 export type {
   BillingInterval,
+  Invoice,
+  InvoiceStatus,
   PlanFeatureCode,
   PublicPlan,
   Subscription,

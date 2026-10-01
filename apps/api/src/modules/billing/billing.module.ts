@@ -5,6 +5,8 @@ import { TenantModule } from '../tenant/tenant.module';
 
 import { SubscriptionLifecycleService } from './application/services/subscription-lifecycle.service';
 import { GetTenantInvoiceUseCase } from './application/use-cases/invoice/get-tenant-invoice.use-case';
+import { GetAdminInvoiceUseCase } from './application/use-cases/admin/get-admin-invoice.use-case';
+import { ListAdminInvoicesUseCase } from './application/use-cases/admin/list-admin-invoices.use-case';
 import { ListTenantInvoicesUseCase } from './application/use-cases/invoice/list-tenant-invoices.use-case';
 import { CreateInvoiceUseCase } from './application/use-cases/invoice/create-invoice.use-case';
 import { ConfirmPaymentUseCase } from './application/use-cases/payment/confirm-payment.use-case';
@@ -55,6 +57,8 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     CreateInvoiceUseCase,
     ListTenantInvoicesUseCase,
     GetTenantInvoiceUseCase,
+    ListAdminInvoicesUseCase,
+    GetAdminInvoiceUseCase,
     CreatePaymentUseCase,
     ConfirmPaymentUseCase,
     SubscriptionLifecycleService,
@@ -101,6 +105,8 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     CreateInvoiceUseCase,
     ListTenantInvoicesUseCase,
     GetTenantInvoiceUseCase,
+    ListAdminInvoicesUseCase,
+    GetAdminInvoiceUseCase,
     CreatePaymentUseCase,
     ConfirmPaymentUseCase,
     SubscriptionLifecycleService,

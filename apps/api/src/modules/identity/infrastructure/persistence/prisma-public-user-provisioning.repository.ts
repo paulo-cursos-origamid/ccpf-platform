@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  InvoiceStatus as PrismaInvoiceStatus,
   SubscriptionStatus as PrismaSubscriptionStatus,
   TenantMemberStatus as PrismaTenantMemberStatus,
   TenantRole as PrismaTenantRole,
@@ -11,7 +12,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 
 import { UserEntity, UserRole } from '../../domain/entities/user.entity';
 import {
-  PublicTrialPlanData,
+  PublicPlanData,
   PublicUserProvisioningRepository,
 } from '../../domain/repositories/public-user-provisioning.repository';
 
@@ -21,6 +22,8 @@ import { TenantMemberStatus } from '../../../tenant/domain/enums/tenant-member-s
 import { TenantRole } from '../../../tenant/domain/enums/tenant-role.enum';
 import { TenantStatus } from '../../../tenant/domain/enums/tenant-status.enum';
 
+import { InvoiceEntity } from '../../../billing/domain/entities/invoice.entity';
+import { InvoiceStatus } from '../../../billing/domain/enums/invoice-status.enum';
 import { SubscriptionEntity } from '../../../billing/domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../../billing/domain/enums/subscription-status.enum';
 import { BillingInterval } from '../../../billing/domain/enums/billing-interval.enum';
@@ -34,7 +37,8 @@ import { BillingInterval } from '../../../billing/domain/enums/billing-interval.
  * 1. User;
  * 2. Tenant;
  * 3. TenantMember OWNER;
- * 4. Subscription TRIALING vinculada ao plano TRIAL.
+ * 4. Subscription;
+ * 5. Invoice, quando o plano contratado for pago.
  *
  * Se qualquer operação falhar, todas as operações são revertidas.
  */
@@ -43,66 +47,97 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Busca o plano TRIAL atualmente disponível para cadastro público.
+   * Busca um plano disponível para contratação pública.
+   *
+   * O código recebido do cadastro é validado contra o catálogo real
+   * do banco. Portanto, o cliente nunca define preço, moeda ou status
+   * da assinatura.
    */
-  async findPublicTrialPlan(): Promise<PublicTrialPlanData | null> {
-    const trialPlan = await this.prisma.plan.findUnique({
+  async findPublicPlan(planCode: string): Promise<PublicPlanData | null> {
+    const plan = await this.prisma.plan.findUnique({
       where: {
-        code: 'TRIAL',
+        code: planCode,
       },
       select: {
         id: true,
+        code: true,
+        price: true,
+        currency: true,
         billingInterval: true,
         isPublic: true,
         isActive: true,
       },
     });
 
-    if (!trialPlan || !trialPlan.isPublic || !trialPlan.isActive) {
+    if (!plan || !plan.isPublic || !plan.isActive) {
       return null;
     }
 
     return {
-      id: trialPlan.id,
-      billingInterval: trialPlan.billingInterval as unknown as BillingInterval,
+      id: plan.id,
+      code: plan.code,
+      price: plan.price.toNumber(),
+      currency: plan.currency,
+      billingInterval: plan.billingInterval as unknown as BillingInterval,
     };
   }
 
+  /**
+   * Persiste todo o contexto inicial do cliente em uma única
+   * transação PostgreSQL.
+   */
   async create(
     user: UserEntity,
     tenant: TenantEntity,
     owner: TenantMemberEntity,
     subscription: SubscriptionEntity,
+    invoice: InvoiceEntity | null,
   ): Promise<{
     user: UserEntity;
     tenant: TenantEntity;
     owner: TenantMemberEntity;
     subscription: SubscriptionEntity;
+    invoice: InvoiceEntity | null;
   }> {
     return this.prisma.$transaction(async (tx) => {
       /**
-       * O plano é consultado novamente dentro da transação para que
-       * a criação efetiva nunca dependa apenas da validação anterior.
+       * O plano é consultado novamente dentro da transação.
+       *
+       * A Subscription já carrega o ID do plano validado pelo caso
+       * de uso. O novo lookup garante que a persistência efetiva
+       * continue protegida pelas regras de disponibilidade do plano.
        */
-      const trialPlan = await tx.plan.findUnique({
+      const transactionalPlan = await tx.plan.findUnique({
         where: {
-          code: 'TRIAL',
+          id: subscription.planId,
         },
       });
 
-      if (!trialPlan) {
-        throw new Error('Plano TRIAL não encontrado.');
+      if (!transactionalPlan) {
+        throw new Error('Plano selecionado não encontrado.');
       }
 
-      if (!trialPlan.isPublic || !trialPlan.isActive) {
+      if (!transactionalPlan.isPublic || !transactionalPlan.isActive) {
         throw new Error(
-          'Plano TRIAL não está disponível para cadastro público.',
+          'Plano selecionado não está disponível para cadastro público.',
         );
       }
 
-      if (subscription.planId !== trialPlan.id) {
+      if (invoice && invoice.subscriptionId !== subscription.id) {
         throw new Error(
-          'A assinatura de cadastro público não está vinculada ao plano TRIAL.',
+          'A Invoice inicial não está vinculada à assinatura selecionada.',
+        );
+      }
+
+      if (invoice && subscription.status !== SubscriptionStatus.PENDING) {
+        throw new Error(
+          'A assinatura de um plano pago deve iniciar como PENDING.',
+        );
+      }
+
+      if (!invoice && subscription.status !== SubscriptionStatus.TRIALING) {
+        throw new Error(
+          'A assinatura do plano TRIAL deve iniciar como TRIALING.',
         );
       }
 
@@ -152,7 +187,7 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         data: {
           id: subscription.id,
           tenantId: subscription.tenantId,
-          planId: trialPlan.id,
+          planId: transactionalPlan.id,
           status: subscription.status,
           startedAt: subscription.startedAt,
           currentPeriodStart: subscription.currentPeriodStart,
@@ -162,11 +197,34 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         },
       });
 
+      let createdInvoice: InvoiceEntity | null = null;
+
+      if (invoice) {
+        const persistedInvoice = await tx.invoice.create({
+          data: {
+            id: invoice.id,
+            tenantId: invoice.tenantId,
+            subscriptionId: invoice.subscriptionId,
+            number: invoice.number,
+            status: invoice.status,
+            amount: invoice.amount,
+            currency: invoice.currency,
+            dueAt: invoice.dueAt,
+            paidAt: invoice.paidAt,
+            createdAt: invoice.createdAt,
+            updatedAt: invoice.updatedAt,
+          },
+        });
+
+        createdInvoice = this.toInvoiceEntity(persistedInvoice);
+      }
+
       return {
         user: this.toUserEntity(createdUser),
         tenant: this.toTenantEntity(createdTenant),
         owner: this.toTenantMemberEntity(createdOwner),
         subscription: this.toSubscriptionEntity(createdSubscription),
+        invoice: createdInvoice,
       };
     });
   }
@@ -270,6 +328,34 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
       data.currentPeriodEnd,
       data.trialEndsAt,
       data.cancelledAt,
+      data.createdAt,
+      data.updatedAt,
+    );
+  }
+
+  private toInvoiceEntity(data: {
+    id: string;
+    tenantId: string;
+    subscriptionId: string;
+    number: string;
+    status: PrismaInvoiceStatus;
+    amount: { toNumber(): number };
+    currency: string;
+    dueAt: Date;
+    paidAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): InvoiceEntity {
+    return new InvoiceEntity(
+      data.id,
+      data.tenantId,
+      data.subscriptionId,
+      data.number,
+      data.status as InvoiceStatus,
+      data.amount.toNumber(),
+      data.currency,
+      data.dueAt,
+      data.paidAt,
       data.createdAt,
       data.updatedAt,
     );

@@ -1,36 +1,10 @@
 /**
- * Intervalo de cobrança de um plano comercial.
+ * Intervalos disponíveis para cobrança de planos.
  */
 export type BillingInterval = "MONTHLY" | "YEARLY";
-/**
- * Dados necessários para solicitar uma nova assinatura.
- *
- * O backend identifica o Tenant através do contexto
- * X-Tenant-Id e recebe somente o código do plano.
- */
-export interface CreateSubscriptionInput {
-  planCode: string;
-}
-/**
- * Recursos comerciais disponibilizados por um plano.
- *
- * Esses códigos são definidos pelo domínio Billing do backend.
- */
-export type PlanFeatureCode =
-  | "DOMESTIC"
-  | "HEALTH"
-  | "TRANSPORT"
-  | "VEHICLES"
-  | "INVESTMENTS"
-  | "OTHER"
-  | "BASIC_REPORTS"
-  | "ADVANCED_REPORTS";
 
 /**
- * Status possíveis de uma assinatura.
- *
- * Deve permanecer alinhado ao enum SubscriptionStatus
- * definido no domínio Billing do backend.
+ * Estados possíveis de uma assinatura.
  */
 export type SubscriptionStatus =
   | "PENDING"
@@ -42,35 +16,77 @@ export type SubscriptionStatus =
   | "EXPIRED";
 
 /**
- * Representação pública de um plano comercial.
+ * Estados possíveis de uma Invoice.
+ */
+export type InvoiceStatus =
+  | "PENDING"
+  | "PAID"
+  | "OVERDUE"
+  | "CANCELLED";
+
+/**
+ * Meios de pagamento aceitos pelo Billing.
  *
- * Corresponde aos dados retornados pelo endpoint:
- * GET /api/v1/billing/plans
+ * A apresentação pode traduzir:
+ * PIX -> Pix
+ * BANK_SLIP -> Boleto
+ */
+export type PaymentMethod = "PIX" | "BANK_SLIP";
+
+/**
+ * Estados possíveis de uma tentativa de pagamento.
+ */
+export type PaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "PAID"
+  | "FAILED"
+  | "REFUNDED"
+  | "CANCELLED";
+
+/**
+ * Código de funcionalidades disponibilizadas por um plano.
+ */
+export type PlanFeatureCode =
+  | "DOMESTIC"
+  | "HEALTH"
+  | "TRANSPORT"
+  | "VEHICLES"
+  | "INVESTMENTS"
+  | "OTHER"
+  | "BASIC_REPORTS"
+  | "ADVANCED_REPORTS"
+  | "BILLING";
+
+/**
+ * Representação pública de um plano comercial.
  */
 export interface PublicPlan {
   id: string;
-  name: string;
   code: string;
+  name: string;
   description: string | null;
   price: number;
   currency: string;
   billingInterval: BillingInterval;
   maxUsers: number;
-  isPublic: boolean;
-  isActive: boolean;
+  trialDays: number;
+  active: boolean;
   features: PlanFeatureCode[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 /**
- * Representação da assinatura atual de um Tenant.
+ * Dados necessários para criação de uma assinatura.
+ */
+export interface CreateSubscriptionInput {
+  planCode: string;
+}
+
+/**
+ * Representação da assinatura comercial do Tenant.
  *
- * Corresponde ao retorno do endpoint:
- * GET /api/v1/billing/subscription
- *
- * O backend retorna a assinatura sem os dados completos do plano.
- * O planId deve ser utilizado para relacioná-la a um PublicPlan.
+ * Datas são mantidas como string porque atravessam a fronteira
+ * HTTP entre a API e o frontend.
  */
 export interface Subscription {
   id: string;
@@ -82,6 +98,89 @@ export interface Subscription {
   currentPeriodEnd: string;
   trialEndsAt: string | null;
   cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Representação de uma fatura do Tenant.
+ *
+ * Corresponde aos dados retornados pelos endpoints:
+ * GET /api/v1/billing/invoices
+ * GET /api/v1/billing/invoices/:invoiceId
+ *
+ * Datas são mantidas como string porque atravessam a fronteira
+ * HTTP entre a API e o frontend.
+ */
+export interface Invoice {
+  id: string;
+  tenantId: string;
+  subscriptionId: string;
+  number: string;
+  status: InvoiceStatus;
+  amount: number;
+  currency: string;
+  dueAt: string;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Dados enviados para criar uma tentativa de pagamento.
+ *
+ * O invoiceId não faz parte do body porque é informado
+ * pela URL do endpoint.
+ *
+ * O backend valida os dados específicos conforme o método:
+ * - PIX exige pixCopyPaste;
+ * - BANK_SLIP exige barcode ou linha digitável.
+ */
+export interface CreatePaymentInput {
+  method: PaymentMethod;
+  expiresAt?: string;
+  externalReference?: string;
+  pixCopyPaste?: string;
+  bankSlipBarcode?: string;
+  bankSlipDigitableLine?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Dados enviados para confirmação manual de um Payment.
+ *
+ * paidAt é opcional; quando omitido, o backend utiliza
+ * a data/hora atual.
+ */
+export interface ConfirmPaymentInput {
+  paidAt?: string;
+}
+
+/**
+ * Representação de uma tentativa de pagamento.
+ *
+ * Corresponde ao PaymentEntity retornado pela API.
+ *
+ * Datas são mantidas como string porque atravessam a fronteira
+ * HTTP entre a API e o frontend.
+ */
+export interface Payment {
+  id: string;
+  invoiceId: string;
+  reference: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  amount: number;
+  currency: string;
+  paidAt: string | null;
+  expiresAt: string | null;
+  provider: string | null;
+  providerPaymentId: string | null;
+  externalReference: string | null;
+  pixCopyPaste: string | null;
+  bankSlipBarcode: string | null;
+  bankSlipDigitableLine: string | null;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }

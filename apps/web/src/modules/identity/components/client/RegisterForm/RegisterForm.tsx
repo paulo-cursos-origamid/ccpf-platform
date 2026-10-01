@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import {
   Button,
@@ -12,26 +13,32 @@ import {
 } from "@/components/ui/forms";
 
 import { useRegister } from "../../../hooks/client";
+import {
+  getRegistrationPlanLabel,
+  normalizeRegistrationPlan,
+} from "../../../utils/registration-plan";
 
 import styles from "./RegisterForm.module.scss";
 
 export function RegisterForm() {
   const { register, loading, error } = useRegister();
 
+  const searchParams = useSearchParams();
+
+  const registrationPlan = normalizeRegistrationPlan(
+    searchParams.get("plan"),
+  );
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [validationError, setValidationError] =
-    useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const [registrationCompleted, setRegistrationCompleted] =
-    useState(false);
+  const [registrationCompleted, setRegistrationCompleted] = useState(false);
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setValidationError(null);
@@ -52,9 +59,7 @@ export function RegisterForm() {
     }
 
     if (password.length < 8) {
-      setValidationError(
-        "A senha deve possuir pelo menos 8 caracteres.",
-      );
+      setValidationError("A senha deve possuir pelo menos 8 caracteres.");
       return;
     }
 
@@ -68,6 +73,7 @@ export function RegisterForm() {
         name: name.trim(),
         email: email.trim(),
         password,
+        planCode: registrationPlan.toUpperCase(),
       });
 
       setRegistrationCompleted(true);
@@ -77,40 +83,35 @@ export function RegisterForm() {
   }
 
   const errorMessage =
-    validationError ??
-    (error instanceof Error ? error.message : null);
+    validationError ?? (error instanceof Error ? error.message : null);
 
   if (registrationCompleted) {
     return (
       <div className={styles.container}>
         <header className={styles.successHeader}>
-          <div className={styles.successIcon}>
-            ✓
-          </div>
+          <div className={styles.successIcon}>✓</div>
 
-          <h1 className={styles.title}>
-            Cadastro realizado com sucesso!
-          </h1>
+          <h1 className={styles.title}>Cadastro realizado com sucesso!</h1>
 
           <p className={styles.subtitle}>
             Enviamos um e-mail de confirmação para:
           </p>
 
-          <strong className={styles.email}>
-            {email.trim()}
-          </strong>
+          <strong className={styles.email}>{email.trim()}</strong>
         </header>
 
         <div className={styles.successContent}>
           <p>
-            Acesse seu e-mail e clique no link de confirmação
-            para ativar sua conta.
+            Acesse seu e-mail e clique no link de confirmação para ativar sua
+            conta.
           </p>
 
-          <Link
-            href="/check-email"
-            className={styles.verifyButton}
-          >
+          <p>
+            Plano selecionado:{" "}
+            <strong>{getRegistrationPlanLabel(registrationPlan)}</strong>
+          </p>
+
+          <Link href="/check-email" className={styles.verifyButton}>
             Ir para verificar meu e-mail
           </Link>
         </div>
@@ -118,9 +119,7 @@ export function RegisterForm() {
         <footer className={styles.footer}>
           <span>© 2026 CCPF Platform</span>
 
-          <span>
-            Todos os direitos reservados.
-          </span>
+          <span>Todos os direitos reservados.</span>
         </footer>
       </div>
     );
@@ -129,27 +128,22 @@ export function RegisterForm() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <div className={styles.logo}>
-          CCPF
-        </div>
+        <div className={styles.logo}>CCPF</div>
 
-        <h1 className={styles.title}>
-          Crie sua conta
-        </h1>
+        <h1 className={styles.title}>Crie sua conta</h1>
 
         <p className={styles.subtitle}>
           Cadastre-se para começar a organizar suas finanças
         </p>
+
+        <p className={styles.subtitle}>
+          Plano selecionado:{" "}
+          <strong>{getRegistrationPlanLabel(registrationPlan)}</strong>
+        </p>
       </header>
 
-      <form
-        className={styles.form}
-        onSubmit={handleSubmit}
-      >
-        <Field
-          label="Nome"
-          htmlFor="name"
-        >
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <Field label="Nome" htmlFor="name">
           <TextInput
             id="name"
             placeholder="Digite seu nome"
@@ -159,10 +153,7 @@ export function RegisterForm() {
           />
         </Field>
 
-        <Field
-          label="E-mail"
-          htmlFor="email"
-        >
+        <Field label="E-mail" htmlFor="email">
           <EmailInput
             id="email"
             placeholder="Digite seu e-mail"
@@ -172,10 +163,7 @@ export function RegisterForm() {
           />
         </Field>
 
-        <Field
-          label="Senha"
-          htmlFor="password"
-        >
+        <Field label="Senha" htmlFor="password">
           <PasswordInput
             id="password"
             placeholder="Crie uma senha segura"
@@ -185,45 +173,30 @@ export function RegisterForm() {
           />
         </Field>
 
-        <Field
-          label="Confirmar senha"
-          htmlFor="confirmPassword"
-        >
+        <Field label="Confirmar senha" htmlFor="confirmPassword">
           <PasswordInput
             id="confirmPassword"
             placeholder="Digite sua senha novamente"
             autoComplete="new-password"
             value={confirmPassword}
-            onChange={(event) =>
-              setConfirmPassword(event.target.value)
-            }
+            onChange={(event) => setConfirmPassword(event.target.value)}
           />
         </Field>
 
         {errorMessage && (
-          <div
-            className={styles.error}
-            role="alert"
-          >
+          <div className={styles.error} role="alert">
             {errorMessage}
           </div>
         )}
 
-        <Button
-          type="submit"
-          fullWidth
-          loading={loading}
-        >
+        <Button type="submit" fullWidth loading={loading}>
           Criar minha conta
         </Button>
 
         <div className={styles.loginPrompt}>
           <span>Já possui uma conta?</span>
 
-          <a
-            href="/login"
-            className={styles.loginLink}
-          >
+          <a href="/login" className={styles.loginLink}>
             Entrar
           </a>
         </div>
@@ -232,9 +205,7 @@ export function RegisterForm() {
       <footer className={styles.footer}>
         <span>© 2026 CCPF Platform</span>
 
-        <span>
-          Todos os direitos reservados.
-        </span>
+        <span>Todos os direitos reservados.</span>
       </footer>
     </div>
   );

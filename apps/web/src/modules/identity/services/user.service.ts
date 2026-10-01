@@ -2,7 +2,7 @@ import { api } from "@/lib/api/client";
 
 import type { ListUsersQuery, ListUsersResponse } from "../types/user-list";
 import type { UpdateUserInput } from "../types/update-user";
-import type { RegisterDto } from "../types/register.dto";
+import type { CreateUserDto } from "../types/create-user.dto";
 import type { User } from "../types/user";
 
 class UserService {
@@ -30,7 +30,7 @@ class UserService {
       ? `/identity/users?${queryString}`
       : "/identity/users";
 
-    return api.get<ListUsersResponse>(path);
+    return api.get<ListUsersResponse>(path, { tenantAware: false });
   }
 
   /**
@@ -39,8 +39,8 @@ class UserService {
    * Diferente do cadastro público, este endpoint não deve
    * provisionar automaticamente Tenant, OWNER ou Subscription.
    */
-  create(dto: RegisterDto) {
-    return api.post<User>("/identity/users", dto);
+  create(dto: CreateUserDto) {
+    return api.post<User>("/identity/users", dto, { tenantAware: false });
   }
 
   /**
@@ -50,6 +50,7 @@ class UserService {
     return api.patch<ListUsersResponse["users"][number]>(
       `/identity/users/${id}`,
       data,
+      { tenantAware: false },
     );
   }
 
@@ -57,7 +58,7 @@ class UserService {
    * Remove/desativa um usuário através do fluxo administrativo.
    */
   delete(id: string) {
-    return api.delete<void>(`/identity/users/${id}`);
+    return api.delete<void>(`/identity/users/${id}`, { tenantAware: false });
   }
 }
 

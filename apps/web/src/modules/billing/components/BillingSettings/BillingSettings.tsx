@@ -1,123 +1,104 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
 import {
   CalendarDays,
   CheckCircle,
   CreditCard,
   Users,
-} from "@/components/icons";
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-import { useSubscribeToPlan, useTenantSubscription } from "../../hooks";
+import {
+  useChangeSubscriptionPlan,
+  useSubscribeToPlan,
+  useTenantSubscription,
+} from "../../hooks/client";
 import { billingService } from "../../services";
-import type { PublicPlan, SubscriptionStatus } from "../../types";
-
+import type {
+  PublicPlan,
+  SubscriptionStatus,
+} from "../../types";
+import { InvoiceList } from "../InvoiceList/InvoiceList";
 import styles from "./BillingSettings.module.scss";
 
-/**
- * Converte o código de status da assinatura para um texto
- * adequado para apresentação na interface.
- */
+function formatCurrency(
+  value: number,
+  currency: string,
+): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency,
+  }).format(value);
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR").format(date);
+}
+
 function getStatusLabel(status: SubscriptionStatus | null): string {
   switch (status) {
+    case "ACTIVE":
+      return "Ativa";
+    case "TRIALING":
+      return "Em período de teste";
     case "PENDING":
       return "Aguardando pagamento";
-
-    case "TRIALING":
-      return "Período de teste";
-
-    case "ACTIVE":
-      return "Ativo";
-
     case "PAST_DUE":
-      return "Pagamento pendente";
-
+      return "Pagamento em atraso";
     case "SUSPENDED":
-      return "Suspenso";
-
+      return "Suspensa";
     case "CANCELLED":
-      return "Cancelado";
-
+      return "Cancelada";
     case "EXPIRED":
-      return "Expirado";
-
+      return "Expirada";
     default:
       return "Sem assinatura";
   }
 }
 
-/**
- * Retorna uma classe visual compatível com o status da assinatura.
- */
-function getStatusClass(status: SubscriptionStatus | null): string {
+function getStatusClass(
+  status: SubscriptionStatus | null,
+): string {
   switch (status) {
     case "ACTIVE":
       return styles.statusActive;
-
     case "TRIALING":
       return styles.statusTrial;
-
     case "PENDING":
     case "PAST_DUE":
       return styles.statusWarning;
-
     case "SUSPENDED":
     case "CANCELLED":
     case "EXPIRED":
       return styles.statusDanger;
-
     default:
       return styles.statusNeutral;
   }
 }
 
 /**
- * Formata o preço do plano utilizando a moeda informada pela API.
- */
-function formatPrice(price: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency,
-    }).format(price);
-  } catch {
-    return `${currency} ${price.toFixed(2)}`;
-  }
-}
-
-/**
- * Formata uma data recebida da API.
- */
-function formatDate(date: string | null): string {
-  if (!date) {
-    return "—";
-  }
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR").format(parsedDate);
-}
-
-/**
- * Retorna a descrição textual do intervalo de cobrança.
- */
-function getBillingIntervalLabel(
-  interval: PublicPlan["billingInterval"],
-): string {
-  return interval === "YEARLY" ? "por ano" : "por mês";
-}
-
-/**
- * Componente responsável pela tela de gerenciamento
- * do plano comercial e da assinatura do Tenant ativo.
+ * Tela principal de gerenciamento da assinatura e dos
+ * planos comerciais do Tenant.
  *
- * A comunicação com a API e as regras de assinatura
- * permanecem encapsuladas nos hooks/services do módulo Billing.
+ * Responsabilidades:
+ * - carregar os planos públicos;
+ * - apresentar a assinatura atual;
+ * - iniciar contratação quando não existe assinatura;
+ * - iniciar alteração quando já existe assinatura;
+ * - refletir o estado retornado pelo backend;
+ * - manter o histórico de cobranças.
+ *
+ * As regras comerciais permanecem na API.
  */
 export function BillingSettings() {
   const {
@@ -130,29 +111,32 @@ export function BillingSettings() {
     isTrial,
     trialDaysRemaining,
     currentPeriodEnd,
-    loading,
-    error,
+    loading: subscriptionLoading,
+    error: subscriptionError,
     reload,
   } = useTenantSubscription();
 
-  const { subscribeToPlan, loading: subscribing } =
-    useSubscribeToPlan();
+  const {
+    subscribeToPlan,
+    loading: subscribing,
+  } = useSubscribeToPlan();
+
+  const {
+    changeSubscriptionPlan,
+    loading: changingPlan,
+  } = useChangeSubscriptionPlan();
+
+  const [plans, setPlans] = useState<PublicPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<unknown>(null);
 
   const [selectedPlanCode, setSelectedPlanCode] = useState<string | null>(
     null,
   );
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [plans, setPlans] = useState<PublicPlan[]>([]);
-  const [plansLoading, setPlansLoading] = useState(true);
-  const [plansError, setPlansError] = useState<unknown>(null);
+  const [pendingPlan, setPendingPlan] = useState<PublicPlan | null>(null);
 
-  /**
-   * Carrega os planos públicos quando a tela é montada.
-   *
-   * O carregamento é realizado em useEffect porque envolve
-   * comunicação assíncrona e atualização de estado.
-   */
   useEffect(() => {
     let cancelled = false;
 
@@ -167,13 +151,16 @@ export function BillingSettings() {
           return;
         }
 
-        setPlans(result);
-      } catch (loadError) {
+        setPlans(
+          [...result].sort((first, second) => first.price - second.price),
+        );
+      } catch (error) {
         if (cancelled) {
           return;
         }
 
-        setPlansError(loadError);
+        setPlans([]);
+        setPlansError(error);
       } finally {
         if (!cancelled) {
           setPlansLoading(false);
@@ -188,21 +175,31 @@ export function BillingSettings() {
     };
   }, []);
 
-  const orderedPlans = useMemo(() => {
-    return [...plans].sort((a, b) => a.price - b.price);
-  }, [plans]);
-
   const hasCurrentSubscription = subscription !== null;
+  const operationInProgress = subscribing || changingPlan;
 
-  /**
-   * Cria uma assinatura somente quando o Tenant não possui
-   * uma assinatura comercial vigente.
-   *
-   * O backend determina se a assinatura iniciará como
-   * TRIALING ou PENDING.
-   */
+  const currentPlanCode = useMemo(
+    () => currentPlan?.code ?? null,
+    [currentPlan],
+  );
+
+  function requestPlanAction(plan: PublicPlan) {
+    if (operationInProgress || plan.code === currentPlanCode) {
+      return;
+    }
+
+    setActionError(null);
+
+    if (hasCurrentSubscription) {
+      setPendingPlan(plan);
+      return;
+    }
+
+    void handleSubscribe(plan);
+  }
+
   async function handleSubscribe(plan: PublicPlan) {
-    if (hasCurrentSubscription || subscribing) {
+    if (operationInProgress) {
       return;
     }
 
@@ -224,56 +221,71 @@ export function BillingSettings() {
     }
   }
 
-  if (loading && !subscription && !currentPlan) {
-    return (
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <div className={styles.headerIcon}>
-            <CreditCard size={24} />
-          </div>
+  async function handleChangePlan() {
+    if (!pendingPlan || operationInProgress) {
+      return;
+    }
 
-          <div>
-            <h1>Plano e assinatura</h1>
+    const plan = pendingPlan;
 
-            <p>
-              Gerencie o plano comercial e a assinatura deste Espaço.
-            </p>
-          </div>
-        </header>
+    setSelectedPlanCode(plan.code);
+    setActionError(null);
 
-        <div className={styles.loadingCard}>
-          <div className={styles.loadingLine} />
-          <div className={styles.loadingLineShort} />
-          <div className={styles.loadingGrid}>
-            <div className={styles.loadingBox} />
-            <div className={styles.loadingBox} />
-            <div className={styles.loadingBox} />
-          </div>
-        </div>
-      </div>
-    );
+    try {
+      await changeSubscriptionPlan(plan.code);
+
+      setPendingPlan(null);
+
+      /**
+       * O backend pode retornar:
+       * - ACTIVE para alterações imediatas;
+       * - PENDING para conversão Trial → plano pago.
+       *
+       * O estado visual é derivado novamente da assinatura
+       * retornada pela API, sem assumir nenhum desses estados.
+       */
+      await reload();
+    } catch {
+      setActionError(
+        "Não foi possível alterar o plano. Verifique as condições da assinatura e tente novamente.",
+      );
+    } finally {
+      setSelectedPlanCode(null);
+    }
   }
+
+  function cancelPlanChange() {
+    if (operationInProgress) {
+      return;
+    }
+
+    setPendingPlan(null);
+    setActionError(null);
+  }
+
+  const selectedPlanIsCurrent =
+    pendingPlan?.code === currentPlanCode;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerIcon}>
-          <CreditCard size={24} />
+          <CreditCard size={22} />
         </div>
 
         <div>
+          <span className={styles.eyebrow}>Billing</span>
           <h1>Plano e assinatura</h1>
-
           <p>
-            Gerencie o plano comercial e a assinatura deste Espaço.
+            Gerencie o plano comercial e acompanhe a assinatura
+            deste Espaço.
           </p>
         </div>
       </header>
 
-      {error ? (
-        <section className={styles.feedbackError}>
+      {subscriptionError ? (
+        <div className={styles.feedbackError}>
           <strong>Não foi possível carregar a assinatura.</strong>
-
           <button
             type="button"
             className={styles.retryButton}
@@ -281,135 +293,175 @@ export function BillingSettings() {
           >
             Tentar novamente
           </button>
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <div className={styles.feedbackError}>
+          <strong>{actionError}</strong>
+          <button
+            type="button"
+            className={styles.retryButton}
+            onClick={() => setActionError(null)}
+          >
+            Fechar
+          </button>
+        </div>
+      ) : null}
+
+      {hasCurrentSubscription && currentPlan ? (
+        <section className={styles.section}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>Assinatura atual</h2>
+              <p>
+                Confira o plano e o estado comercial deste Espaço.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.currentCard}>
+            <div className={styles.currentMain}>
+              <div>
+                <span className={styles.eyebrow}>Plano atual</span>
+                <h3>{currentPlan.name}</h3>
+
+                {currentPlan.description ? (
+                  <p>{currentPlan.description}</p>
+                ) : null}
+              </div>
+
+              <span
+                className={`${styles.status} ${getStatusClass(status)}`}
+              >
+                {getStatusLabel(status)}
+              </span>
+            </div>
+
+            <div className={styles.currentDetails}>
+              <div className={styles.detail}>
+                <Users size={18} />
+                <div>
+                  <span>Usuários</span>
+                  <strong>
+                    {currentUsers}
+                    {hasUnlimitedUsers
+                      ? " / ilimitado"
+                      : ` / ${maxUsers ?? currentPlan.maxUsers}`}
+                  </strong>
+                </div>
+              </div>
+
+              {isTrial ? (
+                <div className={styles.detail}>
+                  <CalendarDays size={18} />
+                  <div>
+                    <span>Período de teste</span>
+                    <strong>
+                      {trialDaysRemaining !== null
+                        ? `${trialDaysRemaining} dias restantes`
+                        : "Encerrado"}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.detail}>
+                  <CalendarDays size={18} />
+                  <div>
+                    <span>Próximo período</span>
+                    <strong>{formatDate(currentPeriodEnd)}</strong>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.detail}>
+                <CreditCard size={18} />
+                <div>
+                  <span>Valor</span>
+                  <strong>
+                    {formatCurrency(
+                      currentPlan.price,
+                      currentPlan.currency,
+                    )}
+                    {" / "}
+                    {currentPlan.billingInterval === "MONTHLY"
+                      ? "mês"
+                      : "ano"}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {isTrial ? (
+              <div className={styles.trialNotice}>
+                <CheckCircle size={18} />
+                <div>
+                  <strong>Você está no período de teste.</strong>
+                  <span>
+                    Ao escolher um plano pago, a assinatura ficará
+                    aguardando a confirmação do pagamento.
+                  </span>
+                </div>
+              </div>
+            ) : null}
+
+            {status === "PENDING" ? (
+              <div className={styles.pendingNotice}>
+                <CreditCard size={18} />
+                <div>
+                  <strong>Pagamento pendente.</strong>
+                  <span>
+                    Conclua a confirmação do pagamento antes de
+                    alterar o plano desta assinatura.
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div>
-            <h2>Assinatura atual</h2>
-
+            <h2>
+              {hasCurrentSubscription
+                ? "Alterar plano"
+                : "Planos disponíveis"}
+            </h2>
             <p>
-              Consulte o plano utilizado atualmente por este Espaço.
+              {hasCurrentSubscription
+                ? status === "PENDING"
+                  ? "Finalize o pagamento pendente antes de alterar o plano."
+                  : "Escolha outro plano disponível para este Espaço."
+                : "Escolha o plano comercial para este Espaço."}
             </p>
           </div>
         </div>
 
-        <div className={styles.currentCard}>
-          <div className={styles.currentMain}>
-            <div>
-              <span className={styles.eyebrow}>Plano atual</span>
-
-              <h3>{currentPlan?.name ?? "Nenhum plano ativo"}</h3>
-
-              <p>
-                {currentPlan?.description ??
-                  "Este Espaço não possui uma assinatura comercial vigente."}
-              </p>
+        {plansLoading || subscriptionLoading ? (
+          <div className={styles.loadingGrid}>
+            <div className={styles.loadingCard}>
+              <div className={styles.loadingLine} />
+              <div className={styles.loadingLineShort} />
+              <div className={styles.loadingBox} />
             </div>
-
-            <span
-              className={`${styles.status} ${getStatusClass(status)}`}
-            >
-              {getStatusLabel(status)}
-            </span>
-          </div>
-
-          {subscription ? (
-            <div className={styles.currentDetails}>
-              <div className={styles.detail}>
-                <Users size={18} />
-
-                <div>
-                  <span>Usuários</span>
-
-                  <strong>
-                    {hasUnlimitedUsers
-                      ? `${currentUsers} usuários`
-                      : `${currentUsers} / ${maxUsers ?? "—"} usuários`}
-                  </strong>
-                </div>
-              </div>
-
-              <div className={styles.detail}>
-                <CalendarDays size={18} />
-
-                <div>
-                  <span>
-                    {isTrial ? "Fim do período de teste" : "Próximo período"}
-                  </span>
-
-                  <strong>
-                    {formatDate(
-                      isTrial
-                        ? subscription.trialEndsAt
-                        : currentPeriodEnd,
-                    )}
-                  </strong>
-                </div>
-              </div>
+            <div className={styles.loadingCard}>
+              <div className={styles.loadingLine} />
+              <div className={styles.loadingLineShort} />
+              <div className={styles.loadingBox} />
             </div>
-          ) : null}
-
-          {isTrial && trialDaysRemaining !== null ? (
-            <div className={styles.trialNotice}>
-              <strong>
-                {trialDaysRemaining === 0
-                  ? "Seu período de teste terminou."
-                  : `${trialDaysRemaining} ${
-                      trialDaysRemaining === 1 ? "dia" : "dias"
-                    } restantes no período de teste.`}
-              </strong>
-
-              <span>
-                Ao final do período, será necessário contratar um
-                plano comercial para continuar utilizando os recursos
-                pagos.
-              </span>
+            <div className={styles.loadingCard}>
+              <div className={styles.loadingLine} />
+              <div className={styles.loadingLineShort} />
+              <div className={styles.loadingBox} />
             </div>
-          ) : null}
-
-          {status === "PENDING" ? (
-            <div className={styles.pendingNotice}>
-              <strong>Pagamento pendente</strong>
-
-              <span>
-                A assinatura foi criada e aguarda a conclusão do
-                pagamento.
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2>Planos disponíveis</h2>
-
-            <p>
-              Consulte os planos comerciais disponibilizados pelo
-              CCPF.
-            </p>
-          </div>
-        </div>
-
-        {actionError ? (
-          <div className={styles.feedbackError}>
-            {actionError}
-          </div>
-        ) : null}
-
-        {plansLoading ? (
-          <div className={styles.plansLoading}>
-            <div className={styles.loadingBox} />
-            <div className={styles.loadingBox} />
-            <div className={styles.loadingBox} />
           </div>
         ) : plansError ? (
           <div className={styles.feedbackError}>
-            <strong>Não foi possível carregar os planos.</strong>
-
+            <strong>
+              Não foi possível carregar os planos disponíveis.
+            </strong>
             <button
               type="button"
               className={styles.retryButton}
@@ -418,24 +470,25 @@ export function BillingSettings() {
               Tentar novamente
             </button>
           </div>
-        ) : orderedPlans.length === 0 ? (
+        ) : plans.length === 0 ? (
           <div className={styles.emptyState}>
-            <CreditCard size={28} />
-
+            <CreditCard size={24} />
             <strong>Nenhum plano disponível</strong>
-
             <span>
-              Não existem planos comerciais públicos disponíveis no
-              momento.
+              Não existem planos comerciais disponíveis no momento.
             </span>
           </div>
         ) : (
           <div className={styles.plansGrid}>
-            {orderedPlans.map((plan) => {
-              const isCurrentPlan = currentPlan?.id === plan.id;
-              const isSelected = selectedPlanCode === plan.code;
+            {plans
+              .filter((plan) => !hasCurrentSubscription || plan.code !== "TRIAL")
+              .map((plan) => {
+                const isCurrentPlan = plan.code === currentPlanCode;
+                const isSelected = plan.code === selectedPlanCode;
+                const isPendingChange = plan.code === pendingPlan?.code;
+                const planChangeBlocked = status === "PENDING";
 
-              return (
+                return (
                 <article
                   key={plan.id}
                   className={`${styles.planCard} ${
@@ -450,39 +503,34 @@ export function BillingSettings() {
 
                   <div className={styles.planHeader}>
                     <div>
-                      <span className={styles.eyebrow}>
-                        {plan.code}
-                      </span>
-
                       <h3>{plan.name}</h3>
+
+                      {plan.description ? (
+                        <p className={styles.planDescription}>
+                          {plan.description}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className={styles.price}>
+                      <strong>
+                        {formatCurrency(plan.price, plan.currency)}
+                      </strong>
+                      <span>
+                        /{" "}
+                        {plan.billingInterval === "MONTHLY"
+                          ? "mês"
+                          : "ano"}
+                      </span>
                     </div>
                   </div>
 
-                  {plan.description ? (
-                    <p className={styles.planDescription}>
-                      {plan.description}
-                    </p>
-                  ) : null}
-
-                  <div className={styles.price}>
-                    <strong>
-                      {formatPrice(plan.price, plan.currency)}
-                    </strong>
-
-                    <span>
-                      {getBillingIntervalLabel(plan.billingInterval)}
-                    </span>
-                  </div>
-
                   <div className={styles.planUsers}>
-                    <Users size={17} />
-
+                    <Users size={18} />
                     <span>
                       {plan.maxUsers === -1
                         ? "Usuários ilimitados"
-                        : `Até ${plan.maxUsers} ${
-                            plan.maxUsers === 1 ? "usuário" : "usuários"
-                          }`}
+                        : `Até ${plan.maxUsers} usuários`}
                     </span>
                   </div>
 
@@ -491,7 +539,6 @@ export function BillingSettings() {
                       {plan.features.map((feature) => (
                         <li key={feature}>
                           <CheckCircle size={16} />
-
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -501,15 +548,22 @@ export function BillingSettings() {
                   <button
                     type="button"
                     className={styles.planButton}
-                    disabled={hasCurrentSubscription || isSelected}
-                    onClick={() => void handleSubscribe(plan)}
+                    disabled={
+                      operationInProgress ||
+                      isCurrentPlan ||
+                      isPendingChange ||
+                      planChangeBlocked
+                    }
+                    onClick={() => requestPlanAction(plan)}
                   >
                     {isCurrentPlan
                       ? "Plano atual"
                       : isSelected
                         ? "Processando..."
                         : hasCurrentSubscription
-                          ? "Indisponível no momento"
+                          ? planChangeBlocked
+                            ? "Aguardando pagamento"
+                            : "Alterar para este plano"
                           : "Escolher plano"}
                   </button>
                 </article>
@@ -517,6 +571,70 @@ export function BillingSettings() {
             })}
           </div>
         )}
+      </section>
+
+      {pendingPlan && !selectedPlanIsCurrent && status !== "PENDING" ? (
+        <div className={styles.confirmation}>
+          <div className={styles.confirmationContent}>
+            <div>
+              <span className={styles.eyebrow}>
+                Confirmar alteração
+              </span>
+              <h2>
+                Alterar para {pendingPlan.name}?
+              </h2>
+              <p>
+                A assinatura será alterada para{" "}
+                <strong>{pendingPlan.name}</strong>. O backend
+                aplicará as regras comerciais e de capacidade
+                previstas para a mudança.
+              </p>
+
+              {isTrial ? (
+                <p>
+                  Como a assinatura está em período de teste, a
+                  alteração para um plano pago ficará pendente até
+                  a confirmação do pagamento.
+                </p>
+              ) : null}
+            </div>
+
+            <div className={styles.confirmationActions}>
+              <button
+                type="button"
+                className={styles.cancelButton}
+                disabled={operationInProgress}
+                onClick={cancelPlanChange}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className={styles.planButton}
+                disabled={operationInProgress}
+                onClick={() => void handleChangePlan()}
+              >
+                {changingPlan
+                  ? "Alterando..."
+                  : "Confirmar alteração"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2>Histórico de cobranças</h2>
+            <p>
+              Consulte as faturas e cobranças deste Espaço.
+            </p>
+          </div>
+        </div>
+
+        <InvoiceList />
       </section>
     </div>
   );

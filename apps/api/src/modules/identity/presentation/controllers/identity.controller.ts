@@ -41,6 +41,7 @@ import { CurrentUser, type AuthenticatedUser } from '../../infrastructure/auth';
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard';
 
 import { CreateUserDto } from '../dto/create-user.dto';
+import { CreatePublicUserDto } from '../dto/create-public-user.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { LoginDto } from '../dto/login.dto';
@@ -134,7 +135,7 @@ export class IdentityController {
       'Cria o usuário, seu Tenant, o vínculo como OWNER e uma assinatura TRIALING de 14 dias.',
   })
   @ApiBody({
-    type: CreateUserDto,
+    type: CreatePublicUserDto,
   })
   @ApiResponse({
     status: 201,
@@ -151,11 +152,12 @@ export class IdentityController {
     status: 409,
     description: 'O e-mail informado já está cadastrado.',
   })
-  async register(@Body() dto: CreateUserDto) {
+  async register(@Body() dto: CreatePublicUserDto) {
     return this.createPublicUserUseCase.execute({
       name: dto.name,
       email: dto.email,
       password: dto.password,
+      planCode: dto.planCode,
     });
   }
 

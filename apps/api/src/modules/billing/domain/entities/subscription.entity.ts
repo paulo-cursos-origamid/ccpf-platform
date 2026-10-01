@@ -1,10 +1,6 @@
+import { SubscriptionPlanChangeType } from '../enums/subscription-plan-change-type.enum';
 import { SubscriptionStatus } from '../enums/subscription-status.enum';
 
-/**
- * Representa uma assinatura de um Tenant a um plano comercial.
- *
- * A entidade controla o estado da assinatura dentro do domínio.
- */
 export class SubscriptionEntity {
   constructor(
     public readonly id: string,
@@ -18,35 +14,28 @@ export class SubscriptionEntity {
     public cancelledAt: Date | null,
     public readonly createdAt: Date,
     public updatedAt: Date,
+    public pendingPlanId: string | null = null,
+    public pendingPlanChangeType: SubscriptionPlanChangeType | null = null,
+    public pendingPlanEffectiveAt: Date | null = null,
+    public pendingPlanInvoiceId: string | null = null,
   ) {}
 
-  /**
-   * Indica se a assinatura está em período de avaliação.
-   */
   get isTrial(): boolean {
     return this.status === SubscriptionStatus.TRIALING;
   }
 
-  /**
-   * Indica se a assinatura está ativa.
-   */
   get isActive(): boolean {
     return this.status === SubscriptionStatus.ACTIVE;
   }
 
-  /**
-   * Indica se a assinatura está aguardando confirmação
-   * de pagamento.
-   */
   get isPending(): boolean {
     return this.status === SubscriptionStatus.PENDING;
   }
 
-  /**
-   * Indica se o período gratuito terminou.
-   *
-   * A regra só se aplica enquanto a assinatura estiver em TRIALING.
-   */
+  get hasPendingPlanChange(): boolean {
+    return this.pendingPlanId !== null;
+  }
+
   hasTrialExpired(referenceDate: Date = new Date()): boolean {
     return (
       this.isTrial &&
@@ -55,28 +44,12 @@ export class SubscriptionEntity {
     );
   }
 
-  /**
-   * Indica se a assinatura permite utilização dos recursos comerciais.
-   *
-   * Somente assinaturas ACTIVE e TRIALING ainda válido permitem
-   * acesso aos recursos protegidos por Billing.
-   */
   get hasCommercialAccess(): boolean {
-    if (this.isActive) {
-      return true;
-    }
-
-    if (this.isTrial) {
-      return !this.hasTrialExpired();
-    }
-
+    if (this.isActive) return true;
+    if (this.isTrial) return !this.hasTrialExpired();
     return false;
   }
 
-  /**
-   * Indica se a assinatura não deve mais permitir utilização
-   * normal dos recursos do plano.
-   */
   get isInactive(): boolean {
     return [
       SubscriptionStatus.CANCELLED,
@@ -85,23 +58,53 @@ export class SubscriptionEntity {
     ].includes(this.status);
   }
 
-  /**
-   * Altera o plano associado à assinatura.
-   *
-   * A decisão sobre permitir ou não a troca pertence ao
-   * caso de uso. A entidade apenas altera o estado interno.
-   */
   changePlan(planId: string, updatedAt: Date = new Date()): void {
     this.planId = planId;
     this.updatedAt = updatedAt;
   }
 
-  /**
-   * Coloca a assinatura aguardando confirmação de pagamento.
-   *
-   * Utilizado quando um Tenant em Trial converte a assinatura
-   * para um plano pago.
-   */
+  scheduleUpgrade(
+    planId: string,
+    invoiceId: string,
+    effectiveAt: Date = new Date(),
+    updatedAt: Date = new Date(),
+  ): void {
+    this.pendingPlanId = planId;
+    this.pendingPlanChangeType = SubscriptionPlanChangeType.UPGRADE;
+    this.pendingPlanEffectiveAt = effectiveAt;
+    this.pendingPlanInvoiceId = invoiceId;
+    this.updatedAt = updatedAt;
+  }
+
+  scheduleDowngrade(
+    planId: string,
+    effectiveAt: Date,
+    updatedAt: Date = new Date(),
+  ): void {
+    this.pendingPlanId = planId;
+    this.pendingPlanChangeType = SubscriptionPlanChangeType.DOWNGRADE;
+    this.pendingPlanEffectiveAt = effectiveAt;
+    this.pendingPlanInvoiceId = null;
+    this.updatedAt = updatedAt;
+  }
+
+  applyPendingPlan(updatedAt: Date = new Date()): void {
+    if (this.pendingPlanId === null) {
+      return;
+    }
+
+    this.planId = this.pendingPlanId;
+    this.clearPendingPlanChange(updatedAt);
+  }
+
+  clearPendingPlanChange(updatedAt: Date = new Date()): void {
+    this.pendingPlanId = null;
+    this.pendingPlanChangeType = null;
+    this.pendingPlanEffectiveAt = null;
+    this.pendingPlanInvoiceId = null;
+    this.updatedAt = updatedAt;
+  }
+
   markAsPending(updatedAt: Date = new Date()): void {
     this.status = SubscriptionStatus.PENDING;
     this.cancelledAt = null;
@@ -109,43 +112,28 @@ export class SubscriptionEntity {
     this.updatedAt = updatedAt;
   }
 
-  /**
-   * Cancela a assinatura.
-   */
   cancel(cancelledAt: Date = new Date()): void {
     this.status = SubscriptionStatus.CANCELLED;
     this.cancelledAt = cancelledAt;
     this.updatedAt = cancelledAt;
   }
 
-  /**
-   * Ativa a assinatura após confirmação do pagamento.
-   */
   activate(updatedAt: Date = new Date()): void {
     this.status = SubscriptionStatus.ACTIVE;
     this.cancelledAt = null;
     this.updatedAt = updatedAt;
   }
 
-  /**
-   * Coloca a assinatura em atraso.
-   */
   markAsPastDue(updatedAt: Date = new Date()): void {
     this.status = SubscriptionStatus.PAST_DUE;
     this.updatedAt = updatedAt;
   }
 
-  /**
-   * Suspende a assinatura.
-   */
   suspend(updatedAt: Date = new Date()): void {
     this.status = SubscriptionStatus.SUSPENDED;
     this.updatedAt = updatedAt;
   }
 
-  /**
-   * Expira a assinatura.
-   */
   expire(updatedAt: Date = new Date()): void {
     this.status = SubscriptionStatus.EXPIRED;
     this.updatedAt = updatedAt;

@@ -13,29 +13,12 @@ import { InvoiceRepository } from '../../../domain/repositories/invoice.reposito
 import { PlanRepository } from '../../../domain/repositories/plan.repository';
 import { SubscriptionRepository } from '../../../domain/repositories/subscription.repository';
 
-/**
- * Dados necessários para emitir uma Invoice.
- */
 export interface CreateInvoiceInput {
   subscriptionId: string;
   dueAt?: Date;
+  amount?: number;
 }
 
-/**
- * Caso de uso responsável pela emissão de uma Invoice.
- *
- * Responsabilidades:
- * - localizar a assinatura;
- * - localizar o plano associado;
- * - impedir duplicação de cobrança aberta;
- * - utilizar o preço e a moeda do plano;
- * - gerar o número da Invoice;
- * - persistir a obrigação financeira.
- *
- * A criação da Invoice não cria o Payment.
- * O Payment representa a tentativa/forma de quitação
- * e pertence a um passo posterior do fluxo.
- */
 @Injectable()
 export class CreateInvoiceUseCase {
   constructor(
@@ -87,6 +70,14 @@ export class CreateInvoiceUseCase {
       );
     }
 
+    const amount = input.amount ?? plan.price;
+
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'O valor da Invoice deve ser maior que zero.',
+      );
+    }
+
     const now = new Date();
     const dueAt = input.dueAt ?? this.calculateDefaultDueAt(now);
 
@@ -102,7 +93,7 @@ export class CreateInvoiceUseCase {
       subscription.id,
       this.generateInvoiceNumber(now),
       InvoiceStatus.PENDING,
-      plan.price,
+      amount,
       plan.currency,
       dueAt,
       null,
@@ -113,31 +104,18 @@ export class CreateInvoiceUseCase {
     return this.invoiceRepository.create(invoice);
   }
 
-  /**
-   * Define o vencimento padrão quando o chamador
-   * não informa uma data específica.
-   */
-  private calculateDefaultDueAt(start: Date): Date {
-    const dueAt = new Date(start);
+  private calculateDefaultDueAt(referenceDate: Date): Date {
+    const dueAt = new Date(referenceDate);
     dueAt.setDate(dueAt.getDate() + 7);
 
     return dueAt;
   }
 
-  /**
-   * Gera uma referência legível e única para a Invoice.
-   *
-   * A unicidade final continua protegida pelo @unique
-   * existente no banco de dados.
-   */
-  private generateInvoiceNumber(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const sequence = randomUUID()
-      .replaceAll('-', '')
-      .slice(0, 10)
-      .toUpperCase();
+  private generateInvoiceNumber(referenceDate: Date): string {
+    const year = referenceDate.getFullYear();
+    const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
+    const suffix = randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase();
 
-    return `INV-${year}${month}-${sequence}`;
+    return `CCPF-${year}-${month}-${suffix}`;
   }
 }
