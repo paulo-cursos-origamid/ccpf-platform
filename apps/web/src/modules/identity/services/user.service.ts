@@ -30,7 +30,7 @@ class UserService {
       ? `/identity/users?${queryString}`
       : "/identity/users";
 
-    return api.get<ListUsersResponse>(path);
+    return api.get<ListUsersResponse>(path, { tenantAware: false });
   }
 
   /**
@@ -40,7 +40,7 @@ class UserService {
    * provisionar automaticamente Tenant, OWNER ou Subscription.
    */
   create(dto: CreateUserDto) {
-    return api.post<User>("/identity/users", dto);
+    return api.post<User>("/identity/users", dto, { tenantAware: false });
   }
 
   /**
@@ -50,6 +50,7 @@ class UserService {
     return api.patch<ListUsersResponse["users"][number]>(
       `/identity/users/${id}`,
       data,
+      { tenantAware: false },
     );
   }
 
@@ -57,7 +58,7 @@ class UserService {
    * Remove/desativa um usuário através do fluxo administrativo.
    */
   delete(id: string) {
-    return api.delete<void>(`/identity/users/${id}`);
+    return api.delete<void>(`/identity/users/${id}`, { tenantAware: false });
   }
 }
 
