@@ -90,6 +90,11 @@ const permissions = [
     'Gerenciar cobrança',
     'Permite administrar cobranças.',
   ],
+  [
+    'DASHBOARD_READ',
+    'Visualizar dashboard administrativo',
+    'Permite visualizar o dashboard administrativo da plataforma.',
+  ],
 ] as const;
 
 const roles = [
@@ -108,13 +113,18 @@ const roles = [
       'USERS_UPDATE',
       'TENANTS_READ',
       'TENANTS_UPDATE',
+      'DASHBOARD_READ',
     ],
   },
   {
     code: 'PLATFORM_SUPPORT',
     name: 'Suporte da Plataforma',
     description: 'Responsável pelo atendimento e suporte aos usuários.',
-    permissions: ['USERS_READ', 'TENANTS_READ'],
+    permissions: [
+      'USERS_READ',
+      'TENANTS_READ',
+      'DASHBOARD_READ',
+    ],
   },
   {
     code: 'PLATFORM_BILLING',
@@ -276,6 +286,20 @@ async function seedRoles() {
       },
     });
 
+    /**
+     * Sincroniza as permissões da role.
+     *
+     * O seed é a fonte de verdade para as roles sistêmicas.
+     * Por isso, removemos as associações atuais antes de recriá-las.
+     * Dessa forma, permissões removidas da definição também são
+     * removidas do banco em execuções posteriores do seed.
+     */
+    await prisma.platformRolePermission.deleteMany({
+      where: {
+        roleId: role.id,
+      },
+    });
+
     for (const permissionCode of roleDefinition.permissions) {
       const permission = await prisma.platformPermission.findUnique({
         where: {
@@ -289,15 +313,8 @@ async function seedRoles() {
         );
       }
 
-      await prisma.platformRolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: role.id,
-            permissionId: permission.id,
-          },
-        },
-        update: {},
-        create: {
+      await prisma.platformRolePermission.create({
+        data: {
           roleId: role.id,
           permissionId: permission.id,
         },

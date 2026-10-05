@@ -14,7 +14,7 @@
   color: var(--text-primary);
 
   font-family: inherit;
-  font-size: var(--font-size-md);
+  font-size: var(--font-md);
   line-height: 1.5;
 
   resize: vertical;
@@ -28,7 +28,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .textarea:hover:not(:disabled) {

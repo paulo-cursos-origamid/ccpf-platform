@@ -74,18 +74,18 @@
 
 .statusPending {
   background: var(--warning-soft);
-  color: var(--warning-primary);
+  color: var(--warning);
 }
 
 .statusPaid {
   background: var(--success-soft);
-  color: var(--success-primary);
+  color: var(--success);
 }
 
 .statusOverdue,
 .statusCancelled {
   background: var(--danger-soft);
-  color: var(--danger-primary);
+  color: var(--danger);
 }
 
 .summaryGrid {
@@ -365,10 +365,10 @@
 .confirmationError {
   margin: 16px 22px 0;
   padding: 12px 14px;
-  border: 1px solid var(--danger-primary);
+  border: 1px solid var(--danger);
   border-radius: 10px;
   background: var(--danger-soft);
-  color: var(--danger-primary);
+  color: var(--danger);
   font-size: 13px;
   font-weight: 600;
 }

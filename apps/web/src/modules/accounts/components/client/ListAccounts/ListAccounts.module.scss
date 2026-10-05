@@ -68,7 +68,7 @@
   background: var(--accent-primary);
   color: var(--text-on-accent);
 
-  font-size: var(--font-size-sm);
+  font-size: var(--font-sm);
   font-weight: var(--font-weight-medium);
 
   cursor: pointer;
@@ -103,7 +103,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
 }
 
 .table {
@@ -146,7 +146,7 @@
     transition: background-color var(--transition-fast);
 
     &:hover {
-      background: var(--background-hover);
+      background: var(--surface-hover);
     }
   }
 }
@@ -201,7 +201,7 @@
   &:hover {
     border-color: var(--border-primary);
 
-    background: var(--background-hover);
+    background: var(--surface-hover);
 
     color: var(--accent-primary);
   }
@@ -256,7 +256,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
 
   text-align: center;
 }
@@ -266,7 +266,7 @@
 }
 
 .error {
-  color: var(--accent-danger);
+  color: var(--danger);
 }
 
 .empty {

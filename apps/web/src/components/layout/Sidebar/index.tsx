@@ -17,7 +17,8 @@ import {
   type ProductModuleAccess,
   type ProductModuleSection,
 } from "@/modules/product/catalog";
-import { useIdentityStore } from "@/modules/identity/stores/identity.store";
+import { useHasPermission } from "@/modules/identity/hooks/useHasPermission";
+import { PLATFORM_PERMISSIONS } from "@/modules/identity/utils";
 import { useTenantStore } from "@/modules/tenant/stores";
 
 import styles from "./Sidebar.module.scss";
@@ -56,12 +57,13 @@ export function Sidebar() {
     null,
   );
 
-  const user = useIdentityStore((state) => state.user);
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
 
   const subscription = useTenantSubscription();
 
-  const isPlatformAdmin = user?.role === "ADMIN";
+  const hasPlatformDashboardAccess = useHasPermission(
+    PLATFORM_PERMISSIONS.DASHBOARD_READ,
+  );
 
   /**
    * Resolve a visibilidade e o estado de cada módulo
@@ -73,7 +75,7 @@ export function Sidebar() {
       access: resolveModuleAccess(module, {
         subscription,
         hasActiveTenant: Boolean(activeTenantId),
-        isPlatformAdmin,
+        isPlatformAdmin: hasPlatformDashboardAccess,
       }),
     }))
     .filter(({ access }) => !HIDDEN_ACCESS_STATES.includes(access))

@@ -1,33 +1,33 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, ConflictException, Inject } from '@nestjs/common';
-
-import { UserEntity } from '../../../domain/entities/user.entity';
-import { UserRepository } from '../../../domain/repositories/user.repository';
-import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
-import { EmailVerificationNotifierContract } from '../../../domain/contracts/email-verification-notifier.contract';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+
+import { EmailVerificationNotifierContract } from '../../../domain/contracts/email-verification-notifier.contract';
+import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
+import { UserEntity, UserRole } from '../../../domain/entities/user.entity';
+import { UserRepository } from '../../../domain/repositories/user.repository';
 
 export interface CreateUserInput {
   name: string;
   email: string;
   password: string;
+  role?: UserRole;
 }
 
 export interface CreateUserOutput {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 @Injectable()
 export class CreateUserUseCase {
   constructor(
     private readonly userRepository: UserRepository,
-
     @Inject(PasswordHasherContract)
     private readonly passwordHasher: PasswordHasherContract,
-
     @Inject(EmailVerificationNotifierContract)
     private readonly emailVerificationNotifier: EmailVerificationNotifierContract,
   ) {}
@@ -40,7 +40,6 @@ export class CreateUserUseCase {
     }
 
     const passwordHash = await this.passwordHasher.hash(input.password);
-
     const verificationToken = randomUUID();
 
     const verificationTokenExpiresAt = new Date(
@@ -51,13 +50,12 @@ export class CreateUserUseCase {
       name: input.name,
       email: input.email,
       password: passwordHash,
-
+      role: input.role ?? UserRole.USER,
       emailVerified: false,
       verificationToken,
       verificationTokenExpiresAt,
     });
 
-    // const savedUser = await this.userRepository.create(user);
     let savedUser: UserEntity;
 
     try {
@@ -83,6 +81,7 @@ export class CreateUserUseCase {
       id: savedUser.id,
       name: savedUser.name,
       email: savedUser.email,
+      role: savedUser.role,
     };
   }
 }

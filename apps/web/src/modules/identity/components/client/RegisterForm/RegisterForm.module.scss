@@ -168,11 +168,11 @@
 
   padding: var(--spacing-md) var(--spacing-lg);
 
-  border: 1px solid var(--border-danger);
+  border: 1px solid var(--danger);
   border-radius: var(--radius-md);
 
-  background: var(--surface-danger);
-  color: var(--text-danger);
+  background: var(--danger-soft);
+  color: var(--text-error);
 
   font-size: var(--font-sm);
   line-height: var(--line-height-normal);
@@ -234,7 +234,7 @@
 
   margin-top: var(--spacing-xl);
 
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 
   font-size: var(--font-xs);
   text-align: center;
@@ -321,7 +321,7 @@
 .verifyButton {
   width: 100%;
 
-  min-height: var(--control-height);
+  min-height: var(--control-height-md);
 
   display: flex;
   align-items: center;

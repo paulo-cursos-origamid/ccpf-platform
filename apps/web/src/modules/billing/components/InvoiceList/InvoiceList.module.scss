@@ -154,7 +154,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  color: var(--danger-primary);
+  color: var(--danger);
   background: var(--danger-soft);
   border: 1px solid var(--border-primary);
   border-radius: 10px;
@@ -169,7 +169,7 @@
   }
 
   strong {
-    color: var(--danger-primary);
+    color: var(--danger);
     font-size: 13px;
     line-height: 1.4;
   }

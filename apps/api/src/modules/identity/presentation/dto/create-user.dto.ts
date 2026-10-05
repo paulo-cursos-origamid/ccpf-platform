@@ -1,9 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
-/**
- * Dados necessários para criação de um usuário.
- */
+import { UserRole } from '../../domain/entities/user.entity';
+
 export class CreateUserDto {
   @ApiProperty({
     description: 'Nome do usuário.',
@@ -27,4 +32,15 @@ export class CreateUserDto {
   @IsString()
   @MinLength(6)
   password!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Perfil administrativo do usuário. Usuários comuns não recebem PlatformRole.',
+    enum: UserRole,
+    example: UserRole.USER,
+    default: UserRole.USER,
+  })
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
 }

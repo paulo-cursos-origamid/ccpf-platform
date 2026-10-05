@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Prisma, UserRole as PrismaUserRole } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
@@ -10,8 +11,14 @@ import {
   UserRepository,
 } from '../../domain/repositories/user.repository';
 
-import { UserRole as PrismaUserRole } from '@prisma/client';
-
+/**
+ * Persiste usuários e mantém a projeção administrativa
+ * UserPlatformRole sincronizada com User.role.
+ *
+ * User.role é a fonte de verdade do perfil administrativo.
+ * UserPlatformRole é a associação utilizada pelo mecanismo
+ * de autorização baseado em permissões.
+ */
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -21,32 +28,38 @@ export class PrismaUserRepository implements UserRepository {
   // --------------------------------------------------
 
   async create(user: UserEntity): Promise<UserEntity> {
-    const createdUser = await this.prisma.user.create({
-      data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        password: user.password,
-        role: user.role,
+    const createdUser = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          role: user.role,
 
-        isActive: user.isActive,
+          isActive: user.isActive,
 
-        emailVerified: user.emailVerified,
+          emailVerified: user.emailVerified,
 
-        verificationToken: user.verificationToken,
+          verificationToken: user.verificationToken,
 
-        verificationTokenExpiresAt: user.verificationTokenExpiresAt,
+          verificationTokenExpiresAt: user.verificationTokenExpiresAt,
 
-        refreshTokenHash: user.refreshTokenHash,
+          refreshTokenHash: user.refreshTokenHash,
 
-        passwordResetToken: user.passwordResetToken,
+          passwordResetToken: user.passwordResetToken,
 
-        passwordResetExpiresAt: user.passwordResetExpiresAt,
+          passwordResetExpiresAt: user.passwordResetExpiresAt,
 
-        lastLoginAt: user.lastLoginAt,
+          lastLoginAt: user.lastLoginAt,
 
-        deletedAt: user.deletedAt,
-      },
+          deletedAt: user.deletedAt,
+        },
+      });
+
+      await this.syncPlatformRole(tx, created.id, user.role);
+
+      return created;
     });
 
     return this.toDomain(createdUser);
@@ -96,9 +109,16 @@ export class PrismaUserRepository implements UserRepository {
 
   async findByVerificationToken(token: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findFirst({
-      where: { verificationToken: token, deletedAt: null },
+      where: {
+        verificationToken: token,
+        deletedAt: null,
+      },
     });
-    if (!user) return null;
+
+    if (!user) {
+      return null;
+    }
+
     return this.toDomain(user);
   }
 
@@ -108,18 +128,25 @@ export class PrismaUserRepository implements UserRepository {
 
   async findByPasswordResetToken(token: string): Promise<UserEntity | null> {
     const user = await this.prisma.user.findFirst({
-      where: { passwordResetToken: token, deletedAt: null },
+      where: {
+        passwordResetToken: token,
+        deletedAt: null,
+      },
     });
-    if (!user) return null;
+
+    if (!user) {
+      return null;
+    }
+
     return this.toDomain(user);
   }
+
   // --------------------------------------------------
   // FIND MANY
   // --------------------------------------------------
 
   async findMany(options: FindUsersOptions = {}): Promise<FindUsersResult> {
     const page = Math.max(options.page ?? 1, 1);
-
     const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
 
     const search = options.search?.trim();
@@ -176,15 +203,23 @@ export class PrismaUserRepository implements UserRepository {
   // --------------------------------------------------
 
   async softDelete(id: string): Promise<void> {
-    await this.prisma.user.update({
-      where: {
-        id,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id,
+        },
 
-      data: {
-        deletedAt: new Date(),
-        isActive: false,
-      },
+        data: {
+          deletedAt: new Date(),
+          isActive: false,
+        },
+      });
+
+      await tx.userPlatformRole.deleteMany({
+        where: {
+          userId: id,
+        },
+      });
     });
   }
 
@@ -193,38 +228,117 @@ export class PrismaUserRepository implements UserRepository {
   // --------------------------------------------------
 
   async update(user: UserEntity): Promise<UserEntity> {
-    const updatedUser = await this.prisma.user.update({
-      where: {
-        id: user.id,
-      },
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: {
+          id: user.id,
+        },
 
-      data: {
-        name: user.name,
-        email: user.email,
-        password: user.password,
-        role: user.role,
+        data: {
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          role: user.role,
 
-        isActive: user.isActive,
+          isActive: user.isActive,
 
-        emailVerified: user.emailVerified,
+          emailVerified: user.emailVerified,
 
-        verificationToken: user.verificationToken,
+          verificationToken: user.verificationToken,
 
-        verificationTokenExpiresAt: user.verificationTokenExpiresAt,
+          verificationTokenExpiresAt: user.verificationTokenExpiresAt,
 
-        refreshTokenHash: user.refreshTokenHash,
+          refreshTokenHash: user.refreshTokenHash,
 
-        passwordResetToken: user.passwordResetToken,
+          passwordResetToken: user.passwordResetToken,
 
-        passwordResetExpiresAt: user.passwordResetExpiresAt,
+          passwordResetExpiresAt: user.passwordResetExpiresAt,
 
-        lastLoginAt: user.lastLoginAt,
+          lastLoginAt: user.lastLoginAt,
 
-        deletedAt: user.deletedAt,
-      },
+          deletedAt: user.deletedAt,
+        },
+      });
+
+      await this.syncPlatformRole(tx, updated.id, user.role);
+
+      return updated;
     });
 
     return this.toDomain(updatedUser);
+  }
+
+  // --------------------------------------------------
+  // PLATFORM ROLE SYNCHRONIZATION
+  // --------------------------------------------------
+
+  /**
+   * Mantém exatamente uma PlatformRole administrativa
+   * correspondente ao UserRole, exceto para USER.
+   *
+   * A operação é executada dentro da mesma transação que
+   * cria/atualiza o usuário.
+   */
+  private async syncPlatformRole(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    userRole: UserRole,
+  ): Promise<void> {
+    await tx.userPlatformRole.deleteMany({
+      where: {
+        userId,
+      },
+    });
+
+    const platformRoleCode = this.mapUserRoleToPlatformRole(userRole);
+
+    if (!platformRoleCode) {
+      return;
+    }
+
+    const platformRole = await tx.platformRole.findUnique({
+      where: {
+        code: platformRoleCode,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!platformRole || !platformRole.isActive) {
+      throw new InternalServerErrorException(
+        `PlatformRole "${platformRoleCode}" não encontrada ou está inativa.`,
+      );
+    }
+
+    await tx.userPlatformRole.create({
+      data: {
+        userId,
+        roleId: platformRole.id,
+      },
+    });
+  }
+
+  /**
+   * Traduz o papel legado/administrativo do usuário para
+   * a PlatformRole responsável pelas permissões globais.
+   */
+  private mapUserRoleToPlatformRole(userRole: UserRole): string | null {
+    switch (userRole) {
+      case UserRole.ADMIN:
+        return 'PLATFORM_ADMIN';
+
+      case UserRole.MANAGER:
+        return 'PLATFORM_MANAGER';
+
+      case UserRole.SUPPORT:
+        return 'PLATFORM_SUPPORT';
+
+      case UserRole.USER:
+      default:
+        return null;
+    }
   }
 
   // --------------------------------------------------
@@ -276,7 +390,6 @@ export class PrismaUserRepository implements UserRepository {
       refreshTokenHash: rawUser.refreshTokenHash,
 
       passwordResetToken: rawUser.passwordResetToken,
-
       passwordResetExpiresAt: rawUser.passwordResetExpiresAt,
 
       lastLoginAt: rawUser.lastLoginAt,

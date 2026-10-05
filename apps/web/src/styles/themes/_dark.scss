@@ -1,55 +1,61 @@
 @use "../abstracts/variables" as v;
 
+/**
+ * Tema escuro da aplicação.
+ *
+ * Este arquivo contém somente tokens que possuem comportamento
+ * visual específico do tema. Tokens estruturais compartilhados
+ * ficam em base/_tokens.scss.
+ */
+
 [data-theme="dark"] {
-  /* ==================================================
+  /* ==========================================================
      SURFACES
-  ================================================== */
+  ========================================================== */
 
   --surface-primary: #{v.$blue-950};
   --surface-secondary: #{v.$blue-900};
   --surface-tertiary: #{v.$blue-850};
-
   --surface-card: rgba(255, 255, 255, 0.04);
   --surface-widget: rgba(255, 255, 255, 0.03);
-
   --surface-hover: rgba(255, 255, 255, 0.06);
 
-  /* ==================================================
+  /* ==========================================================
      TEXT
-  ================================================== */
+  ========================================================== */
 
   --text-primary: rgba(255, 255, 255, 0.92);
   --text-secondary: rgba(255, 255, 255, 0.65);
   --text-muted: rgba(255, 255, 255, 0.45);
-
-  --text-on-accent: #fff;
+  --text-on-accent: #ffffff;
 
   --text-error: #{v.$danger};
   --text-success: #{v.$success};
   --text-warning: #{v.$warning};
   --text-info: #{v.$info};
 
-  /* ==================================================
+  /* ==========================================================
      BORDER
-  ================================================== */
+  ========================================================== */
 
   --border-primary: rgba(120, 160, 255, 0.18);
   --border-secondary: rgba(120, 160, 255, 0.12);
   --border-hover: rgba(120, 180, 255, 0.35);
 
-  /* ==================================================
+  /* ==========================================================
      BRAND
-  ================================================== */
+  ========================================================== */
 
   --accent-primary: #{v.$color-green};
   --accent-primary-rgb: 4, 120, 87;
+  --accent-primary-hover: #059669;
 
   --accent-secondary: #{v.$color-gold};
   --accent-secondary-rgb: 251, 183, 85;
 
-  /* ==================================================
+  /* ==========================================================
      STATUS
-  ================================================== */
+  ========================================================== */
 
   --success: #{v.$success};
   --warning: #{v.$warning};
@@ -61,13 +67,29 @@
   --danger-rgb: 239, 68, 68;
   --info-rgb: 56, 189, 248;
 
-  /* ==================================================
+  /* ==========================================================
      BUTTONS
-  ================================================== */
+  ========================================================== */
+
+  --accent-soft: rgba(var(--accent-primary-rgb), 0.10);
+
+  --success-primary: var(--success);
+  --success-soft: rgba(var(--success-rgb), 0.14);
+
+  --warning-primary: var(--warning);
+  --warning-soft: rgba(var(--warning-rgb), 0.14);
+
+  --danger-primary: var(--danger);
+  --danger-soft: rgba(var(--danger-rgb), 0.14);
+
+  --text-secondary-rgb: 255, 255, 255;
+
+  --dashboard-bg-start: var(--surface-primary);
+  --dashboard-bg-end: var(--surface-secondary);
 
   --button-primary-bg: #3b82f6;
   --button-primary-bg-hover: #60a5fa;
-  --button-primary-text: #fff;
+  --button-primary-text: #ffffff;
   --button-primary-border: transparent;
 
   --button-secondary-bg: rgba(255, 255, 255, 0.03);
@@ -77,68 +99,21 @@
 
   --button-success-bg: #22c55e;
   --button-success-bg-hover: #4ade80;
-  --button-success-text: #fff;
+  --button-success-text: #ffffff;
 
   --button-danger-bg: #ef4444;
   --button-danger-bg-hover: #f87171;
-  --button-danger-text: #fff;
+  --button-danger-text: #ffffff;
 
   --button-warning-bg: #f59e0b;
   --button-warning-bg-hover: #fbbf24;
-  --button-warning-text: #fff;
+  --button-warning-text: #ffffff;
 
-  /* ==================================================
-     SHADOWS
-  ================================================== */
+  /* ==========================================================
+     THEME SHADOWS
+  ========================================================== */
 
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
-
-  /* ==================================================
-     RADIUS
-  ================================================== */
-
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
-
-  /* ==================================================
-     SPACING
-  ================================================== */
-
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-
-  /* ==================================================
-     TYPOGRAPHY
-  ================================================== */
-
-  --font-xs: 12px;
-  --font-sm: 14px;
-  --font-md: 16px;
-  --font-lg: 18px;
-  --font-xl: 20px;
-  --font-2xl: 24px;
-  --font-3xl: 32px;
-
-  /* ==================================================
-     TRANSITIONS
-  ================================================== */
-
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.4s ease;
-
-  --accent-primary: #{v.$color-green};
-  --accent-primary-rgb: 4, 120, 87;
-  --accent-primary-hover: #059669;
+  --theme-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --theme-shadow-md: 0 10px 25px rgba(0, 0, 0, 0.35);
+  --theme-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
 }

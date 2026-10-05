@@ -2,10 +2,11 @@
  * Catálogo central dos módulos disponíveis no CCPF.
  *
  * Responsabilidade:
- * - definir a identidade comercial e funcional de cada módulo;
- * - associar módulos às features do plano quando aplicável;
+ * - definir a identidade funcional de cada módulo;
+ * - associar módulos às features comerciais quando aplicável;
  * - registrar a rota e o estado de implementação;
- * - servir como fonte única para Sidebar e futuras regras de acesso.
+ * - declarar requisitos estruturais de acesso;
+ * - servir como fonte única para a navegação do Sidebar.
  *
  * Este arquivo NÃO decide se o usuário possui acesso.
  * A decisão de acesso é responsabilidade da camada de resolução.
@@ -81,12 +82,24 @@ export interface ProductModule {
   adminOnly?: boolean;
 
   /**
-   * Indica que o módulo exige Tenant ativo.
+   * Indica que o módulo exige um Tenant ativo.
+   *
+   * Módulos administrativos da plataforma e o Dashboard
+   * compartilhado não dependem desse requisito.
    */
   tenantRequired?: boolean;
 }
 
 export const productModules: ProductModule[] = [
+  /**
+   * Dashboard compartilhado.
+   *
+   * A própria página decide o conteúdo exibido:
+   * - Platform Admin com DASHBOARD_READ -> AdminDashboard;
+   * - usuário de Tenant -> TenantDashboard.
+   *
+   * Por isso, o módulo não exige Tenant no catálogo.
+   */
   {
     code: "DASHBOARD",
     label: "Dashboard",
@@ -95,8 +108,8 @@ export const productModules: ProductModule[] = [
     href: "/dashboard",
     feature: null,
     implemented: true,
-    tenantRequired: true,
   },
+
   {
     code: "ACCOUNTS",
     label: "Contas",
@@ -107,6 +120,7 @@ export const productModules: ProductModule[] = [
     implemented: true,
     tenantRequired: true,
   },
+
   {
     code: "CATEGORIES",
     label: "Categorias",
@@ -117,6 +131,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "TRANSACTIONS",
     label: "Transações",
@@ -127,6 +142,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "REPORTS",
     label: "Relatórios",
@@ -137,6 +153,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "VEHICLES",
     label: "Veículos",
@@ -147,6 +164,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "HEALTH",
     label: "Saúde",
@@ -157,6 +175,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "TRANSPORT",
     label: "Transportes",
@@ -167,6 +186,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "INVESTMENTS",
     label: "Investimentos",
@@ -177,6 +197,7 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
   {
     code: "OTHER",
     label: "Outros",
@@ -187,6 +208,13 @@ export const productModules: ProductModule[] = [
     implemented: false,
     tenantRequired: true,
   },
+
+  /**
+   * Administração da plataforma.
+   *
+   * Esses módulos não pertencem ao contexto financeiro
+   * de um Tenant e não dependem de feature comercial.
+   */
   {
     code: "USERS",
     label: "Usuários",
@@ -197,6 +225,7 @@ export const productModules: ProductModule[] = [
     implemented: true,
     adminOnly: true,
   },
+
   {
     code: "BILLING",
     label: "Faturamento",
@@ -207,6 +236,10 @@ export const productModules: ProductModule[] = [
     implemented: true,
     adminOnly: true,
   },
+
+  /**
+   * Configurações pertencem ao Tenant ativo.
+   */
   {
     code: "SETTINGS",
     label: "Configurações",
