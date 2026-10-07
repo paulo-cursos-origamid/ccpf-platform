@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
@@ -17,6 +18,10 @@ import { PaymentMethod } from '../../../domain/enums/payment-method.enum';
 import { PaymentStatus } from '../../../domain/enums/payment-status.enum';
 import { InvoiceRepository } from '../../../domain/repositories/invoice.repository';
 import { PaymentRepository } from '../../../domain/repositories/payment.repository';
+
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
 
 /**
  * Dados necessários para criar uma tentativa de pagamento.
@@ -50,10 +55,14 @@ export interface CreatePaymentInput {
  */
 @Injectable()
 export class CreatePaymentUseCase {
+  private readonly logger = new Logger(CreatePaymentUseCase.name);
+
   constructor(
     private readonly tenantMemberRepository: TenantMemberRepository,
     private readonly invoiceRepository: InvoiceRepository,
     private readonly paymentRepository: PaymentRepository,
+
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreatePaymentInput): Promise<PaymentEntity> {
@@ -118,7 +127,27 @@ export class CreatePaymentUseCase {
       now,
     );
 
-    return this.paymentRepository.create(payment);
+    const createdPayment = await this.paymentRepository.create(payment);
+
+    try {
+      await this.createNotificationsForPermissionUseCase.execute({
+        permissionCode: 'BILLING_MANAGE',
+        type: NotificationType.PAYMENT_PENDING,
+        severity: NotificationSeverity.WARNING,
+        title: 'Pagamento pendente',
+        message: `Uma nova tentativa de pagamento foi criada para a Invoice ${invoice.id}.`,
+        resourceType: 'INVOICE',
+        resourceId: invoice.id,
+        deduplicationKey: `PAYMENT_PENDING:${createdPayment.id}`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Não foi possível criar a notificação de pagamento pendente para o Payment ${createdPayment.id}.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return createdPayment;
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { IdentityModule } from '../identity/identity.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { TenantModule } from '../tenant/tenant.module';
 
 import { SubscriptionLifecycleService } from './application/services/subscription-lifecycle.service';
@@ -43,7 +44,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
  * - consumir recursos dos módulos Tenant e Identity quando necessário.
  */
 @Module({
-  imports: [TenantModule, IdentityModule],
+  imports: [TenantModule, IdentityModule, NotificationsModule],
 
   controllers: [BillingController],
 

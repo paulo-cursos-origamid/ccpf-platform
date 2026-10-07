@@ -9,6 +9,7 @@ import { AccountsModule } from './modules/accounts/accounts.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     TenantModule,
     BillingModule,
     PlatformAdminModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],

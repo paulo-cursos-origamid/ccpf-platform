@@ -11,6 +11,9 @@ import { PaymentStatus } from '../../../domain/enums/payment-status.enum';
 import { SubscriptionStatus } from '../../../domain/enums/subscription-status.enum';
 import { BillingUnitOfWork } from '../../../domain/repositories/billing-unit-of-work';
 import { SubscriptionEntity } from '../../../domain/entities/subscription.entity';
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
 
 export interface ConfirmPaymentInput {
   paymentId: string;
@@ -30,10 +33,13 @@ export interface ConfirmPaymentInput {
  */
 @Injectable()
 export class ConfirmPaymentUseCase {
-  constructor(private readonly billingUnitOfWork: BillingUnitOfWork) {}
+  constructor(
+    private readonly billingUnitOfWork: BillingUnitOfWork,
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
+  ) {}
 
   async execute(input: ConfirmPaymentInput): Promise<PaymentEntity> {
-    return this.billingUnitOfWork.execute(
+    const payment = await this.billingUnitOfWork.execute(
       async ({
         paymentRepository,
         invoiceRepository,
@@ -131,6 +137,19 @@ export class ConfirmPaymentUseCase {
         return payment;
       },
     );
+
+    await this.createNotificationsForPermissionUseCase.execute({
+      permissionCode: 'BILLING_MANAGE',
+      type: NotificationType.PAYMENT_CONFIRMED,
+      severity: NotificationSeverity.SUCCESS,
+      title: 'Pagamento confirmado',
+      message: 'Um pagamento foi confirmado com sucesso.',
+      resourceType: 'PAYMENT',
+      resourceId: payment.id,
+      deduplicationKey: `PAYMENT_CONFIRMED:${payment.id}`,
+    });
+
+    return payment;
   }
 
   private validateSubscriptionState(subscription: SubscriptionEntity): void {

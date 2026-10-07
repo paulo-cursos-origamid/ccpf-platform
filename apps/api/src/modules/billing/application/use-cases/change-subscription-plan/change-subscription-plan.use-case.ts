@@ -16,6 +16,9 @@ import { SubscriptionRepository } from '../../../domain/repositories/subscriptio
 import { TenantMemberRepository } from '../../../../tenant/domain/repositories/tenant-member.repository';
 import { CreateInvoiceUseCase } from '../invoice/create-invoice.use-case';
 import { SubscriptionLifecycleService } from '../../services/subscription-lifecycle.service';
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
 
 export interface ChangeSubscriptionPlanInput {
   tenantId: string;
@@ -31,6 +34,7 @@ export class ChangeSubscriptionPlanUseCase {
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
     private readonly createInvoiceUseCase: CreateInvoiceUseCase,
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(
@@ -115,7 +119,11 @@ export class ChangeSubscriptionPlanUseCase {
       subscription.changePlan(targetPlan.id, now);
       subscription.markAsPending(now);
 
-      return this.persistTrialChange(subscription);
+      const changedSubscription = await this.persistTrialChange(subscription);
+
+      await this.notifySubscriptionChanged(changedSubscription);
+
+      return changedSubscription;
     }
 
     /*
@@ -159,7 +167,12 @@ export class ChangeSubscriptionPlanUseCase {
     if (targetCapacity > currentCapacity) {
       subscription.changePlan(targetPlan.id, now);
 
-      return this.subscriptionRepository.update(subscription);
+      const changedSubscription =
+        await this.subscriptionRepository.update(subscription);
+
+      await this.notifySubscriptionChanged(changedSubscription);
+
+      return changedSubscription;
     }
 
     if (targetCapacity < currentCapacity) {
@@ -204,7 +217,12 @@ export class ChangeSubscriptionPlanUseCase {
     if (amount <= 0) {
       subscription.changePlan(targetPlan.id, referenceDate);
 
-      return this.subscriptionRepository.update(subscription);
+      const changedSubscription =
+        await this.subscriptionRepository.update(subscription);
+
+      await this.notifySubscriptionChanged(changedSubscription);
+
+      return changedSubscription;
     }
 
     const invoice = await this.createInvoiceUseCase.execute({
@@ -219,7 +237,12 @@ export class ChangeSubscriptionPlanUseCase {
       referenceDate,
     );
 
-    return this.subscriptionRepository.update(subscription);
+    const changedSubscription =
+      await this.subscriptionRepository.update(subscription);
+
+    await this.notifySubscriptionChanged(changedSubscription);
+
+    return changedSubscription;
   }
 
   private async scheduleDowngrade(
@@ -234,7 +257,35 @@ export class ChangeSubscriptionPlanUseCase {
 
     subscription.scheduleDowngrade(targetPlan.id, effectiveAt, referenceDate);
 
-    return this.subscriptionRepository.update(subscription);
+    const changedSubscription =
+      await this.subscriptionRepository.update(subscription);
+
+    await this.notifySubscriptionChanged(changedSubscription);
+
+    return changedSubscription;
+  }
+
+  /**
+   * Publica a alteração de plano para os administradores
+   * da plataforma que possuem BILLING_MANAGE.
+   *
+   * A deduplicação usa a versão atualizada da assinatura,
+   * permitindo novos eventos quando o plano mudar novamente.
+   */
+  private async notifySubscriptionChanged(
+    subscription: SubscriptionEntity,
+  ): Promise<void> {
+    await this.createNotificationsForPermissionUseCase.execute({
+      permissionCode: 'BILLING_MANAGE',
+      type: NotificationType.SUBSCRIPTION_CHANGED,
+      severity: NotificationSeverity.INFO,
+      title: 'Assinatura alterada',
+      message:
+        'Uma assinatura teve seu plano alterado ou sua alteração foi agendada.',
+      resourceType: 'SUBSCRIPTION',
+      resourceId: subscription.id,
+      deduplicationKey: `SUBSCRIPTION_CHANGED:${subscription.id}:${subscription.updatedAt.getTime()}`,
+    });
   }
 
   private async validateTargetCapacity(

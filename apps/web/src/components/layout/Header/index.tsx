@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-import { Bell, User } from "@/components/icons";
+import { NotificationBell } from "@/modules/notifications/components";
+import { User } from "@/components/icons";
 import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
 import { useIdentityStore } from "@/modules/identity/stores/identity.store";
 import { TenantSelector } from "@/modules/tenant";
@@ -43,13 +44,7 @@ export function Header() {
       <div className={styles.right}>
         <ThemeSwitch />
 
-        <button
-          type="button"
-          className={styles.iconButton}
-          aria-label="Notificações"
-        >
-          <Bell />
-        </button>
+        <NotificationBell />
 
         <div className={styles.user}>
           <button

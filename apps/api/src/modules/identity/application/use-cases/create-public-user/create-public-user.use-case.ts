@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   Inject,
+  Logger,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -24,6 +25,10 @@ import { InvoiceStatus } from '../../../../billing/domain/enums/invoice-status.e
 import { SubscriptionEntity } from '../../../../billing/domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../../../billing/domain/enums/subscription-status.enum';
 import { BillingInterval } from '../../../../billing/domain/enums/billing-interval.enum';
+
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
 
 export interface CreatePublicUserInput {
   name: string;
@@ -55,6 +60,8 @@ export interface CreatePublicUserOutput {
  */
 @Injectable()
 export class CreatePublicUserUseCase {
+  private readonly logger = new Logger(CreatePublicUserUseCase.name);
+
   constructor(
     private readonly userRepository: UserRepository,
 
@@ -65,6 +72,8 @@ export class CreatePublicUserUseCase {
     private readonly emailVerificationNotifier: EmailVerificationNotifierContract,
 
     private readonly publicUserProvisioningRepository: PublicUserProvisioningRepository,
+
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreatePublicUserInput): Promise<CreatePublicUserOutput> {
@@ -203,6 +212,24 @@ export class CreatePublicUserUseCase {
       }
 
       throw error;
+    }
+
+    try {
+      await this.createNotificationsForPermissionUseCase.execute({
+        permissionCode: 'USERS_READ',
+        type: NotificationType.ACCOUNT_CREATED,
+        severity: NotificationSeverity.INFO,
+        title: 'Nova conta criada',
+        message: `A conta de ${result.user.name} (${result.user.email}) foi criada com sucesso.`,
+        resourceType: 'TENANT',
+        resourceId: result.tenant.id,
+        deduplicationKey: `ACCOUNT_CREATED:${result.user.id}`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Não foi possível criar a notificação de nova conta para o usuário ${result.user.id}.`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
 
     await this.emailVerificationNotifier.sendVerificationEmail({

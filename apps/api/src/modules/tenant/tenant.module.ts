@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { IdentityModule } from '../identity/identity.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { CreateTenantUseCase } from './application/use-cases/create-tenant/create-tenant.use-case';
 import { ListMyTenantsUseCase } from './application/use-cases/list-my-tenants.use-case';
@@ -40,7 +41,7 @@ import { TenantContextGuard } from './presentation/guards/tenant-context.guard';
  * - consumir o UserRepository do Identity para consultar usuários.
  */
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, NotificationsModule],
 
   controllers: [TenantController],
 

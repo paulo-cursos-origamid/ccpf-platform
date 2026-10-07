@@ -15,6 +15,9 @@ import { PlanRepository } from '../../domain/repositories/plan.repository';
 import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
 import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
 import { CreateInvoiceUseCase } from './invoice/create-invoice.use-case';
+import { CreateNotificationsForPermissionUseCase } from '../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../notifications/domain/enums/notification-type.enum';
 
 /**
  * Dados necessários para criar uma assinatura.
@@ -45,6 +48,7 @@ export class CreateSubscriptionUseCase {
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
     private readonly createInvoiceUseCase: CreateInvoiceUseCase,
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreateSubscriptionInput): Promise<SubscriptionEntity> {
@@ -113,6 +117,17 @@ export class CreateSubscriptionUseCase {
           subscriptionId: createdSubscription.id,
         });
       }
+
+      await this.createNotificationsForPermissionUseCase.execute({
+        permissionCode: 'BILLING_MANAGE',
+        type: NotificationType.SUBSCRIPTION_CREATED,
+        severity: NotificationSeverity.INFO,
+        title: 'Nova assinatura criada',
+        message: 'Uma nova assinatura foi criada para um Tenant.',
+        resourceType: 'SUBSCRIPTION',
+        resourceId: createdSubscription.id,
+        deduplicationKey: `SUBSCRIPTION_CREATED:${createdSubscription.id}`,
+      });
 
       return createdSubscription;
     } catch (error) {

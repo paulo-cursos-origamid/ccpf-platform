@@ -1,3 +1,23 @@
+enum NotificationType {
+  ACCOUNT_CREATED
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_CHANGED
+  TENANT_CREATED
+  TENANT_SUSPENDED
+  USER_BLOCKED
+  USER_REMOVED
+  SYSTEM
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -34,6 +54,7 @@ model User {
   tenantMembers  TenantMember[]
   platformRoles  UserPlatformRole[]
   accountMembers AccountMember[]
+  notifications  Notification[]
 }
 
 enum UserRole {
@@ -508,4 +529,27 @@ model UserPlatformRole {
   @@id([userId, roleId])
   @@index([userId])
   @@index([roleId])
+}
+
+model Notification {
+  id               String               @id @default(uuid())
+  userId           String
+  type             NotificationType
+  severity         NotificationSeverity
+  title            String
+  message          String
+  resourceType     String?
+  resourceId       String?
+  deduplicationKey String?
+  readAt           DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deduplicationKey])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@index([userId, type])
+  @@index([resourceType, resourceId])
 }
