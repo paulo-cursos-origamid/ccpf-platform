@@ -22,6 +22,7 @@ import { TenantMemberStatus } from '../../../tenant/domain/enums/tenant-member-s
 import { TenantRole } from '../../../tenant/domain/enums/tenant-role.enum';
 import { TenantStatus } from '../../../tenant/domain/enums/tenant-status.enum';
 
+import { InvoiceInstallmentEntity } from '../../../billing/domain/entities/invoice-installment.entity';
 import { InvoiceEntity } from '../../../billing/domain/entities/invoice.entity';
 import { InvoiceStatus } from '../../../billing/domain/enums/invoice-status.enum';
 import { SubscriptionEntity } from '../../../billing/domain/entities/subscription.entity';
@@ -61,11 +62,20 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
       select: {
         id: true,
         code: true,
-        price: true,
-        currency: true,
-        billingInterval: true,
+        name: true,
         isPublic: true,
         isActive: true,
+        prices: {
+          where: {
+            isActive: true,
+          },
+          select: {
+            id: true,
+            interval: true,
+            amount: true,
+            currency: true,
+          },
+        },
       },
     });
 
@@ -76,9 +86,13 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
     return {
       id: plan.id,
       code: plan.code,
-      price: plan.price.toNumber(),
-      currency: plan.currency,
-      billingInterval: plan.billingInterval as unknown as BillingInterval,
+      name: plan.name,
+      prices: plan.prices.map((price) => ({
+        id: price.id,
+        interval: price.interval as unknown as BillingInterval,
+        amount: price.amount.toNumber(),
+        currency: price.currency,
+      })),
     };
   }
 
@@ -92,12 +106,14 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
     owner: TenantMemberEntity,
     subscription: SubscriptionEntity,
     invoice: InvoiceEntity | null,
+    installments: InvoiceInstallmentEntity[],
   ): Promise<{
     user: UserEntity;
     tenant: TenantEntity;
     owner: TenantMemberEntity;
     subscription: SubscriptionEntity;
     invoice: InvoiceEntity | null;
+    installments: InvoiceInstallmentEntity[];
   }> {
     return this.prisma.$transaction(async (tx) => {
       /**
@@ -188,12 +204,22 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
           id: subscription.id,
           tenantId: subscription.tenantId,
           planId: transactionalPlan.id,
+          planPriceId: subscription.planPriceId,
+          pendingPlanId: subscription.pendingPlanId,
+          pendingPlanPriceId: subscription.pendingPlanPriceId,
+          pendingPlanChangeType: subscription.pendingPlanChangeType,
+          pendingPlanEffectiveAt: subscription.pendingPlanEffectiveAt,
+          pendingPlanInvoiceId: subscription.pendingPlanInvoiceId,
           status: subscription.status,
           startedAt: subscription.startedAt,
           currentPeriodStart: subscription.currentPeriodStart,
           currentPeriodEnd: subscription.currentPeriodEnd,
+          billingDay: subscription.billingDay,
+          nextBillingDate: subscription.nextBillingDate,
           trialEndsAt: subscription.trialEndsAt,
           cancelledAt: subscription.cancelledAt,
+          createdAt: subscription.createdAt,
+          updatedAt: subscription.updatedAt,
         },
       });
 
@@ -207,6 +233,7 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
             subscriptionId: invoice.subscriptionId,
             number: invoice.number,
             status: invoice.status,
+            installmentCount: invoice.installmentCount,
             amount: invoice.amount,
             currency: invoice.currency,
             dueAt: invoice.dueAt,
@@ -217,6 +244,24 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         });
 
         createdInvoice = this.toInvoiceEntity(persistedInvoice);
+
+        if (installments.length > 0) {
+          await tx.invoiceInstallment.createMany({
+            data: installments.map((installment) => ({
+              id: installment.id,
+              invoiceId: installment.invoiceId,
+              number: installment.number,
+              totalCount: installment.totalCount,
+              amount: installment.amount,
+              currency: installment.currency,
+              dueAt: installment.dueAt,
+              paidAt: installment.paidAt,
+              status: installment.status,
+              createdAt: installment.createdAt,
+              updatedAt: installment.updatedAt,
+            })),
+          });
+        }
       }
 
       return {
@@ -225,6 +270,7 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         owner: this.toTenantMemberEntity(createdOwner),
         subscription: this.toSubscriptionEntity(createdSubscription),
         invoice: createdInvoice,
+        installments,
       };
     });
   }
@@ -309,10 +355,18 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
     id: string;
     tenantId: string;
     planId: string;
+    planPriceId: string | null;
+    pendingPlanId: string | null;
+    pendingPlanPriceId: string | null;
+    pendingPlanChangeType: string | null;
+    pendingPlanEffectiveAt: Date | null;
+    pendingPlanInvoiceId: string | null;
     status: PrismaSubscriptionStatus;
     startedAt: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
+    billingDay: number | null;
+    nextBillingDate: Date | null;
     trialEndsAt: Date | null;
     cancelledAt: Date | null;
     createdAt: Date;
@@ -322,14 +376,22 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
       data.id,
       data.tenantId,
       data.planId,
+      data.planPriceId,
       data.status as SubscriptionStatus,
       data.startedAt,
       data.currentPeriodStart,
       data.currentPeriodEnd,
+      data.billingDay,
+      data.nextBillingDate,
       data.trialEndsAt,
       data.cancelledAt,
       data.createdAt,
       data.updatedAt,
+      data.pendingPlanId,
+      data.pendingPlanPriceId,
+      data.pendingPlanChangeType as SubscriptionEntity['pendingPlanChangeType'],
+      data.pendingPlanEffectiveAt,
+      data.pendingPlanInvoiceId,
     );
   }
 
@@ -345,6 +407,7 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
     paidAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    installmentCount: number;
   }): InvoiceEntity {
     return new InvoiceEntity(
       data.id,
@@ -358,6 +421,7 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
       data.paidAt,
       data.createdAt,
       data.updatedAt,
+      data.installmentCount,
     );
   }
 }

@@ -287,6 +287,11 @@ export class PrismaUserRepository implements UserRepository {
     await tx.userPlatformRole.deleteMany({
       where: {
         userId,
+        role: {
+          code: {
+            in: ['PLATFORM_ADMIN', 'PLATFORM_MANAGER', 'PLATFORM_SUPPORT'],
+          },
+        },
       },
     });
 

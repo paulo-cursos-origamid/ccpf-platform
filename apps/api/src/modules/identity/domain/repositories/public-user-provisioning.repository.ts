@@ -1,4 +1,5 @@
 import { BillingInterval } from '../../../billing/domain/enums/billing-interval.enum';
+import { InvoiceInstallmentEntity } from '../../../billing/domain/entities/invoice-installment.entity';
 import { InvoiceEntity } from '../../../billing/domain/entities/invoice.entity';
 import { SubscriptionEntity } from '../../../billing/domain/entities/subscription.entity';
 import { TenantMemberEntity } from '../../../tenant/domain/entities/tenant-member.entity';
@@ -11,12 +12,18 @@ import { UserEntity } from '../entities/user.entity';
  * O lookup pertence ao repositório porque o provisionamento completo
  * precisa continuar independente dos módulos Nest de Billing e Tenant.
  */
+export interface PublicPlanPriceData {
+  id: string;
+  interval: BillingInterval;
+  amount: number;
+  currency: string;
+}
+
 export interface PublicPlanData {
   id: string;
   code: string;
-  price: number;
-  currency: string;
-  billingInterval: BillingInterval;
+  name: string;
+  prices: PublicPlanPriceData[];
 }
 
 /**
@@ -38,11 +45,13 @@ export abstract class PublicUserProvisioningRepository {
     owner: TenantMemberEntity,
     subscription: SubscriptionEntity,
     invoice: InvoiceEntity | null,
+    installments: InvoiceInstallmentEntity[],
   ): Promise<{
     user: UserEntity;
     tenant: TenantEntity;
     owner: TenantMemberEntity;
     subscription: SubscriptionEntity;
     invoice: InvoiceEntity | null;
+    installments: InvoiceInstallmentEntity[];
   }>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ApiError } from "@/lib/http/fetcher";
 import Link from "next/link";
 
 import {
@@ -20,14 +21,52 @@ export function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    await login({
-      email,
-      password,
-    });
+    setErrorMessage("");
+
+    try {
+      await login({
+        email,
+        password,
+      });
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        if (error.statusCode === 401) {
+          setErrorMessage("E-mail ou senha inválidos. Confira seus dados e tente novamente.");
+          return;
+        }
+
+        if (error.statusCode === 403) {
+          setErrorMessage(
+            error.message && error.message !== "Forbidden"
+              ? error.message
+              : "Sua conta não tem permissão para acessar o sistema. Entre em contato com o suporte.",
+          );
+          return;
+        }
+
+        if (error.statusCode >= 500) {
+          setErrorMessage("O serviço está temporariamente indisponível. Tente novamente em instantes.");
+          return;
+        }
+
+        if (error.message && error.message !== "Ocorreu um erro ao processar a solicitação.") {
+          setErrorMessage(error.message);
+          return;
+        }
+      }
+
+      if (error instanceof TypeError) {
+        setErrorMessage("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
+        return;
+      }
+
+      setErrorMessage("Não foi possível entrar. Tente novamente. Se o problema continuar, entre em contato com o suporte.");
+    }
   }
 
   return (
@@ -44,7 +83,10 @@ export function LoginForm() {
             placeholder="Digite seu e-mail"
             autoComplete="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (errorMessage) setErrorMessage("");
+            }}
           />
         </Field>
 
@@ -54,9 +96,18 @@ export function LoginForm() {
             placeholder="Digite sua senha"
             autoComplete="current-password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              if (errorMessage) setErrorMessage("");
+            }}
           />
         </Field>
+
+        {errorMessage && (
+          <div className={styles.errorMessage} role="alert" aria-live="assertive">
+            {errorMessage}
+          </div>
+        )}
 
         <div className={styles.actions}>
           <Link href="/forgot-password" className={styles.forgotPassword}>
