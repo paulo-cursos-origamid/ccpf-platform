@@ -47,8 +47,13 @@ export interface AdminDashboardBillingMetric {
 }
 
 export interface AdminDashboardBillingSummary {
+  /** Faturas integralmente quitadas; não representa receita recebida. */
   paid: AdminDashboardBillingMetric;
+  /** Pagamentos confirmados, incluindo parcelas pagas de faturas abertas. */
+  received: AdminDashboardBillingMetric;
+  /** Saldo das parcelas ainda pendentes. */
   pending: AdminDashboardBillingMetric;
+  /** Saldo das parcelas vencidas ainda não pagas. */
   overdue: AdminDashboardBillingMetric;
 }
 

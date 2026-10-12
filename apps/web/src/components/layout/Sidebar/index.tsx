@@ -58,12 +58,15 @@ export function Sidebar() {
   );
 
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
+  const activeTenant = useTenantStore((state) => state.getActiveTenant());
 
   const subscription = useTenantSubscription();
 
   const hasPlatformDashboardAccess = useHasPermission(
     PLATFORM_PERMISSIONS.DASHBOARD_READ,
   );
+  const canReadUsers = useHasPermission(PLATFORM_PERMISSIONS.USERS_READ);
+  const canManageBilling = useHasPermission(PLATFORM_PERMISSIONS.BILLING_MANAGE);
 
   /**
    * Resolve a visibilidade e o estado de cada módulo
@@ -75,7 +78,14 @@ export function Sidebar() {
       access: resolveModuleAccess(module, {
         subscription,
         hasActiveTenant: Boolean(activeTenantId),
-        isPlatformAdmin: hasPlatformDashboardAccess,
+        isPlatformAdmin:
+          module.code === "USERS"
+            ? canReadUsers
+            : module.code === "BILLING"
+              ? canManageBilling
+              : module.code === "NOTIFICATIONS"
+                ? hasPlatformDashboardAccess
+                : hasPlatformDashboardAccess,
       }),
     }))
     .filter(({ access }) => !HIDDEN_ACCESS_STATES.includes(access))
@@ -220,9 +230,11 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className={styles.subscription}>
-        <SubscriptionSummary collapsed={collapsed} />
-      </div>
+      {(!activeTenant || String(activeTenant.role).toUpperCase() === "OWNER") && (
+        <div className={styles.subscription}>
+          <SubscriptionSummary collapsed={collapsed} />
+        </div>
+      )}
 
       <ComingSoonFeedback
         moduleName={comingSoonModule}

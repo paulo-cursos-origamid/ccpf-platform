@@ -1,10 +1,14 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   Archive,
   ArrowUpRight,
   Wallet,
 } from "lucide-react";
+
+import { ApiError } from "@/lib/http/fetcher";
 
 import { useAccounts } from "@/modules/accounts/hooks/client/useAccounts";
 import { AccountStatus } from "@/modules/accounts/types";
@@ -70,21 +74,50 @@ export function TenantDashboard() {
       {error ? (
         <section className={styles.error} role="alert">
           <div>
-            <strong>
-              Não foi possível carregar suas contas.
-            </strong>
-            <p>
-              Verifique sua conexão e tente novamente.
-            </p>
+            {error instanceof ApiError &&
+            error.statusCode === 403 &&
+            /assinatura/i.test(error.message) ? (
+              <>
+                <strong>
+                  O acesso às contas está aguardando a regularização da assinatura.
+                </strong>
+                <p>
+                  Consulte a cobrança do seu ambiente para verificar pendências
+                  e concluir o pagamento, se necessário. O acesso será liberado
+                  quando a assinatura permitir o uso dos recursos.
+                </p>
+              </>
+            ) : (
+              <>
+                <strong>
+                  Não foi possível carregar suas contas.
+                </strong>
+                <p>
+                  Verifique sua conexão ou tente novamente. Se o problema
+                  persistir, entre em contato com o suporte.
+                </p>
+              </>
+            )}
           </div>
 
-          <button
-            type="button"
-            className={styles.retryButton}
-            onClick={() => void loadAccounts()}
-          >
-            Tentar novamente
-          </button>
+          {error instanceof ApiError &&
+          error.statusCode === 403 &&
+          /assinatura/i.test(error.message) ? (
+            <Link
+              href="/settings/billing"
+              className={styles.retryButton}
+            >
+              Consultar cobrança
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={() => void loadAccounts().catch(() => undefined)}
+            >
+              Tentar novamente
+            </button>
+          )}
         </section>
       ) : null}
 

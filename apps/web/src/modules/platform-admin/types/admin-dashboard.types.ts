@@ -37,13 +37,14 @@ export interface AdminDashboardBillingMetric {
 
 export interface AdminDashboardBillingSummary {
   paid: AdminDashboardBillingMetric;
+  received: AdminDashboardBillingMetric;
   pending: AdminDashboardBillingMetric;
   overdue: AdminDashboardBillingMetric;
 }
 
 export interface AdminDashboardSummary {
-  users: AdminDashboardUsersSummary;
-  tenants: AdminDashboardTenantsSummary;
-  subscriptions: AdminDashboardSubscriptionsSummary;
-  billing: AdminDashboardBillingSummary;
+  users?: AdminDashboardUsersSummary;
+  tenants?: AdminDashboardTenantsSummary;
+  subscriptions?: AdminDashboardSubscriptionsSummary;
+  billing?: AdminDashboardBillingSummary;
 }

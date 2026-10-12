@@ -16,6 +16,7 @@ import type { ComponentType } from "react";
 
 import {
   ArrowLeftRight,
+  Bell,
   BusFront,
   Car,
   Ellipsis,
@@ -44,6 +45,7 @@ export type ProductModuleCode =
   | "OTHER"
   | "USERS"
   | "BILLING"
+  | "NOTIFICATIONS"
   | "SETTINGS";
 
 export type ProductModuleSection =
@@ -232,6 +234,17 @@ export const productModules: ProductModule[] = [
     section: "Administração",
     icon: Receipt,
     href: "/admin/billing/invoices",
+    feature: null,
+    implemented: true,
+    adminOnly: true,
+  },
+
+  {
+    code: "NOTIFICATIONS",
+    label: "Notificações",
+    section: "Administração",
+    icon: Bell,
+    href: "/admin/notifications",
     feature: null,
     implemented: true,
     adminOnly: true,

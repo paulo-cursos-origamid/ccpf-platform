@@ -13,7 +13,9 @@
 
 import { Injectable } from '@nestjs/common';
 import {
+  InvoiceInstallmentStatus,
   InvoiceStatus,
+  PaymentStatus,
   Prisma,
   SubscriptionStatus,
   TenantStatus,
@@ -76,33 +78,71 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
       : null;
 
     const billingPromise = scope.billing
-      ? this.prisma.invoice.groupBy({
-          by: ['status'],
-          where: {
-            status: {
-              in: [
-                InvoiceStatus.PAID,
-                InvoiceStatus.PENDING,
-                InvoiceStatus.OVERDUE,
-              ],
+      ? Promise.all([
+          // Mantém a contagem e o valor nominal das faturas por status.
+          this.prisma.invoice.groupBy({
+            by: ['status'],
+            where: {
+              status: {
+                in: [
+                  InvoiceStatus.PAID,
+                  InvoiceStatus.PENDING,
+                  InvoiceStatus.OVERDUE,
+                ],
+              },
             },
-          },
-          _count: {
-            _all: true,
-          },
-          _sum: {
-            amount: true,
-          },
-        })
+            _count: {
+              _all: true,
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+
+          // Receita realizada: somente tentativas de pagamento confirmadas.
+          this.prisma.payment.aggregate({
+            where: {
+              status: PaymentStatus.PAID,
+            },
+            _count: {
+              _all: true,
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+
+          // Saldo em aberto/vencido é calculado por parcela, não por tentativa.
+          this.prisma.invoiceInstallment.groupBy({
+            by: ['status'],
+            where: {
+              status: {
+                in: [
+                  InvoiceInstallmentStatus.PENDING,
+                  InvoiceInstallmentStatus.OVERDUE,
+                ],
+              },
+            },
+            _count: {
+              _all: true,
+            },
+            _sum: {
+              amount: true,
+            },
+          }),
+        ])
       : null;
 
-    const [usersResult, tenantGroups, subscriptionGroups, invoiceGroups] =
+    const [usersResult, tenantGroups, subscriptionGroups, billingResult] =
       await Promise.all([
         usersPromise,
         tenantsPromise,
         subscriptionsPromise,
         billingPromise,
       ]);
+
+    const [invoiceGroups, receivedAggregate, installmentGroups] =
+      billingResult ?? [null, null, null];
 
     const summary: AdminDashboardSummary = {};
 
@@ -156,15 +196,25 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
       );
 
       const pending = this.toBillingMetric(
-        invoiceGroups.find((group) => group.status === InvoiceStatus.PENDING),
+        installmentGroups?.find(
+          (group) => group.status === InvoiceInstallmentStatus.PENDING,
+        ),
       );
 
       const overdue = this.toBillingMetric(
-        invoiceGroups.find((group) => group.status === InvoiceStatus.OVERDUE),
+        installmentGroups?.find(
+          (group) => group.status === InvoiceInstallmentStatus.OVERDUE,
+        ),
       );
 
       summary.billing = {
         paid,
+        received: {
+          count: receivedAggregate?._count._all ?? 0,
+          amount: receivedAggregate?._sum.amount
+            ? Number(receivedAggregate._sum.amount)
+            : 0,
+        },
         pending,
         overdue,
       };

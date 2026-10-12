@@ -27,38 +27,48 @@ export function AdminDashboard() {
   const metrics = [
     {
       label: "Usuários",
-      value: data ? String(data.users.total) : "0",
+      value: data ? (data.users ? String(data.users.total) : "Sem acesso") : "0",
       description: data
-        ? `${data.users.active} ativos · ${data.users.inactive} inativos`
+        ? data.users
+          ? `${data.users.active} ativos · ${data.users.inactive} inativos`
+          : "Métricas indisponíveis para seu perfil."
         : "Usuários cadastrados na plataforma.",
       icon: Users,
       href: "/dashboard/users",
     },
     {
       label: "Tenants",
-      value: data ? String(data.tenants.total) : "0",
+      value: data ? (data.tenants ? String(data.tenants.total) : "Sem acesso") : "0",
       description: data
-        ? `${data.tenants.active} ativos · ${data.tenants.suspended} suspensos`
+        ? data.tenants
+          ? `${data.tenants.active} ativos · ${data.tenants.suspended} suspensos`
+          : "Métricas indisponíveis para seu perfil."
         : "Organizações cadastradas na plataforma.",
       icon: Building2,
     },
     {
       label: "Assinaturas",
-      value: data ? String(data.subscriptions.active) : "0",
+      value: data
+        ? (data.subscriptions ? String(data.subscriptions.active) : "Sem acesso")
+        : "0",
       description: data
-        ? `${data.subscriptions.trialing} em trial · ${data.subscriptions.pastDue} em atraso`
+        ? data.subscriptions
+          ? `${data.subscriptions.trialing} em trial · ${data.subscriptions.pastDue} em atraso`
+          : "Métricas indisponíveis para seu perfil."
         : "Assinaturas ativas e em acompanhamento.",
       icon: CreditCard,
       href: "/admin/billing/invoices",
     },
     {
-      label: "Faturamento",
+      label: "Recebido",
       value: data
-        ? formatCurrency(data.billing.paid.amount)
+        ? (data.billing ? formatCurrency(data.billing.received.amount) : "Sem acesso")
         : "R$ 0,00",
       description: data
-        ? `${data.billing.paid.count} faturas pagas`
-        : "Faturas e pagamentos da plataforma.",
+        ? data.billing
+          ? `${data.billing.received.count} pagamentos confirmados`
+          : "Métricas indisponíveis para seu perfil."
+        : "Pagamentos confirmados na plataforma.",
       icon: Receipt,
       href: "/admin/billing/invoices",
     },
