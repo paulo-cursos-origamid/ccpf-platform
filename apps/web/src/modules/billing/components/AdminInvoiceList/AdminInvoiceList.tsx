@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { Button, SearchInput } from "@/components/ui/forms";
+import { Button, SearchInput, Select } from "@/components/ui/forms";
 
 import { InvoiceStatusBadge } from "../InvoiceStatusBadge/InvoiceStatusBadge";
 import { useAdminInvoices } from "../../hooks";
@@ -166,7 +166,7 @@ export function AdminInvoiceList() {
         <label className={styles.statusField}>
           <span className={styles.srOnly}>Filtrar por status</span>
 
-          <select
+          <Select
             value={status}
             aria-label="Filtrar faturas por status"
             onChange={(event) => handleStatusChange(event.target.value)}
@@ -176,7 +176,7 @@ export function AdminInvoiceList() {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 

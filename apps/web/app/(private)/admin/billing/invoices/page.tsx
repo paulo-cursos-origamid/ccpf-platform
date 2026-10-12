@@ -1,4 +1,6 @@
 import { AdminInvoiceList } from "@/modules/billing/components";
+import { PlatformPermissionAccessGuard } from "@/modules/identity/components/client/PlatformPermissionAccessGuard";
+import { PLATFORM_PERMISSIONS } from "@/modules/identity/utils";
 
 /**
  * Página administrativa responsável pela consulta global
@@ -9,8 +11,10 @@ import { AdminInvoiceList } from "@/modules/billing/components";
  */
 export default function AdminBillingInvoicesPage() {
   return (
-    <main>
-      <AdminInvoiceList />
-    </main>
+    <PlatformPermissionAccessGuard permission={PLATFORM_PERMISSIONS.BILLING_MANAGE}>
+      <main>
+        <AdminInvoiceList />
+      </main>
+    </PlatformPermissionAccessGuard>
   );
 }

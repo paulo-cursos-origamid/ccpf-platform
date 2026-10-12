@@ -20,6 +20,7 @@ import { ChangeSubscriptionPlanUseCase } from '../../application/use-cases/chang
 import { CreateSubscriptionUseCase } from '../../application/use-cases/create-subscription.use-case';
 import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-tenant-subscription.use-case';
 import { ListPublicPlansUseCase } from '../../application/use-cases/list-public-plans.use-case';
+import { AssignSystemOwnerPlanUseCase } from '../../application/use-cases/assign-system-owner-plan.use-case';
 import { ListTenantInvoicesUseCase } from '../../application/use-cases/invoice/list-tenant-invoices.use-case';
 import { GetTenantInvoiceUseCase } from '../../application/use-cases/invoice/get-tenant-invoice.use-case';
 import { GetAdminInvoiceUseCase } from '../../application/use-cases/admin/get-admin-invoice.use-case';
@@ -57,6 +58,7 @@ import {
 export class BillingController {
   constructor(
     private readonly listPublicPlansUseCase: ListPublicPlansUseCase,
+    private readonly assignSystemOwnerPlanUseCase: AssignSystemOwnerPlanUseCase,
     private readonly getTenantSubscriptionUseCase: GetTenantSubscriptionUseCase,
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
     private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
@@ -97,6 +99,24 @@ export class BillingController {
    * O Tenant é identificado através do header X-Tenant-Id,
    * validado pelo TenantContextGuard.
    */
+
+  /**
+   * Atribui o plano interno SYSTEM_OWNER ao Tenant selecionado.
+   * Operação exclusiva de plataforma e sem cobrança comercial.
+   */
+  @Patch('subscription/system-owner')
+  @UseGuards(JwtAuthGuard, TenantContextGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Atribuir plano interno SYSTEM_OWNER',
+    description:
+      'Ativa o plano interno ilimitado para o Tenant selecionado, sem gerar fatura comercial.',
+  })
+  async assignSystemOwnerPlan(@CurrentTenant() tenant: TenantContext) {
+    return this.assignSystemOwnerPlanUseCase.execute(tenant.tenantId);
+  }
+
   @Get('subscription')
   @UseGuards(JwtAuthGuard, TenantContextGuard)
   @ApiBearerAuth('access-token')
@@ -172,6 +192,8 @@ export class BillingController {
       tenantId: tenant.tenantId,
       userId: user.sub,
       planCode: dto.planCode,
+      planPriceId: dto.planPriceId,
+      billingDay: dto.billingDay,
     });
   }
 
@@ -386,12 +408,10 @@ export class BillingController {
       tenantId: tenant.tenantId,
       userId: user.sub,
       invoiceId,
+      installmentId: dto.installmentId,
       method: dto.method,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       externalReference: dto.externalReference,
-      pixCopyPaste: dto.pixCopyPaste,
-      bankSlipBarcode: dto.bankSlipBarcode,
-      bankSlipDigitableLine: dto.bankSlipDigitableLine,
       metadata: dto.metadata,
     });
   }
@@ -528,11 +548,16 @@ export class BillingController {
   })
   async createSubscription(
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateSubscriptionDto,
   ) {
     return this.createSubscriptionUseCase.execute({
       tenantId: tenant.tenantId,
+      userId: user.sub,
       planCode: dto.planCode,
+      planPriceId: dto.planPriceId,
+      billingDay: dto.billingDay,
+      installmentCount: dto.installmentCount,
     });
   }
 }

@@ -1,24 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PlanFeatureCode as PrismaPlanFeatureCode } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
 import { PlanEntity } from '../../domain/entities/plan.entity';
-import { BillingInterval } from '../../domain/enums/billing-interval.enum';
 import { PlanFeatureCode } from '../../domain/enums/plan-feature-code.enum';
 import { PlanRepository } from '../../domain/repositories/plan.repository';
 
 /**
  * Implementação Prisma do repositório de Plan.
  *
- * Responsável por traduzir os registros persistidos pelo Prisma
- * para entidades pertencentes ao domínio de Billing.
- *
- * O domínio não conhece Prisma nem os enums gerados pelo ORM.
+ * Plan representa somente o produto.
+ * Preços e periodicidades pertencem ao PlanPriceRepository.
  */
 @Injectable()
 export class PrismaPlanRepository implements PlanRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService | Prisma.TransactionClient,
+  ) {}
 
   async create(plan: PlanEntity): Promise<PlanEntity> {
     const createdPlan = await this.prisma.plan.create({
@@ -27,15 +28,12 @@ export class PrismaPlanRepository implements PlanRepository {
         name: plan.name,
         code: plan.code,
         description: plan.description,
-        price: plan.price,
-        currency: plan.currency,
-        billingInterval: plan.billingInterval,
         maxUsers: plan.maxUsers,
         isPublic: plan.isPublic,
         isActive: plan.isActive,
         features: {
           create: plan.features.map((feature) => ({
-            feature,
+            feature: feature,
             enabled: true,
           })),
         },
@@ -56,11 +54,7 @@ export class PrismaPlanRepository implements PlanRepository {
       },
     });
 
-    if (!plan) {
-      return null;
-    }
-
-    return this.toDomain(plan);
+    return plan ? this.toDomain(plan) : null;
   }
 
   async findByCode(code: string): Promise<PlanEntity | null> {
@@ -71,11 +65,7 @@ export class PrismaPlanRepository implements PlanRepository {
       },
     });
 
-    if (!plan) {
-      return null;
-    }
-
-    return this.toDomain(plan);
+    return plan ? this.toDomain(plan) : null;
   }
 
   async findPublicPlans(): Promise<PlanEntity[]> {
@@ -88,7 +78,7 @@ export class PrismaPlanRepository implements PlanRepository {
         features: true,
       },
       orderBy: {
-        price: 'asc',
+        name: 'asc',
       },
     });
 
@@ -104,9 +94,6 @@ export class PrismaPlanRepository implements PlanRepository {
         name: plan.name,
         code: plan.code,
         description: plan.description,
-        price: plan.price,
-        currency: plan.currency,
-        billingInterval: plan.billingInterval,
         maxUsers: plan.maxUsers,
         isPublic: plan.isPublic,
         isActive: plan.isActive,
@@ -119,17 +106,11 @@ export class PrismaPlanRepository implements PlanRepository {
     return this.toDomain(updatedPlan);
   }
 
-  /**
-   * Converte um registro Prisma em uma entidade do domínio.
-   */
   private toDomain(rawPlan: {
     id: string;
     name: string;
     code: string;
     description: string | null;
-    price: { toNumber(): number };
-    currency: string;
-    billingInterval: string;
     maxUsers: number;
     isPublic: boolean;
     isActive: boolean;
@@ -145,15 +126,24 @@ export class PrismaPlanRepository implements PlanRepository {
       rawPlan.name,
       rawPlan.code,
       rawPlan.description,
-      rawPlan.price.toNumber(),
-      rawPlan.currency,
-      rawPlan.billingInterval as BillingInterval,
       rawPlan.maxUsers,
       rawPlan.isPublic,
       rawPlan.isActive,
       rawPlan.features
         .filter((feature) => feature.enabled)
-        .map((feature) => feature.feature as PlanFeatureCode),
+        .map((feature) => {
+          if (
+            !Object.values(PlanFeatureCode).includes(
+              feature.feature as unknown as PlanFeatureCode,
+            )
+          ) {
+            throw new Error(
+              `PlanFeatureCode inválido encontrado no banco: ${feature.feature}`,
+            );
+          }
+
+          return feature.feature as unknown as PlanFeatureCode;
+        }),
       rawPlan.createdAt,
       rawPlan.updatedAt,
     );

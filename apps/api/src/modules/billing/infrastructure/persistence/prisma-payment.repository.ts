@@ -1,25 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  PaymentMethod as PrismaPaymentMethod,
-  PaymentStatus as PrismaPaymentStatus,
-  Prisma,
-} from '@prisma/client';
-
-import { PrismaService } from '../../../../infrastructure/database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 import { PaymentEntity } from '../../domain/entities/payment.entity';
 import { PaymentMethod } from '../../domain/enums/payment-method.enum';
 import { PaymentStatus } from '../../domain/enums/payment-status.enum';
 import { PaymentRepository } from '../../domain/repositories/payment.repository';
+import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 
-/**
- * Implementação Prisma do repositório de Payment.
- *
- * Responsável por traduzir os registros persistidos pelo Prisma
- * para entidades pertencentes ao domínio de Billing.
- *
- * O domínio não conhece Prisma nem os enums gerados pelo ORM.
- */
 @Injectable()
 export class PrismaPaymentRepository implements PaymentRepository {
   constructor(
@@ -28,10 +15,10 @@ export class PrismaPaymentRepository implements PaymentRepository {
   ) {}
 
   async create(payment: PaymentEntity): Promise<PaymentEntity> {
-    const createdPayment = await this.prisma.payment.create({
+    const created = await this.prisma.payment.create({
       data: {
         id: payment.id,
-        invoiceId: payment.invoiceId,
+        installmentId: payment.installmentId,
         reference: payment.reference,
         method: payment.method,
         status: payment.status,
@@ -52,7 +39,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
       },
     });
 
-    return this.toDomain(createdPayment);
+    return this.toDomain(created);
   }
 
   async findById(id: string): Promise<PaymentEntity | null> {
@@ -60,11 +47,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
       where: { id },
     });
 
-    if (!payment) {
-      return null;
-    }
-
-    return this.toDomain(payment);
+    return payment ? this.toDomain(payment) : null;
   }
 
   async findByReference(reference: string): Promise<PaymentEntity | null> {
@@ -72,61 +55,38 @@ export class PrismaPaymentRepository implements PaymentRepository {
       where: { reference },
     });
 
-    if (!payment) {
-      return null;
-    }
-
-    return this.toDomain(payment);
+    return payment ? this.toDomain(payment) : null;
   }
 
-  async findByInvoice(invoiceId: string): Promise<PaymentEntity[]> {
+  async findByInstallment(installmentId: string): Promise<PaymentEntity[]> {
     const payments = await this.prisma.payment.findMany({
-      where: {
-        invoiceId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      where: { installmentId },
+      orderBy: { createdAt: 'desc' },
     });
 
     return payments.map((payment) => this.toDomain(payment));
   }
 
   async update(payment: PaymentEntity): Promise<PaymentEntity> {
-    const updatedPayment = await this.prisma.payment.update({
-      where: {
-        id: payment.id,
-      },
+    const updated = await this.prisma.payment.update({
+      where: { id: payment.id },
       data: {
         status: payment.status,
         paidAt: payment.paidAt,
-        expiresAt: payment.expiresAt,
-        provider: payment.provider,
-        providerPaymentId: payment.providerPaymentId,
-        externalReference: payment.externalReference,
-        pixCopyPaste: payment.pixCopyPaste,
-        bankSlipBarcode: payment.bankSlipBarcode,
-        bankSlipDigitableLine: payment.bankSlipDigitableLine,
-        metadata:
-          payment.metadata === null
-            ? Prisma.JsonNull
-            : (payment.metadata as Prisma.InputJsonValue),
+        updatedAt: payment.updatedAt,
       },
     });
 
-    return this.toDomain(updatedPayment);
+    return this.toDomain(updated);
   }
 
-  /**
-   * Converte um registro Prisma em uma entidade do domínio.
-   */
-  private toDomain(rawPayment: {
+  private toDomain(raw: {
     id: string;
-    invoiceId: string;
+    installmentId: string;
     reference: string;
-    method: PrismaPaymentMethod;
-    status: PrismaPaymentStatus;
-    amount: { toNumber(): number };
+    method: string;
+    status: string;
+    amount: unknown;
     currency: string;
     paidAt: Date | null;
     expiresAt: Date | null;
@@ -136,45 +96,31 @@ export class PrismaPaymentRepository implements PaymentRepository {
     pixCopyPaste: string | null;
     bankSlipBarcode: string | null;
     bankSlipDigitableLine: string | null;
-    metadata: Prisma.JsonValue | null;
+    metadata: unknown;
     createdAt: Date;
     updatedAt: Date;
   }): PaymentEntity {
     return new PaymentEntity(
-      rawPayment.id,
-      rawPayment.invoiceId,
-      rawPayment.reference,
-      rawPayment.method as PaymentMethod,
-      rawPayment.status as PaymentStatus,
-      rawPayment.amount.toNumber(),
-      rawPayment.currency,
-      rawPayment.paidAt,
-      rawPayment.expiresAt,
-      rawPayment.provider,
-      rawPayment.providerPaymentId,
-      rawPayment.externalReference,
-      rawPayment.pixCopyPaste,
-      rawPayment.bankSlipBarcode,
-      rawPayment.bankSlipDigitableLine,
-      this.toMetadata(rawPayment.metadata),
-      rawPayment.createdAt,
-      rawPayment.updatedAt,
+      raw.id,
+      raw.installmentId,
+      raw.reference,
+      raw.method as PaymentMethod,
+      raw.status as PaymentStatus,
+      Number(raw.amount),
+      raw.currency,
+      raw.paidAt,
+      raw.expiresAt,
+      raw.provider,
+      raw.providerPaymentId,
+      raw.externalReference,
+      raw.pixCopyPaste,
+      raw.bankSlipBarcode,
+      raw.bankSlipDigitableLine,
+      raw.metadata && typeof raw.metadata === 'object'
+        ? (raw.metadata as Record<string, unknown>)
+        : null,
+      raw.createdAt,
+      raw.updatedAt,
     );
-  }
-
-  /**
-   * Converte o JSON persistido pelo Prisma para o formato
-   * utilizado pela entidade de domínio.
-   *
-   * O Billing trabalha com metadata como objeto.
-   */
-  private toMetadata(
-    metadata: Prisma.JsonValue | null,
-  ): Record<string, unknown> | null {
-    if (!metadata || Array.isArray(metadata) || typeof metadata !== 'object') {
-      return null;
-    }
-
-    return metadata;
   }
 }

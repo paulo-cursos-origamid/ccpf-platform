@@ -22,6 +22,7 @@ export class InvoiceEntity {
     public paidAt: Date | null,
     public readonly createdAt: Date,
     public updatedAt: Date,
+    public readonly installmentCount: number = 1,
   ) {}
 
   /**

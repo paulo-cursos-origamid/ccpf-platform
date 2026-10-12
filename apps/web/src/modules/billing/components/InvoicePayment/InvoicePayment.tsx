@@ -7,132 +7,37 @@ import QRCode from "qrcode";
 import { useCreateInvoicePayment } from "../../hooks/client/useCreateInvoicePayment";
 import type {
   Invoice,
+  InvoiceInstallment,
   Payment,
   PaymentMethod,
 } from "../../types";
 
 import styles from "./InvoicePayment.module.scss";
 
+import { Select } from "@/components/ui/forms/Select";
 interface InvoicePaymentProps {
   invoice: Invoice;
 }
 
-/**
- * Formata um campo no padrão TLV utilizado pelo payload Pix EMV.
- *
- * Estrutura:
- * ID + tamanho + valor.
- */
-function pixField(id: string, value: string): string {
-  return `${id}${String(value.length).padStart(2, "0")}${value}`;
-}
-
-/**
- * Calcula o CRC16-CCITT utilizado no payload Pix.
- *
- * A função recebe o payload sem o campo de CRC e acrescenta
- * "6304" antes de calcular o valor final.
- */
-function calculatePixCrc16(payload: string): string {
-  let crc = 0xffff;
-
-  for (let index = 0; index < payload.length; index += 1) {
-    crc ^= payload.charCodeAt(index) << 8;
-
-    for (let bit = 0; bit < 8; bit += 1) {
-      if ((crc & 0x8000) !== 0) {
-        crc = ((crc << 1) ^ 0x1021) & 0xffff;
-      } else {
-        crc = (crc << 1) & 0xffff;
-      }
-    }
-  }
-
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
-
-/**
- * Gera um payload Pix mock para o ambiente de testes.
- *
- * O payload é estruturalmente compatível com o formato EMV/Pix,
- * mas não representa uma cobrança bancária real.
- *
- * O valor da Invoice é incorporado ao campo 54 e o identificador
- * da Invoice é utilizado para criar um TXID determinístico.
- */
-function generateMockPixPayload(invoice: Invoice): string {
-  const amount = invoice.amount.toFixed(2);
-
-  const transactionId =
-    invoice.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20) || "CCPFTEST";
-
-  const merchantAccountInformation = [
-    pixField("00", "BR.GOV.BCB.PIX"),
-    pixField("01", "pix@ccpf.test"),
-  ].join("");
-
-  const payloadWithoutCrc = [
-    pixField("00", "01"),
-    pixField("26", merchantAccountInformation),
-    pixField("52", "0000"),
-    pixField("53", "986"),
-    pixField("54", amount),
-    pixField("58", "BR"),
-    pixField("59", "CCPF"),
-    pixField("60", "SUMARE"),
-    pixField(
-      "62",
-      pixField("05", transactionId),
-    ),
-    "6304",
-  ].join("");
-
-  return `${payloadWithoutCrc}${calculatePixCrc16(payloadWithoutCrc)}`;
-}
-
-/**
- * Gera um código de barras mock de 44 dígitos para testes.
- *
- * Não representa um boleto bancário emitido por instituição financeira.
- * O objetivo é apenas exercitar o fluxo de criação de Payment no CCPF.
- */
-function generateMockBankSlipBarcode(invoice: Invoice): string {
-  const amountInCents = Math.round(invoice.amount * 100)
-    .toString()
-    .padStart(10, "0");
-
-  const invoiceDigits =
-    invoice.id.replace(/\D/g, "").padStart(20, "0").slice(-20);
-
-  const base = `0019${amountInCents}${invoiceDigits}`;
-
-  let hash = 0;
-
-  for (let index = 0; index < invoice.id.length; index += 1) {
-    hash = (hash * 31 + invoice.id.charCodeAt(index)) % 100000000;
-  }
-
-  return `${base}${hash.toString().padStart(8, "0")}`.slice(0, 44);
-}
-
-/**
- * Componente responsável por iniciar uma tentativa de pagamento
- * de uma Invoice pelo Tenant OWNER.
- *
- * O componente gera instrumentos de pagamento mock para o ambiente
- * de testes e os envia para a API através do fluxo oficial de Billing.
- *
- * A confirmação não ocorre neste componente.
- * Ela permanece exclusivamente no painel administrativo.
- */
 export function InvoicePayment({ invoice }: InvoicePaymentProps) {
   const { payment, loading, error, createPayment, clearPayment } =
     useCreateInvoicePayment();
 
   const [method, setMethod] = useState<PaymentMethod>("PIX");
+  const [selectedInstallmentId, setSelectedInstallmentId] = useState("");
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Somente parcelas em aberto podem iniciar uma tentativa de pagamento.
+  const payableInstallments = (invoice.installments ?? []).filter(
+    (installment) =>
+      installment.status === "PENDING" || installment.status === "OVERDUE",
+  );
+  const selectedInstallment: InvoiceInstallment | undefined =
+    payableInstallments.find(
+      (installment) => installment.id === selectedInstallmentId,
+    ) ?? payableInstallments[0];
 
   const formatCurrency = useCallback(
     (amount: number, currency: string) =>
@@ -159,40 +64,20 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
     setCopied(false);
     setQrCode(null);
 
-    const generatedPix =
-      method === "PIX"
-        ? generateMockPixPayload(invoice)
-        : undefined;
+    if (!selectedInstallment) {
+      setLocalError("Esta fatura não possui parcelas em aberto para pagamento.");
+      return;
+    }
 
-    const generatedBankSlip =
-      method === "BANK_SLIP"
-        ? generateMockBankSlipBarcode(invoice)
-        : undefined;
-
-    const input =
-      method === "PIX"
-        ? {
-            method,
-            pixCopyPaste: generatedPix,
-            externalReference: `MOCK-PIX-${invoice.number}`,
-            metadata: {
-              mock: true,
-              environment: "development",
-              generatedBy: "CCPF_TEST_CHECKOUT",
-              invoiceNumber: invoice.number,
-            },
-          }
-        : {
-            method,
-            bankSlipBarcode: generatedBankSlip,
-            externalReference: `MOCK-BOLETO-${invoice.number}`,
-            metadata: {
-              mock: true,
-              environment: "development",
-              generatedBy: "CCPF_TEST_CHECKOUT",
-              invoiceNumber: invoice.number,
-            },
-          };
+    const input = {
+      installmentId: selectedInstallment.id,
+      method,
+      externalReference: `CCPF-${invoice.number}-${selectedInstallment.number}`,
+      metadata: {
+        invoiceNumber: invoice.number,
+        installmentNumber: selectedInstallment.number,
+      },
+    };
 
     const createdPayment = await createPayment(invoice.id, input);
 
@@ -255,16 +140,43 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
       <div className={styles.header}>
         <div>
           <span className={styles.eyebrow}>Pagamento</span>
-          <h2 className={styles.title}>Pagar esta invoice</h2>
+          <h2 className={styles.title}>Pagar fatura</h2>
         </div>
 
         <span className={styles.amount}>
-          {formatCurrency(invoice.amount, invoice.currency)}
+          {formatCurrency(
+            selectedInstallment?.amount ?? invoice.amount,
+            selectedInstallment?.currency ?? invoice.currency,
+          )}
         </span>
       </div>
 
       {!payment ? (
         <>
+          {payableInstallments.length > 0 && (
+            <div className={styles.formGroup}>
+              <label htmlFor="invoice-installment">Parcela a pagar</label>
+              <Select
+                id="invoice-installment"
+                value={selectedInstallment?.id ?? ""}
+                onChange={(event) => setSelectedInstallmentId(event.target.value)}
+                disabled={loading}
+              >
+                {payableInstallments.map((installment) => (
+                  <option key={installment.id} value={installment.id}>
+                    Parcela {installment.number}/{installment.totalCount} — {formatCurrency(installment.amount, installment.currency)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {!selectedInstallment && (
+            <div className={styles.notice} role="status">
+              Esta fatura não possui parcelas em aberto para pagamento.
+            </div>
+          )}
+
           <div className={styles.methodSelector}>
             <button
               type="button"
@@ -308,9 +220,7 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
               <label>Pagamento via Pix</label>
 
               <p className={styles.helper}>
-                O sistema irá gerar automaticamente um Pix mock
-                utilizando o valor desta Invoice e exibirá o QR Code
-                após a criação da tentativa de pagamento.
+                O backend irá gerar os dados do Pix para a parcela selecionada e exibirá o QR Code após criar a tentativa.
               </p>
             </div>
           ) : (
@@ -318,8 +228,7 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
               <label>Boleto bancário</label>
 
               <p className={styles.helper}>
-                O sistema irá gerar automaticamente um código de
-                boleto mock para esta Invoice.
+                O backend irá gerar os dados do boleto para a parcela selecionada após criar a tentativa.
               </p>
             </div>
           )}
@@ -334,7 +243,7 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
             type="button"
             className={styles.primaryButton}
             onClick={handleCreatePayment}
-            disabled={loading}
+            disabled={loading || !selectedInstallment}
           >
             {loading
               ? "Criando pagamento..."
@@ -344,9 +253,7 @@ export function InvoicePayment({ invoice }: InvoicePaymentProps) {
           </button>
 
           <p className={styles.notice}>
-            O pagamento será criado como{" "}
-            <strong>pendente</strong> e dependerá de confirmação
-            administrativa.
+            Gerar o Pix ou boleto registra uma tentativa de pagamento. A fatura continuará <strong>pendente</strong> até que o pagamento seja validado e confirmado pela administração.
           </p>
         </>
       ) : (
@@ -397,7 +304,7 @@ function PaymentCreated({
       <div className={styles.success}>
         <strong>Pagamento criado</strong>
         <span>
-          A tentativa foi registrada e aguarda confirmação.
+          A tentativa foi registrada, mas isso ainda não significa que a fatura foi paga. A confirmação depende da administração.
         </span>
       </div>
 
@@ -510,9 +417,7 @@ function PaymentCreated({
       <div className={styles.pendingNotice}>
         <strong>Aguardando confirmação</strong>
         <span>
-          Esta tela não confirma o pagamento. Depois que o
-          responsável financeiro validar o pagamento, a Invoice
-          poderá ser marcada como paga pela plataforma.
+          Esta tela não confirma o pagamento. A fatura só será considerada paga depois que a administração validar e confirmar o pagamento na plataforma.
         </span>
       </div>
 

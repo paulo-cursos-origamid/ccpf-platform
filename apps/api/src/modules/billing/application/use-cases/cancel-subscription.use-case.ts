@@ -1,12 +1,11 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 
 import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
-import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
-
-import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
+import { SubscriptionLifecycleApplicationService } from '../services/subscription-lifecycle-application.service';
 
 import { TenantRole } from '../../../tenant/domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../../tenant/domain/repositories/tenant-member.repository';
+import { BillingUnitOfWork } from '../../domain/repositories/billing-unit-of-work';
 
 /**
  * Entrada necessária para cancelar a assinatura corrente
@@ -30,9 +29,9 @@ export interface CancelSubscriptionInput {
 @Injectable()
 export class CancelSubscriptionUseCase {
   constructor(
-    private readonly subscriptionRepository: SubscriptionRepository,
-    private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
+    private readonly subscriptionLifecycleApplicationService: SubscriptionLifecycleApplicationService,
     private readonly tenantMemberRepository: TenantMemberRepository,
+    private readonly billingUnitOfWork: BillingUnitOfWork,
   ) {}
 
   async execute(input: CancelSubscriptionInput): Promise<SubscriptionEntity> {
@@ -53,22 +52,38 @@ export class CancelSubscriptionUseCase {
       );
     }
 
-    const subscription = await this.subscriptionLifecycleService.resolveCurrent(
-      input.tenantId,
-    );
-
-    if (!subscription) {
-      throw new ForbiddenException(
-        'O Tenant não possui uma assinatura corrente para cancelar.',
+    return this.billingUnitOfWork.execute(async (context) => {
+      const current = await context.subscriptionRepository.findCurrentByTenant(
+        input.tenantId,
       );
-    }
 
-    /**
-     * A entidade encapsula a transição para CANCELLED.
-     * O caso de uso decide quando essa transição é permitida.
-     */
-    subscription.cancel();
+      if (!current) {
+        throw new ForbiddenException(
+          'O Tenant não possui uma assinatura corrente para cancelar.',
+        );
+      }
 
-    return this.subscriptionRepository.update(subscription);
+      await context.lockSubscription(current.id);
+
+      const subscription =
+        await this.subscriptionLifecycleApplicationService.synchronize(
+          input.tenantId,
+          context,
+        );
+
+      if (!subscription) {
+        throw new ForbiddenException(
+          'O Tenant não possui uma assinatura corrente para cancelar.',
+        );
+      }
+
+      /**
+       * A entidade encapsula a transição para CANCELLED.
+       * O caso de uso decide quando essa transição é permitida.
+       */
+      subscription.cancel();
+
+      return context.subscriptionRepository.update(subscription);
+    });
   }
 }

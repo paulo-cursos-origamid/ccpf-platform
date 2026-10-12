@@ -40,6 +40,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         subscriptionId: invoice.subscriptionId,
         number: invoice.number,
         status: InvoiceStatus[invoice.status],
+        installmentCount: invoice.installmentCount,
         amount: invoice.amount,
         currency: invoice.currency,
         dueAt: invoice.dueAt,
@@ -101,18 +102,19 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
   }
 
   async update(invoice: InvoiceEntity): Promise<InvoiceEntity> {
-    const updatedInvoice = await this.prisma.invoice.update({
-      where: {
-        id: invoice.id,
-      },
+    const updated = await this.prisma.invoice.update({
+      where: { id: invoice.id },
       data: {
-        status: InvoiceStatus[invoice.status],
+        // Os enums do domínio e do Prisma usam os mesmos valores textuais.
+        // Persistimos o status diretamente para evitar conversões ambíguas.
+        status: invoice.status,
         dueAt: invoice.dueAt,
         paidAt: invoice.paidAt,
+        updatedAt: invoice.updatedAt,
       },
     });
 
-    return this.toDomain(updatedInvoice);
+    return this.toDomain(updated);
   }
 
   /**
@@ -187,35 +189,46 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
                   id: true,
                   name: true,
                   code: true,
-                  price: true,
+                },
+              },
+              planPrice: {
+                select: {
+                  id: true,
+                  amount: true,
                   currency: true,
-                  billingInterval: true,
+                  interval: true,
                 },
               },
             },
           },
-          payments: {
+          installments: {
             orderBy: {
-              createdAt: 'desc',
+              number: 'asc',
             },
-            take: 1,
-            select: {
-              id: true,
-              reference: true,
-              method: true,
-              status: true,
-              amount: true,
-              currency: true,
-              paidAt: true,
-              expiresAt: true,
-              provider: true,
-              providerPaymentId: true,
-              externalReference: true,
-              pixCopyPaste: true,
-              bankSlipBarcode: true,
-              bankSlipDigitableLine: true,
-              createdAt: true,
-              updatedAt: true,
+            include: {
+              payments: {
+                orderBy: {
+                  createdAt: 'desc',
+                },
+                select: {
+                  id: true,
+                  reference: true,
+                  method: true,
+                  status: true,
+                  amount: true,
+                  currency: true,
+                  paidAt: true,
+                  expiresAt: true,
+                  provider: true,
+                  providerPaymentId: true,
+                  externalReference: true,
+                  pixCopyPaste: true,
+                  bankSlipBarcode: true,
+                  bankSlipDigitableLine: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
         },
@@ -232,6 +245,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         subscriptionId: invoice.subscriptionId,
         number: invoice.number,
         status: InvoiceStatus[invoice.status],
+        installmentCount: invoice.installmentCount,
         amount: invoice.amount.toNumber(),
         currency: invoice.currency,
         dueAt: invoice.dueAt,
@@ -240,9 +254,20 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         updatedAt: invoice.updatedAt,
         tenant: this.toAdminTenant(invoice.tenant),
         subscription: this.toAdminSubscription(invoice.subscription),
-        latestPayment: invoice.payments[0]
-          ? this.toAdminPayment(invoice.payments[0])
-          : null,
+        installments: invoice.installments.map((installment) => ({
+          id: installment.id,
+          number: installment.number,
+          totalCount: installment.totalCount,
+          amount: installment.amount.toNumber(),
+          currency: installment.currency,
+          dueAt: installment.dueAt,
+          paidAt: installment.paidAt,
+          status: installment.status as InvoiceStatus,
+          payments: installment.payments.map((payment) =>
+            this.toAdminPayment(payment),
+          ),
+        })),
+        latestPayment: this.findLatestAdminPayment(invoice.installments),
       })),
       total,
     };
@@ -273,34 +298,46 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
                 id: true,
                 name: true,
                 code: true,
-                price: true,
+              },
+            },
+            planPrice: {
+              select: {
+                id: true,
+                amount: true,
                 currency: true,
-                billingInterval: true,
+                interval: true,
               },
             },
           },
         },
-        payments: {
+        installments: {
           orderBy: {
-            createdAt: 'desc',
+            number: 'asc',
           },
-          select: {
-            id: true,
-            reference: true,
-            method: true,
-            status: true,
-            amount: true,
-            currency: true,
-            paidAt: true,
-            expiresAt: true,
-            provider: true,
-            providerPaymentId: true,
-            externalReference: true,
-            pixCopyPaste: true,
-            bankSlipBarcode: true,
-            bankSlipDigitableLine: true,
-            createdAt: true,
-            updatedAt: true,
+          include: {
+            payments: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              select: {
+                id: true,
+                reference: true,
+                method: true,
+                status: true,
+                amount: true,
+                currency: true,
+                paidAt: true,
+                expiresAt: true,
+                provider: true,
+                providerPaymentId: true,
+                externalReference: true,
+                pixCopyPaste: true,
+                bankSlipBarcode: true,
+                bankSlipDigitableLine: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
           },
         },
       },
@@ -316,6 +353,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       subscriptionId: invoice.subscriptionId,
       number: invoice.number,
       status: InvoiceStatus[invoice.status],
+      installmentCount: invoice.installmentCount,
       amount: invoice.amount.toNumber(),
       currency: invoice.currency,
       dueAt: invoice.dueAt,
@@ -324,8 +362,61 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       updatedAt: invoice.updatedAt,
       tenant: this.toAdminTenant(invoice.tenant),
       subscription: this.toAdminSubscription(invoice.subscription),
-      payments: invoice.payments.map((payment) => this.toAdminPayment(payment)),
+      installments: invoice.installments.map((installment) => ({
+        id: installment.id,
+        number: installment.number,
+        totalCount: installment.totalCount,
+        amount: installment.amount.toNumber(),
+        currency: installment.currency,
+        dueAt: installment.dueAt,
+        paidAt: installment.paidAt,
+        status: installment.status as InvoiceStatus,
+        payments: installment.payments.map((payment) =>
+          this.toAdminPayment(payment),
+        ),
+      })),
+      latestPayment: this.findLatestAdminPayment(invoice.installments),
+      payments: invoice.installments.flatMap((installment) =>
+        installment.payments.map((payment) => this.toAdminPayment(payment)),
+      ),
     };
+  }
+
+  /**
+   * Obtém o pagamento mais recente considerando todas as parcelas.
+   *
+   * O pagamento pertence à parcela; este método existe apenas para
+   * preservar o contrato legado utilizado pela listagem administrativa.
+   */
+  private findLatestAdminPayment(
+    installments: Array<{
+      payments: Array<{
+        id: string;
+        reference: string;
+        method: string;
+        status: string;
+        amount: { toNumber(): number };
+        currency: string;
+        paidAt: Date | null;
+        expiresAt: Date | null;
+        provider: string | null;
+        providerPaymentId: string | null;
+        externalReference: string | null;
+        pixCopyPaste: string | null;
+        bankSlipBarcode: string | null;
+        bankSlipDigitableLine: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }>;
+    }>,
+  ): AdminInvoicePayment | null {
+    const payments = installments
+      .flatMap((installment) => installment.payments)
+      .sort(
+        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+      );
+
+    return payments[0] ? this.toAdminPayment(payments[0]) : null;
   }
 
   /**
@@ -356,11 +447,20 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       id: string;
       name: string;
       code: string;
-      price: { toNumber(): number };
-      currency: string;
-      billingInterval: string;
     };
+    planPrice: {
+      id: string;
+      amount: { toNumber(): number };
+      currency: string;
+      interval: string;
+    } | null;
   }): AdminInvoiceSubscription {
+    if (!subscription.planPrice) {
+      throw new Error(
+        `Invoice subscription ${subscription.id} does not have a PlanPrice.`,
+      );
+    }
+
     return {
       id: subscription.id,
       status: subscription.status as AdminInvoiceSubscription['status'],
@@ -371,10 +471,11 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         id: subscription.plan.id,
         name: subscription.plan.name,
         code: subscription.plan.code,
-        price: subscription.plan.price.toNumber(),
-        currency: subscription.plan.currency,
-        billingInterval: subscription.plan
-          .billingInterval as AdminInvoicePlan['billingInterval'],
+        planPriceId: subscription.planPrice.id,
+        price: subscription.planPrice.amount.toNumber(),
+        currency: subscription.planPrice.currency,
+        billingInterval: subscription.planPrice
+          .interval as AdminInvoicePlan['billingInterval'],
       },
     };
   }
@@ -435,6 +536,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     paidAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+    installmentCount: number;
   }): InvoiceEntity {
     return new InvoiceEntity(
       rawInvoice.id,
@@ -448,6 +550,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       rawInvoice.paidAt,
       rawInvoice.createdAt,
       rawInvoice.updatedAt,
+      rawInvoice.installmentCount,
     );
   }
 }

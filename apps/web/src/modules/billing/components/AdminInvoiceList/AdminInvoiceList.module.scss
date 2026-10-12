@@ -88,24 +88,6 @@
   flex: 0 0 190px;
 }
 
-.statusField select {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: var(--control-height-md);
-  padding: var(--control-padding-y) var(--control-padding-x);
-  border: 1px solid var(--control-border);
-  border-radius: var(--control-radius);
-  outline: 0;
-  background: var(--surface-primary);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--font-md);
-  line-height: var(--line-height-normal);
-  transition:
-    border-color var(--transition-normal),
-    box-shadow var(--transition-normal),
-    background-color var(--transition-normal);
-}
 
 .statusField select:hover {
   border-color: var(--border-secondary);

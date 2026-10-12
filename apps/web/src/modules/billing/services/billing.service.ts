@@ -6,6 +6,7 @@ import type {
   AdminInvoiceListResponse,
   ConfirmPaymentInput,
   CreatePaymentInput,
+  ChangeSubscriptionPlanInput,
   CreateSubscriptionInput,
   Invoice,
   Payment,
@@ -37,6 +38,17 @@ export const billingService = {
   /**
    * Obtém a assinatura comercial atual do Tenant ativo.
    */
+  /**
+   * Solicita a atribuição do plano interno SYSTEM_OWNER.
+   * A API valida a permissão administrativa e não cria fatura.
+   */
+  async assignSystemOwnerPlan(): Promise<Subscription> {
+    return api.patch<Subscription>(
+      "/billing/subscription/system-owner",
+      {},
+    );
+  },
+
   async getCurrentSubscription(): Promise<Subscription | null> {
     return api.get<Subscription | null>("/billing/subscription");
   },
@@ -51,12 +63,15 @@ export const billingService = {
   },
 
   /**
-   * Altera o plano da assinatura corrente do Tenant.
+   * Altera o plano/modalidade da assinatura corrente do Tenant.
    */
-  async changeSubscriptionPlan(planCode: string): Promise<Subscription> {
-    return api.patch<Subscription>("/billing/subscription/plan", {
-      planCode,
-    });
+  async changeSubscriptionPlan(
+    input: ChangeSubscriptionPlanInput,
+  ): Promise<Subscription> {
+    return api.patch<Subscription>(
+      "/billing/subscription/plan",
+      input,
+    );
   },
 
   /**

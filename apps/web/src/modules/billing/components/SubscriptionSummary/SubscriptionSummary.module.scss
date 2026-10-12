@@ -250,6 +250,9 @@
  * ============================================================ */
 
 .collapsedSummary {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
   width: 44px;
   height: 44px;
 

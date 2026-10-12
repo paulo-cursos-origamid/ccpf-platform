@@ -25,6 +25,7 @@ export interface AdminInvoicePlan {
   price: number;
   currency: string;
   billingInterval: BillingInterval;
+  planPriceId: string;
 }
 
 export interface AdminInvoiceSubscription {
@@ -55,12 +56,25 @@ export interface AdminInvoicePayment {
   updatedAt: Date;
 }
 
+export interface AdminInvoiceInstallment {
+  id: string;
+  number: number;
+  totalCount: number;
+  amount: number;
+  currency: string;
+  dueAt: Date;
+  paidAt: Date | null;
+  status: InvoiceStatus;
+  payments: AdminInvoicePayment[];
+}
+
 export interface AdminInvoiceListItem {
   id: string;
   tenantId: string;
   subscriptionId: string;
   number: string;
   status: InvoiceStatus;
+  installmentCount: number;
   amount: number;
   currency: string;
   dueAt: Date;
@@ -69,14 +83,17 @@ export interface AdminInvoiceListItem {
   updatedAt: Date;
   tenant: AdminInvoiceTenant;
   subscription: AdminInvoiceSubscription;
+  installments: AdminInvoiceInstallment[];
   latestPayment: AdminInvoicePayment | null;
 }
+
 export interface AdminInvoiceDetail {
   id: string;
   tenantId: string;
   subscriptionId: string;
   number: string;
   status: InvoiceStatus;
+  installmentCount: number;
   amount: number;
   currency: string;
   dueAt: Date;
@@ -85,6 +102,15 @@ export interface AdminInvoiceDetail {
   updatedAt: Date;
   tenant: AdminInvoiceTenant;
   subscription: AdminInvoiceSubscription;
+  installments: AdminInvoiceInstallment[];
+  latestPayment: AdminInvoicePayment | null;
+
+  /**
+   * Campo legado de compatibilidade.
+   *
+   * Os pagamentos reais pertencem às parcelas e este campo
+   * representa a visão achatada utilizada pelo frontend atual.
+   */
   payments: AdminInvoicePayment[];
 }
 export interface FindAdminInvoicesResult {

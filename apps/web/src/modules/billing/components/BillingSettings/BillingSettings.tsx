@@ -16,11 +16,16 @@ import {
 import { billingService } from "../../services";
 import type {
   PublicPlan,
+  PublicPlanPrice,
   SubscriptionStatus,
 } from "../../types";
 import { InvoiceList } from "../InvoiceList/InvoiceList";
 import styles from "./BillingSettings.module.scss";
 
+import { Select } from "@/components/ui/forms/Select";
+import { useHasPermission } from "@/modules/identity/hooks/useHasPermission";
+import { tenantService } from "@/modules/tenant/services";
+import { useTenantStore } from "@/modules/tenant/stores";
 function formatCurrency(
   value: number,
   currency: string,
@@ -133,9 +138,74 @@ export function BillingSettings() {
   const [selectedPlanCode, setSelectedPlanCode] = useState<string | null>(
     null,
   );
+  const [selectedPriceIds, setSelectedPriceIds] = useState<
+    Record<string, string>
+  >({});
   const [actionError, setActionError] = useState<string | null>(null);
+  const [assigningSystemOwner, setAssigningSystemOwner] = useState(false);
+  const canManageBilling = useHasPermission("BILLING_MANAGE");
 
   const [pendingPlan, setPendingPlan] = useState<PublicPlan | null>(null);
+
+  /**
+   * Define a modalidade comercial padrão apresentada ao usuário.
+   *
+   * A preferência visual é:
+   * Anual -> Semestral -> Vitalício.
+   *
+   * A regra de disponibilidade permanece no backend:
+   * somente modalidades retornadas em prices[] podem ser contratadas.
+   */
+  function getDefaultPrice(plan: PublicPlan) {
+    return (
+      plan.prices.find((price) => price.interval === "YEARLY") ??
+      plan.prices.find((price) => price.interval === "SEMESTERLY") ??
+      plan.prices.find((price) => price.interval === "LIFETIME") ??
+      null
+    );
+  }
+
+  /**
+   * Retorna a modalidade atualmente escolhida para um plano.
+   *
+   * Quando o usuário ainda não escolheu uma modalidade,
+   * utiliza a modalidade comercial padrão.
+   */
+  function getSelectedPrice(plan: PublicPlan) {
+    return (
+      plan.prices.find(
+        (price) => price.id === selectedPriceIds[plan.code],
+      ) ?? getDefaultPrice(plan)
+    );
+  }
+
+  function getIntervalLabel(interval: PublicPlan["prices"][number]["interval"]) {
+    switch (interval) {
+      case "SEMESTERLY":
+        return "Semestral";
+
+      case "YEARLY":
+        return "Anual";
+
+      case "LIFETIME":
+        return "Vitalício";
+    }
+  }
+
+  function getIntervalSuffix(
+    interval: PublicPlan["prices"][number]["interval"],
+  ) {
+    switch (interval) {
+      case "SEMESTERLY":
+        return "/ semestre";
+
+      case "YEARLY":
+        return "/ ano";
+
+      case "LIFETIME":
+        return "pagamento único";
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -152,7 +222,13 @@ export function BillingSettings() {
         }
 
         setPlans(
-          [...result].sort((first, second) => first.price - second.price),
+          [...result].sort((first, second) => {
+            const firstPrice = getDefaultPrice(first)?.amount ?? Number.MAX_SAFE_INTEGER;
+            const secondPrice =
+              getDefaultPrice(second)?.amount ?? Number.MAX_SAFE_INTEGER;
+
+            return firstPrice - secondPrice;
+          }),
         );
       } catch (error) {
         if (cancelled) {
@@ -203,12 +279,22 @@ export function BillingSettings() {
       return;
     }
 
+    const price = getSelectedPrice(plan);
+
+    if (!price) {
+      setActionError(
+        "Este plano não possui uma modalidade comercial disponível.",
+      );
+      return;
+    }
+
     setSelectedPlanCode(plan.code);
     setActionError(null);
 
     try {
       await subscribeToPlan({
         planCode: plan.code,
+        planPriceId: price.id,
       });
 
       await reload();
@@ -227,12 +313,27 @@ export function BillingSettings() {
     }
 
     const plan = pendingPlan;
+    const price = getSelectedPrice(plan);
+
+    if (!price) {
+      setActionError(
+        "Este plano não possui uma modalidade comercial disponível.",
+      );
+      return;
+    }
 
     setSelectedPlanCode(plan.code);
     setActionError(null);
 
     try {
-      await changeSubscriptionPlan(plan.code);
+      await changeSubscriptionPlan({
+        planCode: plan.code,
+        planPriceId: price.id,
+        billingDay:
+          price.interval === "LIFETIME"
+            ? undefined
+            : (subscription?.billingDay ?? 8),
+      });
 
       setPendingPlan(null);
 
@@ -266,8 +367,83 @@ export function BillingSettings() {
   const selectedPlanIsCurrent =
     pendingPlan?.code === currentPlanCode;
 
+  /**
+   * Resolve a modalidade comercial vinculada à assinatura atual.
+   *
+   * Os preços pertencem ao catálogo público, não aos detalhes
+   * do plano retornado junto à assinatura. Planos internos que
+   * não aparecem no catálogo permanecem válidos, sem preço público.
+   */
+  const currentPrice =
+    currentPlan && subscription?.planPriceId
+      ? (plans.find((plan) => plan.code === currentPlan.code)?.prices.find(
+          (price: PublicPlanPrice) =>
+            price.id === subscription.planPriceId,
+        ) ?? null)
+      : null;
+
+  /**
+   * Atribui o plano interno ao Tenant ativo após confirmação.
+   */
+  async function handleAssignSystemOwnerPlan() {
+    const confirmed = window.confirm(
+      "Atribuir o plano interno SYSTEM_OWNER ao Tenant selecionado? A assinatura atual será substituída."
+    );
+    if (!confirmed) return;
+
+    setAssigningSystemOwner(true);
+    setActionError(null);
+
+    try {
+      /**
+       * Garante que o Tenant ativo esteja carregado antes da chamada.
+       * O ApiClient utiliza esse contexto para enviar X-Tenant-Id.
+       */
+      const tenantStore = useTenantStore.getState();
+
+      if (!tenantStore.getActiveTenant()) {
+        const tenants = await tenantService.listMine();
+        useTenantStore.getState().setTenants(tenants);
+      }
+
+      if (!useTenantStore.getState().getActiveTenant()) {
+        setActionError(
+          "Nenhum espaço disponível para atribuir o plano interno. " +
+          "Verifique seu acesso aos espaços e tente novamente."
+        );
+        return;
+      }
+
+      await billingService.assignSystemOwnerPlan();
+      await reload();
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atribuir o plano interno."
+      );
+    } finally {
+      setAssigningSystemOwner(false);
+    }
+  }
+
   return (
     <div className={styles.container}>
+      {canManageBilling && currentPlanCode !== "SYSTEM_OWNER" && (
+        <section style={{ marginBottom: "1rem" }}>
+          <button
+            type="button"
+            onClick={handleAssignSystemOwnerPlan}
+            disabled={assigningSystemOwner || subscriptionLoading}
+          >
+            {assigningSystemOwner
+              ? "Atribuindo plano interno..."
+              : "Atribuir plano interno SYSTEM_OWNER"}
+          </button>
+        </section>
+      )}
+
+
       <header className={styles.header}>
         <div className={styles.headerIcon}>
           <CreditCard size={22} />
@@ -379,14 +555,14 @@ export function BillingSettings() {
                 <div>
                   <span>Valor</span>
                   <strong>
-                    {formatCurrency(
-                      currentPlan.price,
-                      currentPlan.currency,
-                    )}
-                    {" / "}
-                    {currentPlan.billingInterval === "MONTHLY"
-                      ? "mês"
-                      : "ano"}
+                    {currentPrice
+                      ? `${formatCurrency(
+                          currentPrice.amount,
+                          currentPrice.currency,
+                        )} ${getIntervalSuffix(currentPrice.interval)}`
+                      : isTrial
+                        ? "Período de teste"
+                        : "Não informado"}
                   </strong>
                 </div>
               </div>
@@ -487,6 +663,8 @@ export function BillingSettings() {
                 const isSelected = plan.code === selectedPlanCode;
                 const isPendingChange = plan.code === pendingPlan?.code;
                 const planChangeBlocked = status === "PENDING";
+                const selectedPrice = getSelectedPrice(plan);
+                const hasPrices = plan.prices.length > 0;
 
                 return (
                 <article
@@ -513,17 +691,46 @@ export function BillingSettings() {
                     </div>
 
                     <div className={styles.price}>
-                      <strong>
-                        {formatCurrency(plan.price, plan.currency)}
-                      </strong>
-                      <span>
-                        /{" "}
-                        {plan.billingInterval === "MONTHLY"
-                          ? "mês"
-                          : "ano"}
-                      </span>
+                      {selectedPrice ? (
+                        <>
+                          <strong>
+                            {formatCurrency(
+                              selectedPrice.amount,
+                              selectedPrice.currency,
+                            )}
+                          </strong>
+                          <span>
+                            {getIntervalSuffix(selectedPrice.interval)}
+                          </span>
+                        </>
+                      ) : (
+                        <strong>Sem preço disponível</strong>
+                      )}
                     </div>
                   </div>
+
+                  {hasPrices ? (
+                    <label>
+                      <span>Modalidade</span>
+                      <Select
+                        value={selectedPrice?.id ?? ""}
+                        disabled={operationInProgress || isCurrentPlan}
+                        onChange={(event) => {
+                          setSelectedPriceIds((current) => ({
+                            ...current,
+                            [plan.code]: event.target.value,
+                          }));
+                        }}
+                      >
+                        {plan.prices.map((price) => (
+                          <option key={price.id} value={price.id}>
+                            {getIntervalLabel(price.interval)} —{" "}
+                            {formatCurrency(price.amount, price.currency)}
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  ) : null}
 
                   <div className={styles.planUsers}>
                     <Users size={18} />
@@ -552,7 +759,8 @@ export function BillingSettings() {
                       operationInProgress ||
                       isCurrentPlan ||
                       isPendingChange ||
-                      planChangeBlocked
+                      planChangeBlocked ||
+                      !hasPrices
                     }
                     onClick={() => requestPlanAction(plan)}
                   >

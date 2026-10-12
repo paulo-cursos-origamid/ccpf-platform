@@ -90,10 +90,42 @@ export function InvoiceList() {
     );
   }
 
+  const statusPriority = (status: Invoice["status"]): number => {
+    if (status === "OVERDUE") return 0;
+    if (status === "PENDING") return 1;
+    return 2;
+  };
+
+  const orderedInvoices = [...invoices].sort(
+    (left, right) =>
+      statusPriority(left.status) - statusPriority(right.status) ||
+      new Date(right.createdAt).getTime() -
+        new Date(left.createdAt).getTime(),
+  );
+
+  const pendingCount = invoices.filter(
+    (invoice) =>
+      invoice.status === "PENDING" || invoice.status === "OVERDUE",
+  ).length;
+
   return (
     <div className={styles.card}>
+      {pendingCount > 0 && (
+        <div className={styles.attentionHeader}>
+          <strong>
+            {pendingCount === 1
+              ? "Você tem uma fatura que precisa de atenção"
+              : `Você tem ${pendingCount} faturas que precisam de atenção`}
+          </strong>
+          <span>
+            Faturas pendentes ou vencidas aparecem primeiro. Selecione
+            “Pagar agora” para consultar as opções de pagamento.
+          </span>
+        </div>
+      )}
+
       <div className={styles.list}>
-        {invoices.map((invoice) => (
+        {orderedInvoices.map((invoice) => (
           <InvoiceRow key={invoice.id} invoice={invoice} />
         ))}
       </div>
@@ -112,8 +144,15 @@ interface InvoiceRowProps {
  * a navegação para a página de detalhes da fatura.
  */
 function InvoiceRow({ invoice }: InvoiceRowProps) {
+  const requiresPayment =
+    invoice.status === "PENDING" || invoice.status === "OVERDUE";
+
   return (
-    <div className={styles.row}>
+    <div
+      className={`${styles.row} ${
+        requiresPayment ? styles.rowNeedsPayment : ""
+      }`}
+    >
       <div className={styles.number}>
         <div className={styles.icon}>
           <CalendarDays size={17} />
@@ -161,9 +200,11 @@ function InvoiceRow({ invoice }: InvoiceRowProps) {
       <div className={styles.actions}>
         <Link
           href={`/settings/billing/invoices/${invoice.id}`}
-          className={styles.detailsLink}
+          className={`${styles.detailsLink} ${
+            requiresPayment ? styles.paymentLink : ""
+          }`}
         >
-          <span>Ver detalhes</span>
+          <span>{requiresPayment ? "Pagar agora" : "Ver detalhes"}</span>
 
           <ArrowRight size={14} aria-hidden="true" />
         </Link>

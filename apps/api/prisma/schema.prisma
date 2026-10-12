@@ -144,22 +144,44 @@ enum TenantMemberStatus {
 // Regras de acesso devem preferencialmente utilizar features,
 // evitando regras espalhadas como "if plan === PREMIUM".
 model Plan {
-  id              String          @id @default(uuid())
-  name            String
-  code            String          @unique
-  description     String?
-  price           Decimal
-  currency        String          @default("BRL")
-  billingInterval BillingInterval
-  maxUsers        Int
-  isPublic        Boolean         @default(true)
-  isActive        Boolean         @default(true)
+  id          String  @id @default(uuid())
+  name        String
+  code        String  @unique
+  description String?
+  maxUsers    Int
+  isPublic    Boolean @default(true)
+  isActive    Boolean @default(true)
 
   features      PlanFeature[]
+  prices        PlanPrice[]
   subscriptions Subscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Modalidade comercial de um plano.
+//
+// O produto é representado por Plan.
+// O preço e a periodicidade são representados por PlanPrice.
+model PlanPrice {
+  id       String          @id @default(uuid())
+  planId   String
+  interval BillingInterval
+  amount   Decimal
+  currency String          @default("BRL")
+  isActive Boolean         @default(true)
+
+  plan          Plan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([planId, interval])
+  @@index([planId])
+  @@index([interval])
+  @@index([isActive])
 }
 
 // Recursos disponíveis em cada plano.
@@ -200,27 +222,44 @@ enum PlanFeatureCode {
 // A regra de apenas uma assinatura ativa simultaneamente
 // será controlada na camada de domínio/aplicação.
 model Subscription {
-  id       String @id @default(uuid())
-  tenantId String
-  planId   String
+  id          String  @id @default(uuid())
+  tenantId    String
+  planId      String
+  planPriceId String?
 
-  // Alteração de plano pendente.
-  // O planId continua representando o plano atualmente efetivo.
+  // Alteração comercial pendente.
+  // planId/planPriceId continuam representando a modalidade efetiva.
   pendingPlanId          String?
+  pendingPlanPriceId     String?
   pendingPlanChangeType  SubscriptionPlanChangeType?
   pendingPlanEffectiveAt DateTime?
   pendingPlanInvoiceId   String?
+
+  // Dia de cobrança escolhido para a modalidade pendente.
+  // Lifetime permanece nulo.
+  pendingBillingDay Int?
 
   status SubscriptionStatus @default(TRIALING)
 
   startedAt          DateTime
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
-  trialEndsAt        DateTime?
-  cancelledAt        DateTime?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  plan   Plan   @relation(fields: [planId], references: [id])
+  // Dia preferencial de cobrança para assinaturas recorrentes.
+  // Valores válidos: 1..31.
+  // Lifetime e Trial podem permanecer nulos.
+  billingDay Int?
+
+  // Próxima cobrança de uma assinatura recorrente.
+  // Lifetime não possui próxima cobrança.
+  nextBillingDate DateTime?
+
+  trialEndsAt DateTime?
+  cancelledAt DateTime?
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  plan      Plan       @relation(fields: [planId], references: [id])
+  planPrice PlanPrice? @relation(fields: [planPriceId], references: [id])
 
   invoices Invoice[]
 
@@ -229,8 +268,13 @@ model Subscription {
 
   @@index([tenantId])
   @@index([planId])
+  @@index([planPriceId])
   @@index([status])
+  @@index([billingDay])
+  @@index([pendingBillingDay])
+  @@index([nextBillingDate])
   @@index([pendingPlanId])
+  @@index([pendingPlanPriceId])
   @@index([pendingPlanEffectiveAt])
   @@index([pendingPlanInvoiceId])
 }
@@ -251,8 +295,9 @@ enum SubscriptionStatus {
 }
 
 enum BillingInterval {
-  MONTHLY
+  SEMESTERLY
   YEARLY
+  LIFETIME
 }
 
 // Meio de pagamento aceito pelo CCPF.
@@ -276,16 +321,17 @@ model Invoice {
   tenantId       String
   subscriptionId String
 
-  number   String        @unique
-  status   InvoiceStatus
-  amount   Decimal
-  currency String        @default("BRL")
-  dueAt    DateTime
-  paidAt   DateTime?
+  number           String        @unique
+  status           InvoiceStatus
+  installmentCount Int           @default(1)
+  amount           Decimal
+  currency         String        @default("BRL")
+  dueAt            DateTime
+  paidAt           DateTime?
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id])
-  subscription Subscription @relation(fields: [subscriptionId], references: [id])
-  payments     Payment[]
+  tenant       Tenant               @relation(fields: [tenantId], references: [id])
+  subscription Subscription         @relation(fields: [subscriptionId], references: [id])
+  installments InvoiceInstallment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -303,12 +349,42 @@ enum InvoiceStatus {
   CANCELLED
 }
 
-// Pagamento associado a uma Invoice.
+enum InvoiceInstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model InvoiceInstallment {
+  id         String                   @id @default(uuid())
+  invoiceId  String
+  number     Int
+  totalCount Int
+  amount     Decimal
+  currency   String                   @default("BRL")
+  dueAt      DateTime
+  paidAt     DateTime?
+  status     InvoiceInstallmentStatus @default(PENDING)
+
+  invoice  Invoice   @relation(fields: [invoiceId], references: [id])
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([invoiceId, number])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([dueAt])
+}
+
+// Tentativa de pagamento associada a uma parcela de uma Invoice.
 //
-// Uma Invoice pode possuir múltiplas tentativas de pagamento.
+// Uma parcela pode possuir múltiplas tentativas de pagamento.
 model Payment {
-  id        String @id @default(uuid())
-  invoiceId String
+  id            String @id @default(uuid())
+  installmentId String
 
   // Referência interna única da tentativa de pagamento.
   // É usada para conciliação manual e poderá ser associada
@@ -358,12 +434,12 @@ model Payment {
   // integrações sem amarrar o schema a um fornecedor.
   metadata Json?
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  installment InvoiceInstallment @relation(fields: [installmentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([invoiceId])
+  @@index([installmentId])
   @@index([status])
   @@index([method])
   @@index([provider, providerPaymentId])
