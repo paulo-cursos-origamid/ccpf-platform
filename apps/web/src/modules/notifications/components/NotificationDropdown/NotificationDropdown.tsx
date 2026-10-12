@@ -19,6 +19,7 @@ import styles from "./NotificationDropdown.module.scss";
 interface NotificationDropdownProps {
   open: boolean;
   onClose: () => void;
+  onNotificationsChanged?: () => Promise<void>;
 }
 
 /**
@@ -26,10 +27,14 @@ interface NotificationDropdownProps {
  *
  * Exibe as notificações recentes e concentra as ações rápidas
  * relacionadas à leitura das notificações.
+ *
+ * Notifica o componente pai quando o estado de leitura muda,
+ * permitindo sincronizar o badge do Header.
  */
 export function NotificationDropdown({
   open,
   onClose,
+  onNotificationsChanged,
 }: NotificationDropdownProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,13 +87,21 @@ export function NotificationDropdown({
   async function handleMarkAsRead(notificationId: string) {
     await markAsRead(notificationId);
 
-    await Promise.all([reload(), reloadUnreadCount()]);
+    await Promise.all([
+      reload(),
+      reloadUnreadCount(),
+      onNotificationsChanged?.(),
+    ]);
   }
 
   async function handleMarkAllAsRead() {
     await markAllAsRead();
 
-    await Promise.all([reload(), reloadUnreadCount()]);
+    await Promise.all([
+      reload(),
+      reloadUnreadCount(),
+      onNotificationsChanged?.(),
+    ]);
   }
 
   function handleViewAll() {
@@ -124,9 +137,12 @@ export function NotificationDropdown({
           type="button"
           className={styles.markAllButton}
           onClick={() => void handleMarkAllAsRead()}
-          disabled={markingAllAsRead || notifications.every(
-            (notification) => notification.readAt !== null,
-          )}
+          disabled={
+            markingAllAsRead ||
+            notifications.every(
+              (notification) => notification.readAt !== null,
+            )
+          }
         >
           <CheckCheck />
           Marcar todas como lidas

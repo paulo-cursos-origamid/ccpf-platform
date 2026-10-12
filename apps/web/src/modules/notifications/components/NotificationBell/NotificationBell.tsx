@@ -14,18 +14,24 @@ import styles from "./NotificationBell.module.scss";
  *
  * Consulta a quantidade de notificações não lidas no backend,
  * apresenta o contador e controla a abertura da Central de Avisos.
+ *
+ * Também sincroniza o badge quando o Dropdown altera o estado
+ * de leitura das notificações.
  */
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
-  const { count, reload } = useUnreadNotificationCount();
+  const {
+    count,
+    reload: reloadUnreadCount,
+  } = useUnreadNotificationCount();
 
   function handleToggle() {
     setOpen((current) => !current);
+  }
 
-    if (!open) {
-      void reload();
-    }
+  async function handleNotificationsChanged() {
+    await reloadUnreadCount();
   }
 
   return (
@@ -56,6 +62,7 @@ export function NotificationBell() {
       <NotificationDropdown
         open={open}
         onClose={() => setOpen(false)}
+        onNotificationsChanged={handleNotificationsChanged}
       />
     </div>
   );

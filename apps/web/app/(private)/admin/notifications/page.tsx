@@ -1,5 +1,14 @@
-import { NotificationCenter } from "@/modules/notifications";
+"use client";
+
+import {
+  NotificationAccessGuard,
+  NotificationCenter,
+} from "@/modules/notifications";
 
 export default function NotificationsPage() {
-  return <NotificationCenter />;
+  return (
+    <NotificationAccessGuard>
+      <NotificationCenter />
+    </NotificationAccessGuard>
+  );
 }

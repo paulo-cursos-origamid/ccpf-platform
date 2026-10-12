@@ -1,3 +1,4 @@
+export { NotificationAccessGuard } from "./NotificationAccessGuard";
 export { NotificationBell } from "./NotificationBell";
 export { NotificationCenter } from "./NotificationCenter";
 export { NotificationDropdown } from "./NotificationDropdown";

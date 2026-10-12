@@ -6,6 +6,7 @@ export {
 } from "./hooks";
 
 export {
+  NotificationAccessGuard,
   NotificationBell,
   NotificationCenter,
   NotificationDropdown,
