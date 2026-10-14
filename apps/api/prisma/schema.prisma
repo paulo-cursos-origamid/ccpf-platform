@@ -9,6 +9,7 @@ enum NotificationType {
   USER_BLOCKED
   USER_REMOVED
   SYSTEM
+  PAYMENT_CANCELLED
 }
 
 enum NotificationSeverity {
@@ -395,6 +396,7 @@ model Payment {
   method PaymentMethod
 
   status   PaymentStatus
+  cancellationReason String?
   amount   Decimal
   currency String        @default("BRL")
   paidAt   DateTime?

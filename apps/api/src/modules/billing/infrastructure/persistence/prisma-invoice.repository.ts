@@ -225,6 +225,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
                   pixCopyPaste: true,
                   bankSlipBarcode: true,
                   bankSlipDigitableLine: true,
+                  cancellationReason: true,
                   createdAt: true,
                   updatedAt: true,
                 },
@@ -334,6 +335,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
                 pixCopyPaste: true,
                 bankSlipBarcode: true,
                 bankSlipDigitableLine: true,
+                cancellationReason: true,
                 createdAt: true,
                 updatedAt: true,
               },
@@ -405,6 +407,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         pixCopyPaste: string | null;
         bankSlipBarcode: string | null;
         bankSlipDigitableLine: string | null;
+        cancellationReason: string | null;
         createdAt: Date;
         updatedAt: Date;
       }>;
@@ -498,6 +501,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
     pixCopyPaste: string | null;
     bankSlipBarcode: string | null;
     bankSlipDigitableLine: string | null;
+    cancellationReason: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): AdminInvoicePayment {
@@ -516,6 +520,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       pixCopyPaste: payment.pixCopyPaste,
       bankSlipBarcode: payment.bankSlipBarcode,
       bankSlipDigitableLine: payment.bankSlipDigitableLine,
+      cancellationReason: payment.cancellationReason,
       createdAt: payment.createdAt,
       updatedAt: payment.updatedAt,
     };

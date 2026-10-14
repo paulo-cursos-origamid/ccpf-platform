@@ -22,6 +22,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         reference: payment.reference,
         method: payment.method,
         status: payment.status,
+        cancellationReason: payment.cancellationReason,
         amount: payment.amount,
         currency: payment.currency,
         paidAt: payment.paidAt,
@@ -73,6 +74,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
       data: {
         status: payment.status,
         paidAt: payment.paidAt,
+        cancellationReason: payment.cancellationReason,
         updatedAt: payment.updatedAt,
       },
     });
@@ -99,6 +101,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
     metadata: unknown;
     createdAt: Date;
     updatedAt: Date;
+    cancellationReason: string | null;
   }): PaymentEntity {
     return new PaymentEntity(
       raw.id,
@@ -121,6 +124,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         : null,
       raw.createdAt,
       raw.updatedAt,
+      raw.cancellationReason,
     );
   }
 }

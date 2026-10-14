@@ -64,6 +64,33 @@
   gap: var(--spacing-xs);
 }
 
+.selection {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  accent-color: #047857;
+  cursor: pointer;
+}
+
+.titleButton {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
+  }
+}
+
 .title {
   margin: 0;
 

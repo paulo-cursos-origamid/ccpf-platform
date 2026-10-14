@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   Patch,
   Param,
@@ -19,10 +21,12 @@ import type { Request } from 'express';
 
 import type { AuthenticatedUser } from '../../../identity/infrastructure/auth';
 import { CountUnreadNotificationsUseCase } from '../../application/use-cases/count-unread-notifications.use-case';
+import { DeleteNotificationsUseCase } from '../../application/use-cases/delete-notifications.use-case';
 import { ListNotificationsUseCase } from '../../application/use-cases/list-notifications.use-case';
 import { MarkAllNotificationsAsReadUseCase } from '../../application/use-cases/mark-all-notifications-as-read.use-case';
 import { MarkNotificationAsReadUseCase } from '../../application/use-cases/mark-notification-as-read.use-case';
 import { ListNotificationsQueryDto } from '../dto/list-notifications-query.dto';
+import { DeleteNotificationsDto } from '../dto/delete-notifications.dto';
 
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
@@ -44,7 +48,25 @@ export class NotificationsController {
     private readonly countUnreadNotificationsUseCase: CountUnreadNotificationsUseCase,
     private readonly markNotificationAsReadUseCase: MarkNotificationAsReadUseCase,
     private readonly markAllNotificationsAsReadUseCase: MarkAllNotificationsAsReadUseCase,
+    private readonly deleteNotificationsUseCase: DeleteNotificationsUseCase,
   ) {}
+
+  @Delete()
+  @ApiOperation({
+    summary: 'Exclui notificações selecionadas do usuário autenticado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Quantidade de notificações excluídas.',
+  })
+  async deleteMany(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: DeleteNotificationsDto,
+  ) {
+    const user = this.getAuthenticatedUser(request);
+
+    return this.deleteNotificationsUseCase.execute(body.ids, user.sub);
+  }
 
   @Get()
   @ApiOperation({

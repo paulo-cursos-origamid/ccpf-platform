@@ -166,6 +166,7 @@ export interface InvoiceInstallment {
   status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
+  payments?: Payment[];
 }
 
 /**
@@ -242,6 +243,7 @@ export interface Payment {
   bankSlipBarcode: string | null;
   bankSlipDigitableLine: string | null;
   metadata: Record<string, unknown> | null;
+  cancellationReason: string | null;
   createdAt: string;
   updatedAt: string;
 }

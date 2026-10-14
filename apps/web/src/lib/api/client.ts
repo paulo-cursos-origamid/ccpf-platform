@@ -77,9 +77,14 @@ class ApiClient {
     });
   }
 
-  delete<T>(path: string, options?: ApiRequestOptions) {
+  delete<T>(
+    path: string,
+    options?: ApiRequestOptions,
+    body?: unknown,
+  ) {
     return fetcher<T>(this.buildUrl(path), {
       method: "DELETE",
+      body: body === undefined ? undefined : JSON.stringify(body),
       headers: this.buildHeaders(options),
     });
   }

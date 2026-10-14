@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 
@@ -20,6 +21,14 @@ async function bootstrap() {
 
   // Permite que a aplicação leia cookies enviados pelo cliente.
   app.use(cookieParser());
+
+  // Valida e transforma os dados recebidos pelos DTOs da API.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
   // Define o prefixo global de todas as rotas da API.
   app.setGlobalPrefix('api/v1');

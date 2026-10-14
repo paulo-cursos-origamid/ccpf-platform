@@ -22,7 +22,7 @@ export class ListNotificationsUseCase {
 
   async execute(input: ListNotificationsInput) {
     const page = Math.max(1, input.page ?? 1);
-    const limit = Math.min(100, Math.max(1, input.limit ?? 20));
+    const limit = Math.min(50, Math.max(1, input.limit ?? 50));
 
     const result = await this.notificationRepository.findManyByUserId(
       input.userId,

@@ -226,12 +226,17 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 24px;
-  padding: 18px 22px;
+  gap: 20px;
+  padding: 22px;
   border-bottom: 1px solid var(--border-primary);
+  transition: background 160ms ease;
 
   &:last-child {
     border-bottom: 0;
+  }
+
+  &:hover {
+    background: var(--surface-secondary);
   }
 }
 
@@ -378,7 +383,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--accent-primary);
   border-radius: 8px;
@@ -386,10 +391,9 @@
   color: #fff;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+  transition: opacity 160ms ease, transform 160ms ease;
 
   &:hover:not(:disabled) {
     opacity: 0.9;
@@ -415,5 +419,265 @@
 @media (max-width: 760px) {
   .confirmButton {
     width: fit-content;
+  }
+}
+
+
+/* Ação administrativa para cancelar uma tentativa de pagamento. */
+.cancelButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, opacity 160ms ease,
+    transform 160ms ease;
+
+  &:hover:not(:disabled) {
+    background: var(--danger-soft);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.cancellationError {
+  margin: 16px 22px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+
+/* Organização responsiva do histórico financeiro. */
+.paymentActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .paymentRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .paymentActions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .paymentRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .paymentAmount,
+  .paymentDate {
+    align-items: flex-start;
+  }
+
+  .paymentActions {
+    grid-column: auto;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .confirmButton,
+  .cancelButton {
+    width: 100%;
+  }
+}
+
+
+
+/* Diálogo de cancelamento de tentativa de pagamento */
+.cancelDialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 55%);
+}
+
+.cancelDialog {
+  width: 100%;
+  max-width: 520px;
+  padding: 1.5rem;
+  background: var(--surface, #000);
+
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+  box-sizing: border-box;
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.25rem;
+    color: var(--text-primary, #111827);
+  }
+
+  p {
+    margin: 0 0 1rem;
+    color: var(--text-secondary, #4b5563);
+    line-height: 1.5;
+  }
+
+  label {
+    display: block;
+    margin: 1rem 0 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 100px;
+    padding: 0.75rem;
+    resize: vertical;
+    font: inherit;
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: 8px;
+    box-sizing: border-box;
+
+  }
+
+  small {
+    display: block;
+    margin-top: 0.35rem;
+    text-align: right;
+    color: var(--text-secondary, #6b7280);
+  }
+}
+
+.cancelReasonSelect {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+
+  background-color: var(--surface-primary);
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+  font-size: var(--font-md);
+
+  cursor: pointer;
+  outline: none;
+
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--border-secondary);
+  }
+
+  &:focus-visible {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 12%);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--surface-secondary);
+  }
+
+  &:invalid {
+    color: var(--text-secondary);
+  }
+
+  option {
+    background-color: var(--surface-primary);
+    color: var(--text-primary);
+  }
+}
+
+.cancelDetailsField {
+  margin-top: 0.5rem;
+}
+
+.cancelError {
+  margin-top: 1rem !important;
+  padding: 0.75rem;
+  color: #b91c1c !important;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.cancelDialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+
+  button {
+    min-height: 40px;
+    padding: 0.65rem 1rem;
+    font: inherit;
+    font-weight: 600;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  }
+}
+
+.cancelSecondaryButton {
+  color: var(--text-primary, #374151);
+  background: var(--surface-secondary, #f3f4f6);
+}
+
+.cancelConfirmButton {
+  color: #fff;
+  background: #b91c1c;
+}
+
+@media (max-width: 480px) {
+  .cancelDialog {
+    padding: 1rem;
+  }
+
+  .cancelDialogActions {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
   }
 }

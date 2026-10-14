@@ -156,6 +156,24 @@ export const billingService = {
    *
    * A operação é administrativa e utiliza BILLING_MANAGE.
    */
+  /**
+   * Cancela uma tentativa de pagamento pela visão administrativa.
+   *
+   * A API permite somente pagamentos PENDING ou PROCESSING.
+   */
+  async cancelPayment(
+    paymentId: string,
+    reason: string,
+  ): Promise<Payment> {
+    return api.patch<Payment>(
+      `/billing/payments/${paymentId}/cancel`,
+      { reason },
+      {
+        tenantAware: false,
+      },
+    );
+  },
+
   async confirmPayment(
     paymentId: string,
     input: ConfirmPaymentInput = {},

@@ -52,6 +52,7 @@ export interface AdminInvoicePayment {
   pixCopyPaste: string | null;
   bankSlipBarcode: string | null;
   bankSlipDigitableLine: string | null;
+  cancellationReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

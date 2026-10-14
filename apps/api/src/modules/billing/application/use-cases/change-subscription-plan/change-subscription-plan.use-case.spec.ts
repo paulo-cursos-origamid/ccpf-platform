@@ -5,8 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { InvoiceEntity } from '../../../domain/entities/invoice.entity';
 import { PlanEntity } from '../../../domain/entities/plan.entity';
 import { PlanPriceEntity } from '../../../domain/entities/plan-price.entity';
+import { InvoiceStatus } from '../../../domain/enums/invoice-status.enum';
 import { SubscriptionEntity } from '../../../domain/entities/subscription.entity';
 import { BillingInterval } from '../../../domain/enums/billing-interval.enum';
 import { SubscriptionStatus } from '../../../domain/enums/subscription-status.enum';
@@ -100,7 +102,20 @@ describe('ChangeSubscriptionPlanUseCase', () => {
     tenantRole = TenantRole.OWNER,
     memberCount = 1,
     lifecycleSubscription,
-    invoice = { id: 'invoice-1' },
+    invoice = new InvoiceEntity(
+      'invoice-1',
+      tenantId,
+      'subscription-1',
+      'INV-TEST-001',
+      InvoiceStatus.PENDING,
+      100,
+      'BRL',
+      dates.end,
+      null,
+      dates.startedAt,
+      dates.now,
+      1,
+    ),
   }: {
     subscription?: SubscriptionEntity | null;
     currentPlan?: PlanEntity | null;
@@ -110,7 +125,7 @@ describe('ChangeSubscriptionPlanUseCase', () => {
     tenantRole?: TenantRole | null;
     memberCount?: number;
     lifecycleSubscription?: SubscriptionEntity | null;
-    invoice?: { id: string };
+    invoice?: InvoiceEntity;
   } = {}) => {
     const resolvedCurrentPlan =
       currentPlan === undefined
@@ -204,6 +219,7 @@ describe('ChangeSubscriptionPlanUseCase', () => {
 
     const billingContext = {
       invoiceRepository,
+      invoiceInstallmentRepository: {},
       paymentRepository,
       subscriptionRepository,
       planRepository,
@@ -876,7 +892,11 @@ describe('ChangeSubscriptionPlanUseCase', () => {
     const invoiceExecute = jest.spyOn(invoiceCreationService, 'execute');
     invoiceExecute.mockImplementation(() => {
       callOrder.push('invoice');
-      return Promise.resolve({ id: 'invoice-1' });
+      return Promise.resolve(new InvoiceEntity(
+        'invoice-1', tenantId, 'subscription-1', 'INV-TEST-001',
+        InvoiceStatus.PENDING, 100, 'BRL', dates.end, null,
+        dates.startedAt, dates.now, 1,
+      ));
     });
 
     // O repositório é tipado pela interface; o cast esconde o tipo Mock do ESLint.
@@ -894,7 +914,7 @@ describe('ChangeSubscriptionPlanUseCase', () => {
     );
     notificationsExecute.mockImplementation(() => {
       callOrder.push('notification');
-      return Promise.resolve();
+      return Promise.resolve({ recipients: 0 });
     });
 
     await sut.execute(executeInput());

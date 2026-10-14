@@ -21,6 +21,7 @@ export class PaymentEntity {
     public readonly metadata: Record<string, unknown> | null,
     public readonly createdAt: Date,
     public updatedAt: Date,
+    public cancellationReason: string | null = null,
   ) {}
 
   get isPending(): boolean {
@@ -42,8 +43,15 @@ export class PaymentEntity {
     this.updatedAt = updatedAt;
   }
 
-  cancel(updatedAt: Date = new Date()): void {
+  cancel(reason: string, updatedAt: Date = new Date()): void {
+    const normalizedReason = reason.trim();
+
+    if (!normalizedReason) {
+      throw new Error('O motivo do cancelamento é obrigatório.');
+    }
+
     this.status = PaymentStatus.CANCELLED;
+    this.cancellationReason = normalizedReason;
     this.updatedAt = updatedAt;
   }
 }

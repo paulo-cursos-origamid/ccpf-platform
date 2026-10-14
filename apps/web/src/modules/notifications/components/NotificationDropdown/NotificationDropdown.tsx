@@ -13,6 +13,8 @@ import {
 } from "../../hooks";
 
 import { NotificationItem } from "../NotificationItem";
+import type { Notification } from "../../types";
+import { getNotificationNavigationPath } from "../../utils";
 
 import styles from "./NotificationDropdown.module.scss";
 
@@ -104,6 +106,25 @@ export function NotificationDropdown({
     ]);
   }
 
+  async function handleOpenNotification(notification: Notification) {
+    if (notification.readAt === null) {
+      await markAsRead(notification.id);
+      await Promise.all([
+        reload(),
+        reloadUnreadCount(),
+        onNotificationsChanged?.(),
+      ]);
+    }
+
+    const path = getNotificationNavigationPath(
+      notification.resourceType,
+      notification.resourceId,
+    );
+
+    onClose();
+    if (path) router.push(path);
+  }
+
   function handleViewAll() {
     onClose();
     router.push("/admin/notifications");
@@ -167,6 +188,7 @@ export function NotificationDropdown({
               key={notification.id}
               notification={notification}
               onMarkAsRead={handleMarkAsRead}
+              onOpen={handleOpenNotification}
             />
           ))
         )}

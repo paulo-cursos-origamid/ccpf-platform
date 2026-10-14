@@ -7,3 +7,4 @@ export * from "./useTenantSubscription";
 export * from "./useAdminInvoice";
 export * from "./useAdminInvoices";
 export { useConfirmPayment } from "./useConfirmPayment";
+export { useCancelPayment } from "./useCancelPayment";

@@ -36,4 +36,9 @@ export abstract class NotificationRepository {
   abstract save(notification: NotificationEntity): Promise<NotificationEntity>;
 
   abstract markAllAsRead(userId: string, readAt: Date): Promise<number>;
+
+  abstract deleteManyByIdsAndUserId(
+    ids: string[],
+    userId: string,
+  ): Promise<number>;
 }

@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from '../../infrastructure/database/prisma.module';
 
 import { CountUnreadNotificationsUseCase } from './application/use-cases/count-unread-notifications.use-case';
+import { DeleteNotificationsUseCase } from './application/use-cases/delete-notifications.use-case';
 import { CreateNotificationUseCase } from './application/use-cases/create-notification.use-case';
 import { CreateNotificationsForPermissionUseCase } from './application/use-cases/create-notifications-for-permission.use-case';
 import { ListNotificationsUseCase } from './application/use-cases/list-notifications.use-case';
@@ -30,6 +31,7 @@ import { NotificationsController } from './presentation/controllers/notification
     CountUnreadNotificationsUseCase,
     MarkNotificationAsReadUseCase,
     MarkAllNotificationsAsReadUseCase,
+    DeleteNotificationsUseCase,
     {
       provide: NotificationRepository,
       useClass: PrismaNotificationRepository,
@@ -39,6 +41,6 @@ import { NotificationsController } from './presentation/controllers/notification
       useClass: PrismaNotificationRecipientRepository,
     },
   ],
-  exports: [CreateNotificationsForPermissionUseCase],
+  exports: [CreateNotificationUseCase, CreateNotificationsForPermissionUseCase],
 })
 export class NotificationsModule {}

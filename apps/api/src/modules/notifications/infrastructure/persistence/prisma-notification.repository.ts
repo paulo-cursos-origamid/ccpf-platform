@@ -127,6 +127,20 @@ export class PrismaNotificationRepository implements NotificationRepository {
     return result.count;
   }
 
+  async deleteManyByIdsAndUserId(
+    ids: string[],
+    userId: string,
+  ): Promise<number> {
+    const result = await this.prisma.notification.deleteMany({
+      where: {
+        id: { in: ids },
+        userId,
+      },
+    });
+
+    return result.count;
+  }
+
   private toCreateInput(
     notification: NotificationEntity,
   ): Prisma.NotificationUncheckedCreateInput {

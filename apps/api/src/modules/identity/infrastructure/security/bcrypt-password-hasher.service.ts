@@ -10,6 +10,20 @@ export class BcryptPasswordHasherService implements PasswordHasherContract {
   }
 
   async compare(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
+    if (
+      typeof password !== 'string' ||
+      password.length === 0 ||
+      typeof hash !== 'string' ||
+      hash.length === 0
+    ) {
+      return false;
+    }
+
+    try {
+      return await bcrypt.compare(password, hash);
+    } catch {
+      // Hash inválido ou incompatível deve resultar em falha de autenticação.
+      return false;
+    }
   }
 }

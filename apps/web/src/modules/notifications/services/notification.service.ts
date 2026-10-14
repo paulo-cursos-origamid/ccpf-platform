@@ -2,21 +2,24 @@ import { api } from "@/lib/api/client";
 
 import type {
   Notification,
+  NotificationListResponse,
   NotificationUnreadCountResponse,
 } from "../types";
 
-interface NotificationListResponse {
-  items: Notification[];
+const NOTIFICATIONS_UPDATED_EVENT = "ccpf:notifications-updated";
+
+function notifyNotificationsUpdated() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(NOTIFICATIONS_UPDATED_EVENT));
+  }
 }
 
 class NotificationService {
-  async list(): Promise<Notification[]> {
-    const response = await api.get<NotificationListResponse>(
-      "/notifications",
+  list(page = 1, limit = 50): Promise<NotificationListResponse> {
+    return api.get<NotificationListResponse>(
+      `/notifications?page=${page}&limit=${limit}`,
       { tenantAware: false },
     );
-
-    return response.items;
   }
 
   getUnreadCount() {
@@ -26,19 +29,36 @@ class NotificationService {
     );
   }
 
-  markAsRead(notificationId: string) {
-    return api.patch<Notification>(
+  async markAsRead(notificationId: string) {
+    const result = await api.patch<Notification>(
       `/notifications/${notificationId}/read`,
       undefined,
       { tenantAware: false },
     );
+    notifyNotificationsUpdated();
+    return result;
   }
 
-  markAllAsRead() {
-    return api.patch<void>("/notifications/read-all", undefined, {
-      tenantAware: false,
-    });
+  async markAllAsRead() {
+    const result = await api.patch<{ updated: number }>(
+      "/notifications/read-all",
+      undefined,
+      { tenantAware: false },
+    );
+    notifyNotificationsUpdated();
+    return result;
+  }
+
+  async deleteMany(ids: string[]) {
+    const result = await api.delete<{ deleted: number }>(
+      "/notifications",
+      { tenantAware: false },
+      { ids },
+    );
+    notifyNotificationsUpdated();
+    return result;
   }
 }
 
+export { NOTIFICATIONS_UPDATED_EVENT };
 export const notificationService = new NotificationService();

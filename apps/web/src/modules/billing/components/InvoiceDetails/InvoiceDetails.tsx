@@ -14,7 +14,7 @@ import {
 import { InvoicePayment } from "../InvoicePayment";
 import { InvoiceStatusBadge } from "../InvoiceStatusBadge/InvoiceStatusBadge";
 import { useInvoice } from "../../hooks";
-import type { InvoiceStatus } from "../../types";
+import type { InvoiceStatus, Payment } from "../../types";
 
 import styles from "./InvoiceDetails.module.scss";
 
@@ -136,6 +136,29 @@ export function InvoiceDetails({ invoiceId }: InvoiceDetailsProps) {
 
   const isPaid = invoice.status === "PAID";
   const isCancelled = invoice.status === "CANCELLED";
+
+  const paymentHistory = (invoice.installments ?? [])
+    .flatMap((installment) =>
+      (installment.payments ?? []).map((payment) => ({
+        ...payment,
+        installmentNumber: installment.number,
+      })),
+    )
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+  const paymentStatusLabels: Record<Payment["status"], string> = {
+    PENDING: "Aguardando confirmação",
+    PROCESSING: "Em processamento",
+    PAID: "Confirmado",
+    FAILED: "Falhou",
+    REFUNDED: "Estornado",
+    CANCELLED: "Tentativa cancelada",
+  };
+
+  const paymentMethodLabels: Record<Payment["method"], string> = {
+    PIX: "PIX",
+    BANK_SLIP: "Boleto bancário",
+  };
 
   const formattedAmount = new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -284,6 +307,72 @@ export function InvoiceDetails({ invoiceId }: InvoiceDetailsProps) {
         </div>
 
         {canPay && <InvoicePayment invoice={invoice} />}
+
+        <section className={styles.paymentHistory} aria-labelledby="payment-history-title">
+          <div className={styles.cardHeader}>
+            <div className={styles.cardHeaderIcon}>
+              <CreditCard size={18} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="payment-history-title">Histórico de pagamentos</h2>
+              <p>Acompanhe as tentativas e a situação de cada pagamento.</p>
+            </div>
+          </div>
+
+          {paymentHistory.length === 0 ? (
+            <p className={styles.paymentHistoryEmpty}>
+              Ainda não há tentativas de pagamento para esta fatura.
+            </p>
+          ) : (
+            <div className={styles.paymentHistoryList}>
+              {paymentHistory.map((payment) => (
+                <article className={styles.paymentHistoryItem} key={payment.id}>
+                  <div className={styles.paymentHistoryMain}>
+                    <strong>{paymentMethodLabels[payment.method] ?? payment.method}</strong>
+                    <span>Parcela {payment.installmentNumber}</span>
+                    <span>Referência: {payment.reference}</span>
+                  </div>
+                  <div className={styles.paymentHistoryDetails}>
+                    <strong>
+                      {new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: payment.currency,
+                      }).format(payment.amount)}
+                    </strong>
+                    <span className={`${styles.paymentStatus} ${styles[`paymentStatus_${payment.status}`]}`}>
+                      {paymentStatusLabels[payment.status] ?? payment.status}
+                    </span>
+                    <span>
+                      Tentativa: {new Intl.DateTimeFormat("pt-BR", {
+                        dateStyle: "short", timeStyle: "short",
+                      }).format(new Date(payment.createdAt))}
+                    </span>
+                    {payment.paidAt && (
+                      <span>
+                        Pago em: {new Intl.DateTimeFormat("pt-BR", {
+                          dateStyle: "short", timeStyle: "short",
+                        }).format(new Date(payment.paidAt))}
+                      </span>
+                    )}
+                    {payment.expiresAt && (
+                      <span>
+                        Expira em: {new Intl.DateTimeFormat("pt-BR", {
+                          dateStyle: "short", timeStyle: "short",
+                        }).format(new Date(payment.expiresAt))}
+                      </span>
+                    )}
+                    {payment.status === "CANCELLED" && payment.cancellationReason && (
+                      <span>
+                        <strong>Motivo do cancelamento:</strong>{" "}
+                        {payment.cancellationReason}
+                      </span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
         {isPaid && (
           <div className={`${styles.statusNotice} ${styles.successNotice}`}>

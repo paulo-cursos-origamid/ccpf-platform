@@ -14,6 +14,7 @@ import { ListAdminInvoicesUseCase } from './application/use-cases/admin/list-adm
 import { ListTenantInvoicesUseCase } from './application/use-cases/invoice/list-tenant-invoices.use-case';
 import { CreateInvoiceUseCase } from './application/use-cases/invoice/create-invoice.use-case';
 import { ConfirmPaymentUseCase } from './application/use-cases/payment/confirm-payment.use-case';
+import { CancelPaymentUseCase } from './application/use-cases/payment/cancel-payment.use-case';
 import { CreatePaymentUseCase } from './application/use-cases/payment/create-payment.use-case';
 import { ActivateSubscriptionUseCase } from './application/use-cases/activate-subscription.use-case';
 import { CancelSubscriptionUseCase } from './application/use-cases/cancel-subscription.use-case';
@@ -72,6 +73,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     GetAdminInvoiceUseCase,
     CreatePaymentUseCase,
     ConfirmPaymentUseCase,
+    CancelPaymentUseCase,
     SubscriptionLifecycleService,
     SubscriptionLifecycleApplicationService,
     InvoiceCreationService,

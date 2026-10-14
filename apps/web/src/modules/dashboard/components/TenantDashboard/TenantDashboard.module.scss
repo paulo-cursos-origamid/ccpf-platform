@@ -336,3 +336,97 @@
     flex-direction: column;
   }
 }
+
+/* Aviso específico para assinatura pendente ou irregular. */
+.error.subscriptionError {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  width: 100%;
+  padding: clamp(24px, 5vw, 48px) var(--spacing-5);
+  border-color: var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.subscriptionErrorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 620px;
+}
+
+.subscriptionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--spacing-4);
+  border-radius: 50%;
+  color: var(--accent-primary);
+  background: var(--accent-soft);
+}
+
+.error .subscriptionTitle {
+  color: var(--text-primary);
+  font-size: clamp(18px, 2.5vw, 22px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.error.subscriptionError p {
+  margin-top: var(--spacing-3);
+  color: var(--text-secondary);
+  font-size: var(--font-md);
+  line-height: 1.7;
+}
+
+.billingButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 48px;
+  padding: 0 var(--spacing-5);
+  border-color: var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background-color var(--transition-normal),
+    border-color var(--transition-normal),
+    transform var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.billingButton:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: #fff;
+  filter: brightness(0.92);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.billingButton:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .error.subscriptionError {
+    padding: var(--spacing-5) var(--spacing-4);
+  }
+
+  .billingButton {
+    width: 100%;
+    max-width: 320px;
+  }
+}

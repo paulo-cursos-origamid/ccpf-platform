@@ -27,11 +27,13 @@ import { GetAdminInvoiceUseCase } from '../../application/use-cases/admin/get-ad
 import { ListAdminInvoicesUseCase } from '../../application/use-cases/admin/list-admin-invoices.use-case';
 import { CreatePaymentUseCase } from '../../application/use-cases/payment/create-payment.use-case';
 import { ConfirmPaymentUseCase } from '../../application/use-cases/payment/confirm-payment.use-case';
+import { CancelPaymentUseCase } from '../../application/use-cases/payment/cancel-payment.use-case';
 
 import { ChangeSubscriptionPlanDto } from '../dto/change-subscription-plan.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { ConfirmPaymentDto } from '../dto/confirm-payment.dto';
+import { CancelPaymentDto } from '../dto/cancel-payment.dto';
 import { ListAdminInvoicesQueryDto } from '../dto/list-admin-invoices.query.dto';
 
 import type { TenantContext } from '../../../tenant/presentation/interfaces/tenant-context.interface';
@@ -68,6 +70,7 @@ export class BillingController {
     private readonly getTenantInvoiceUseCase: GetTenantInvoiceUseCase,
     private readonly createPaymentUseCase: CreatePaymentUseCase,
     private readonly confirmPaymentUseCase: ConfirmPaymentUseCase,
+    private readonly cancelPaymentUseCase: CancelPaymentUseCase,
     private readonly listAdminInvoicesUseCase: ListAdminInvoicesUseCase,
     private readonly getAdminInvoiceUseCase: GetAdminInvoiceUseCase,
   ) {}
@@ -422,6 +425,44 @@ export class BillingController {
    * Não utiliza TenantContextGuard porque a operação pertence
    * ao controle financeiro global da plataforma.
    */
+  /**
+   * Cancela uma tentativa de pagamento no painel administrativo.
+   *
+   * A operação não cancela a Invoice, suas parcelas ou a assinatura.
+   * Exige a permissão global BILLING_MANAGE.
+   */
+  @Patch('payments/:paymentId/cancel')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Cancelar pagamento',
+    description:
+      'Cancela um pagamento PENDING ou PROCESSING sem cancelar a fatura ou a assinatura.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pagamento cancelado com sucesso.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Pagamento ou parcela não encontrados.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'O status atual do pagamento não permite cancelamento.',
+  })
+  async cancelPayment(
+    @Param('paymentId') paymentId: string,
+    @Body() dto: CancelPaymentDto,
+  ) {
+    return this.cancelPaymentUseCase.execute(paymentId, dto.reason);
+  }
+
   @Patch('payments/:paymentId/confirm')
   @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
   @RequirePlatformPermission('BILLING_MANAGE')

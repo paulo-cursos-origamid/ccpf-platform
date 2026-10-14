@@ -387,7 +387,7 @@ export function BillingSettings() {
    */
   async function handleAssignSystemOwnerPlan() {
     const confirmed = window.confirm(
-      "Atribuir o plano interno SYSTEM_OWNER ao Tenant selecionado? A assinatura atual será substituída."
+      "Atribuir o plano interno SYSTEM_OWNER ao espaço selecionado? A assinatura atual será substituída."
     );
     if (!confirmed) return;
 

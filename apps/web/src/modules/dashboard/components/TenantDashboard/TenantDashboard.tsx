@@ -4,7 +4,9 @@ import Link from "next/link";
 
 import {
   Archive,
+  ArrowRight,
   ArrowUpRight,
+  CreditCard,
   Wallet,
 } from "lucide-react";
 
@@ -42,6 +44,11 @@ function getAccountTypeLabel(type: string): string {
 export function TenantDashboard() {
   const { accounts, loading, error, loadAccounts } = useAccounts();
 
+  const isSubscriptionBlocked =
+    error instanceof ApiError &&
+    error.statusCode === 403 &&
+    /assinatura/i.test(error.message);
+
   const activeAccounts = accounts.filter(
     (account) => account.status === AccountStatus.ACTIVE,
   );
@@ -72,42 +79,51 @@ export function TenantDashboard() {
       </header>
 
       {error ? (
-        <section className={styles.error} role="alert">
-          <div>
-            {error instanceof ApiError &&
-            error.statusCode === 403 &&
-            /assinatura/i.test(error.message) ? (
-              <>
-                <strong>
-                  O acesso às contas está aguardando a regularização da assinatura.
-                </strong>
-                <p>
-                  Consulte a cobrança do seu ambiente para verificar pendências
-                  e concluir o pagamento, se necessário. O acesso será liberado
-                  quando a assinatura permitir o uso dos recursos.
-                </p>
-              </>
-            ) : (
-              <>
-                <strong>
-                  Não foi possível carregar suas contas.
-                </strong>
-                <p>
-                  Verifique sua conexão ou tente novamente. Se o problema
-                  persistir, entre em contato com o suporte.
-                </p>
-              </>
-            )}
+        <section
+          className={`${styles.error} ${
+            isSubscriptionBlocked ? styles.subscriptionError : ""
+          }`}
+          role="alert"
+        >
+          <div
+            className={
+              isSubscriptionBlocked
+                ? styles.subscriptionErrorContent
+                : undefined
+            }
+          >
+            {isSubscriptionBlocked ? (
+              <div className={styles.subscriptionIcon}>
+                <CreditCard size={27} strokeWidth={1.8} aria-hidden="true" />
+              </div>
+            ) : null}
+
+            <strong
+              className={
+                isSubscriptionBlocked
+                  ? styles.subscriptionTitle
+                  : undefined
+              }
+            >
+              {isSubscriptionBlocked
+                ? "Acesso às contas temporariamente bloqueado"
+                : "Não foi possível carregar suas contas."}
+            </strong>
+
+            <p>
+              {isSubscriptionBlocked
+                ? "Acompanhe suas contas e o saldo financeiro do seu ambiente. Para liberar o acesso, consulte a cobrança e regularize eventuais pendências. Os recursos serão disponibilizados quando a assinatura estiver regularizada."
+                : "Verifique sua conexão ou tente novamente. Se o problema persistir, entre em contato com o suporte."}
+            </p>
           </div>
 
-          {error instanceof ApiError &&
-          error.statusCode === 403 &&
-          /assinatura/i.test(error.message) ? (
+          {isSubscriptionBlocked ? (
             <Link
               href="/settings/billing"
-              className={styles.retryButton}
+              className={`${styles.retryButton} ${styles.billingButton}`}
             >
-              Consultar cobrança
+              <span>Consultar cobrança</span>
+              <ArrowRight size={18} strokeWidth={2} aria-hidden="true" />
             </Link>
           ) : (
             <button

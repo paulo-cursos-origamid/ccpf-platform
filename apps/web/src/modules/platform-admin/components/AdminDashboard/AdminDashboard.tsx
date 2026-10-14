@@ -37,7 +37,7 @@ export function AdminDashboard() {
       href: "/dashboard/users",
     },
     {
-      label: "Tenants",
+      label: "Espaços",
       value: data ? (data.tenants ? String(data.tenants.total) : "Sem acesso") : "0",
       description: data
         ? data.tenants
