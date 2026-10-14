@@ -1,0 +1,1 @@
+export { NotificationAccessGuard } from "./NotificationAccessGuard";

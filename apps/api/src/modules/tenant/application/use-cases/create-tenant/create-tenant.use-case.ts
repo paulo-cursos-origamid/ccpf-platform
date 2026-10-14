@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
+
 import { TenantMemberEntity } from '../../../domain/entities/tenant-member.entity';
 import { TenantEntity } from '../../../domain/entities/tenant.entity';
 import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.enum';
@@ -24,6 +28,7 @@ export class CreateTenantUseCase {
   constructor(
     private readonly tenantRepository: TenantRepository,
     private readonly tenantProvisioningRepository: TenantProvisioningRepository,
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreateTenantInput) {
@@ -70,6 +75,20 @@ export class CreateTenantUseCase {
       updatedAt: now,
     });
 
-    return this.tenantProvisioningRepository.createWithOwner(tenant, owner);
+    const createdTenant =
+      await this.tenantProvisioningRepository.createWithOwner(tenant, owner);
+
+    await this.createNotificationsForPermissionUseCase.execute({
+      permissionCode: 'TENANTS_READ',
+      type: NotificationType.TENANT_CREATED,
+      severity: NotificationSeverity.INFO,
+      title: 'Novo Tenant criado',
+      message: `O Tenant ${createdTenant.tenant.name} foi criado com sucesso.`,
+      resourceType: 'TENANT',
+      resourceId: createdTenant.tenant.id,
+      deduplicationKey: `TENANT_CREATED:${createdTenant.tenant.id}`,
+    });
+
+    return createdTenant;
   }
 }

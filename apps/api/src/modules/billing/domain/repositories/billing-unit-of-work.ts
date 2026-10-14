@@ -1,4 +1,7 @@
 import { InvoiceRepository } from './invoice.repository';
+import { InvoiceInstallmentRepository } from './invoice-installment.repository';
+import { PlanRepository } from './plan.repository';
+import { PlanPriceRepository } from './plan-price.repository';
 import { PaymentRepository } from './payment.repository';
 import { SubscriptionRepository } from './subscription.repository';
 
@@ -10,8 +13,11 @@ import { SubscriptionRepository } from './subscription.repository';
  */
 export interface BillingUnitOfWorkContext {
   invoiceRepository: InvoiceRepository;
+  invoiceInstallmentRepository: InvoiceInstallmentRepository;
   paymentRepository: PaymentRepository;
   subscriptionRepository: SubscriptionRepository;
+  planRepository: PlanRepository;
+  planPriceRepository: PlanPriceRepository;
 
   /**
    * Bloqueia a Invoice para serializar confirmações concorrentes.
@@ -20,6 +26,11 @@ export interface BillingUnitOfWorkContext {
    * obrigação já foi quitada por outra tentativa de pagamento.
    */
   lockInvoice: (invoiceId: string) => Promise<void>;
+
+  /**
+   * Bloqueia a Subscription para serializar mutações concorrentes.
+   */
+  lockSubscription: (subscriptionId: string) => Promise<void>;
 }
 
 /**

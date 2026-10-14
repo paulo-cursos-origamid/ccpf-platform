@@ -36,7 +36,7 @@ export function TenantSelector() {
       <Select
         value={activeTenantId ?? ""}
         onChange={handleChange}
-        aria-label="Selecionar Tenant"
+        aria-label="Selecionar espaço"
         disabled={tenants.length <= 1}
         fullWidth={false}
       >

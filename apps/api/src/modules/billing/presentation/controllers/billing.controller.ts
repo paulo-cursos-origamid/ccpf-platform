@@ -20,17 +20,20 @@ import { ChangeSubscriptionPlanUseCase } from '../../application/use-cases/chang
 import { CreateSubscriptionUseCase } from '../../application/use-cases/create-subscription.use-case';
 import { GetTenantSubscriptionUseCase } from '../../application/use-cases/get-tenant-subscription.use-case';
 import { ListPublicPlansUseCase } from '../../application/use-cases/list-public-plans.use-case';
+import { AssignSystemOwnerPlanUseCase } from '../../application/use-cases/assign-system-owner-plan.use-case';
 import { ListTenantInvoicesUseCase } from '../../application/use-cases/invoice/list-tenant-invoices.use-case';
 import { GetTenantInvoiceUseCase } from '../../application/use-cases/invoice/get-tenant-invoice.use-case';
 import { GetAdminInvoiceUseCase } from '../../application/use-cases/admin/get-admin-invoice.use-case';
 import { ListAdminInvoicesUseCase } from '../../application/use-cases/admin/list-admin-invoices.use-case';
 import { CreatePaymentUseCase } from '../../application/use-cases/payment/create-payment.use-case';
 import { ConfirmPaymentUseCase } from '../../application/use-cases/payment/confirm-payment.use-case';
+import { CancelPaymentUseCase } from '../../application/use-cases/payment/cancel-payment.use-case';
 
 import { ChangeSubscriptionPlanDto } from '../dto/change-subscription-plan.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { ConfirmPaymentDto } from '../dto/confirm-payment.dto';
+import { CancelPaymentDto } from '../dto/cancel-payment.dto';
 import { ListAdminInvoicesQueryDto } from '../dto/list-admin-invoices.query.dto';
 
 import type { TenantContext } from '../../../tenant/presentation/interfaces/tenant-context.interface';
@@ -57,6 +60,7 @@ import {
 export class BillingController {
   constructor(
     private readonly listPublicPlansUseCase: ListPublicPlansUseCase,
+    private readonly assignSystemOwnerPlanUseCase: AssignSystemOwnerPlanUseCase,
     private readonly getTenantSubscriptionUseCase: GetTenantSubscriptionUseCase,
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
     private readonly changeSubscriptionPlanUseCase: ChangeSubscriptionPlanUseCase,
@@ -66,6 +70,7 @@ export class BillingController {
     private readonly getTenantInvoiceUseCase: GetTenantInvoiceUseCase,
     private readonly createPaymentUseCase: CreatePaymentUseCase,
     private readonly confirmPaymentUseCase: ConfirmPaymentUseCase,
+    private readonly cancelPaymentUseCase: CancelPaymentUseCase,
     private readonly listAdminInvoicesUseCase: ListAdminInvoicesUseCase,
     private readonly getAdminInvoiceUseCase: GetAdminInvoiceUseCase,
   ) {}
@@ -97,6 +102,24 @@ export class BillingController {
    * O Tenant é identificado através do header X-Tenant-Id,
    * validado pelo TenantContextGuard.
    */
+
+  /**
+   * Atribui o plano interno SYSTEM_OWNER ao Tenant selecionado.
+   * Operação exclusiva de plataforma e sem cobrança comercial.
+   */
+  @Patch('subscription/system-owner')
+  @UseGuards(JwtAuthGuard, TenantContextGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Atribuir plano interno SYSTEM_OWNER',
+    description:
+      'Ativa o plano interno ilimitado para o Tenant selecionado, sem gerar fatura comercial.',
+  })
+  async assignSystemOwnerPlan(@CurrentTenant() tenant: TenantContext) {
+    return this.assignSystemOwnerPlanUseCase.execute(tenant.tenantId);
+  }
+
   @Get('subscription')
   @UseGuards(JwtAuthGuard, TenantContextGuard)
   @ApiBearerAuth('access-token')
@@ -172,6 +195,8 @@ export class BillingController {
       tenantId: tenant.tenantId,
       userId: user.sub,
       planCode: dto.planCode,
+      planPriceId: dto.planPriceId,
+      billingDay: dto.billingDay,
     });
   }
 
@@ -386,12 +411,10 @@ export class BillingController {
       tenantId: tenant.tenantId,
       userId: user.sub,
       invoiceId,
+      installmentId: dto.installmentId,
       method: dto.method,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       externalReference: dto.externalReference,
-      pixCopyPaste: dto.pixCopyPaste,
-      bankSlipBarcode: dto.bankSlipBarcode,
-      bankSlipDigitableLine: dto.bankSlipDigitableLine,
       metadata: dto.metadata,
     });
   }
@@ -402,6 +425,44 @@ export class BillingController {
    * Não utiliza TenantContextGuard porque a operação pertence
    * ao controle financeiro global da plataforma.
    */
+  /**
+   * Cancela uma tentativa de pagamento no painel administrativo.
+   *
+   * A operação não cancela a Invoice, suas parcelas ou a assinatura.
+   * Exige a permissão global BILLING_MANAGE.
+   */
+  @Patch('payments/:paymentId/cancel')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('BILLING_MANAGE')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Cancelar pagamento',
+    description:
+      'Cancela um pagamento PENDING ou PROCESSING sem cancelar a fatura ou a assinatura.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pagamento cancelado com sucesso.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Usuário não possui BILLING_MANAGE.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Pagamento ou parcela não encontrados.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'O status atual do pagamento não permite cancelamento.',
+  })
+  async cancelPayment(
+    @Param('paymentId') paymentId: string,
+    @Body() dto: CancelPaymentDto,
+  ) {
+    return this.cancelPaymentUseCase.execute(paymentId, dto.reason);
+  }
+
   @Patch('payments/:paymentId/confirm')
   @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
   @RequirePlatformPermission('BILLING_MANAGE')
@@ -528,11 +589,16 @@ export class BillingController {
   })
   async createSubscription(
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateSubscriptionDto,
   ) {
     return this.createSubscriptionUseCase.execute({
       tenantId: tenant.tenantId,
+      userId: user.sub,
       planCode: dto.planCode,
+      planPriceId: dto.planPriceId,
+      billingDay: dto.billingDay,
+      installmentCount: dto.installmentCount,
     });
   }
 }

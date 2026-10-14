@@ -17,7 +17,7 @@
   align-items: center;
   justify-content: center;
 
-  min-height: var(--control-height);
+  min-height: var(--control-height-md);
 
   padding: 0 var(--spacing-6);
 
@@ -25,7 +25,7 @@
 
   color: var(--accent-primary);
 
-  font-size: var(--font-size-base);
+  font-size: var(--font-md);
   font-weight: var(--font-weight-semibold);
 
   text-decoration: none;

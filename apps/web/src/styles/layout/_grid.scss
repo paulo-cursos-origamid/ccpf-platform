@@ -1,9 +1,14 @@
+/**
+ * Layout container.
+ *
+ * Responsabilidade:
+ * Controlar largura máxima e espaçamento horizontal
+ * compartilhado pelas páginas da aplicação.
+ */
+
 .container {
   width: 100%;
-
   max-width: 1440px;
-
   margin: 0 auto;
-
-  padding: 0 var(--space-5);
+  padding-inline: var(--spacing-5);
 }

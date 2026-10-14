@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { Button, SearchInput } from "@/components/ui/forms";
+import { Button, SearchInput, Select } from "@/components/ui/forms";
 
 import { InvoiceStatusBadge } from "../InvoiceStatusBadge/InvoiceStatusBadge";
 import { useAdminInvoices } from "../../hooks";
@@ -127,7 +127,7 @@ export function AdminInvoiceList() {
           <h1 className={styles.title}>Faturas</h1>
 
           <p className={styles.description}>
-            Consulte e acompanhe as faturas de todos os tenants da plataforma.
+            Consulte e acompanhe as faturas de todos os espaços da plataforma.
           </p>
         </div>
       </div>
@@ -137,8 +137,8 @@ export function AdminInvoiceList() {
           <SearchInput
             className={styles.searchInput}
             value={search}
-            placeholder="Buscar por número ou tenant..."
-            aria-label="Buscar faturas por número ou tenant"
+            placeholder="Buscar por número ou espaço..."
+            aria-label="Buscar faturas por número ou espaço"
             leftIcon={
               <Search
                 size={18}
@@ -166,7 +166,7 @@ export function AdminInvoiceList() {
         <label className={styles.statusField}>
           <span className={styles.srOnly}>Filtrar por status</span>
 
-          <select
+          <Select
             value={status}
             aria-label="Filtrar faturas por status"
             onChange={(event) => handleStatusChange(event.target.value)}
@@ -176,7 +176,7 @@ export function AdminInvoiceList() {
                 {option.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 
@@ -186,7 +186,7 @@ export function AdminInvoiceList() {
             <thead>
               <tr>
                 <th>Fatura</th>
-                <th>Tenant</th>
+                <th>Espaço</th>
                 <th>Plano</th>
                 <th>Valor</th>
                 <th>Vencimento</th>

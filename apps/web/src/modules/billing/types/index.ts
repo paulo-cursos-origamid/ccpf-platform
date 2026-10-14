@@ -5,16 +5,20 @@
 export type {
   BillingInterval,
   ConfirmPaymentInput,
+  ChangeSubscriptionPlanInput,
   CreatePaymentInput,
   CreateSubscriptionInput,
   Invoice,
+  InvoiceInstallment,
   InvoiceStatus,
   Payment,
   PaymentMethod,
   PaymentStatus,
   PlanFeatureCode,
   PublicPlan,
+  PublicPlanPrice,
   Subscription,
+  SubscriptionPlanDetails,
   SubscriptionStatus,
 } from "./billing.types";
 

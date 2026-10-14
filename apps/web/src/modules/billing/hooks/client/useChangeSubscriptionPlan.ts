@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { billingService } from "../../services";
+import type { ChangeSubscriptionPlanInput } from "../../types";
 
 /**
  * Controla o estado da operação de alteração
@@ -16,12 +17,14 @@ export function useChangeSubscriptionPlan() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  async function changeSubscriptionPlan(planCode: string) {
+  async function changeSubscriptionPlan(
+    input: ChangeSubscriptionPlanInput,
+  ) {
     setLoading(true);
     setError(null);
 
     try {
-      return await billingService.changeSubscriptionPlan(planCode);
+      return await billingService.changeSubscriptionPlan(input);
     } catch (error) {
       setError(error);
       throw error;

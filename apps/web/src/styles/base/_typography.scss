@@ -1,15 +1,15 @@
-/* ==================================================
-   TYPOGRAPHY BASE
-================================================== */
+/**
+ * Tipografia base da aplicação.
+ *
+ * Responsabilidade:
+ * Definir hierarquia tipográfica global.
+ * Componentes específicos devem sobrescrever somente quando necessário.
+ */
 
 body {
   font-size: var(--font-md);
   line-height: var(--line-height-normal);
 }
-
-/* ==================================================
-   HEADINGS
-================================================== */
 
 h1,
 h2,
@@ -18,9 +18,7 @@ h4,
 h5,
 h6 {
   color: var(--text-primary);
-
   font-weight: var(--font-weight-semibold);
-
   line-height: var(--line-height-tight);
 }
 
@@ -40,22 +38,12 @@ h4 {
   font-size: var(--font-xl);
 }
 
-/* ==================================================
-   TEXT
-================================================== */
-
 p {
   color: var(--text-secondary);
-
   line-height: var(--line-height-relaxed);
 }
 
-/* ==================================================
-   SMALL
-================================================== */
-
 small {
+  color: var(--text-muted);
   font-size: var(--font-sm);
-
-  color: var(--text-muted, var(--text-secondary));
 }

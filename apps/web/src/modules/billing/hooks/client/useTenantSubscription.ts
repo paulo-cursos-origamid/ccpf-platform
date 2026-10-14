@@ -6,11 +6,11 @@ import { useTenantStore } from "@/modules/tenant/stores";
 import { tenantService } from "@/modules/tenant/services";
 
 import { billingService } from "../../services";
-import type { PublicPlan, Subscription, SubscriptionStatus } from "../../types";
+import type { Subscription, SubscriptionPlanDetails, SubscriptionStatus } from "../../types";
 
 export interface TenantSubscriptionState {
   subscription: Subscription | null;
-  plan: PublicPlan | null;
+  plan: SubscriptionPlanDetails | null;
 
   currentUsers: number;
   maxUsers: number | null;
@@ -74,7 +74,7 @@ export function useTenantSubscription(): TenantSubscriptionState {
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  const [plan, setPlan] = useState<PublicPlan | null>(null);
+  const [plan, setPlan] = useState<SubscriptionPlanDetails | null>(null);
 
   const [currentUsers, setCurrentUsers] = useState(0);
 
@@ -101,9 +101,8 @@ export function useTenantSubscription(): TenantSubscriptionState {
       setError(null);
 
       try {
-        const [currentSubscription, publicPlans, members] = await Promise.all([
+        const [currentSubscription, members] = await Promise.all([
           billingService.getCurrentSubscription(),
-          billingService.listPublicPlans(),
           tenantService.listMembers(),
         ]);
 
@@ -114,16 +113,10 @@ export function useTenantSubscription(): TenantSubscriptionState {
         setSubscription(currentSubscription);
 
         /**
-         * Localiza o plano correspondente à assinatura atual.
+         * Usa o plano retornado pela API para a assinatura atual.
+         * Isso também funciona para planos internos não públicos.
          */
-        const currentPlan =
-          currentSubscription === null
-            ? null
-            : (publicPlans.find(
-                (item) => item.id === currentSubscription.planId,
-              ) ?? null);
-
-        setPlan(currentPlan);
+        setPlan(currentSubscription?.plan ?? null);
 
         /**
          * O backend considera qualquer vínculo diferente de

@@ -8,6 +8,7 @@ import {
   EmailInput,
   Field,
   PasswordInput,
+  Select,
   TextInput,
 } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay/Modal";
@@ -15,6 +16,7 @@ import { Modal } from "@/components/ui/overlay/Modal";
 import { useCreateUser } from "../../../hooks/client";
 
 import type { User } from "../../../types/user";
+import { UserRole } from "../../../types/user-list";
 
 import styles from "./CreateUserModal.module.scss";
 
@@ -37,6 +39,7 @@ export function CreateUserModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<UserRole>(UserRole.USER);
 
   const [validationError, setValidationError] = useState<string | null>(
     null,
@@ -79,6 +82,7 @@ export function CreateUserModal({
         name: name.trim(),
         email: email.trim(),
         password,
+        role,
       });
 
       if (onCreated) {
@@ -104,6 +108,7 @@ export function CreateUserModal({
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setRole(UserRole.USER);
     setValidationError(null);
 
     onClose();
@@ -167,6 +172,20 @@ export function CreateUserModal({
             onChange={(event) => setConfirmPassword(event.target.value)}
             disabled={loading}
           />
+        </Field>
+
+        <Field label="Perfil de acesso" htmlFor="create-user-role" required>
+          <Select
+            id="create-user-role"
+            value={role}
+            onChange={(event) => setRole(event.target.value as UserRole)}
+            disabled={loading}
+          >
+            <option value={UserRole.USER}>Usuário</option>
+            <option value={UserRole.MANAGER}>Gerente</option>
+            <option value={UserRole.SUPPORT}>Suporte</option>
+            <option value={UserRole.ADMIN}>Administrador</option>
+          </Select>
         </Field>
 
         {errorMessage && (

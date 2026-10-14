@@ -1,13 +1,11 @@
-/* ==================================================
-   AUTH PAGE
-================================================== */
+/**
+ * Layout das páginas de autenticação.
+ */
 
 .auth-page {
+  display: flex;
   width: 100%;
   min-height: 100vh;
-
-  display: flex;
-
   background: linear-gradient(
     135deg,
     var(--dashboard-bg-start),

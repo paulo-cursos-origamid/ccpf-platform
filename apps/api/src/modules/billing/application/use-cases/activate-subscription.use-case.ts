@@ -6,7 +6,7 @@ import {
 
 import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../domain/enums/subscription-status.enum';
-import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
+import { BillingUnitOfWork } from '../../domain/repositories/billing-unit-of-work';
 
 /**
  * Dados necessários para ativar uma assinatura.
@@ -33,34 +33,36 @@ export interface ActivateSubscriptionInput {
  */
 @Injectable()
 export class ActivateSubscriptionUseCase {
-  constructor(
-    private readonly subscriptionRepository: SubscriptionRepository,
-  ) {}
+  constructor(private readonly billingUnitOfWork: BillingUnitOfWork) {}
 
   async execute(input: ActivateSubscriptionInput): Promise<SubscriptionEntity> {
-    const subscription = await this.subscriptionRepository.findById(
-      input.subscriptionId,
-    );
+    return this.billingUnitOfWork.execute(async (context) => {
+      await context.lockSubscription(input.subscriptionId);
 
-    if (!subscription) {
-      throw new NotFoundException('Assinatura não encontrada.');
-    }
-
-    if (subscription.status === SubscriptionStatus.ACTIVE) {
-      throw new BadRequestException('A assinatura já está ativa.');
-    }
-
-    if (subscription.status !== SubscriptionStatus.PENDING) {
-      throw new BadRequestException(
-        'Somente assinaturas PENDING podem ser ativadas.',
+      const subscription = await context.subscriptionRepository.findById(
+        input.subscriptionId,
       );
-    }
 
-    /**
-     * A entidade encapsula a transição de estado.
-     */
-    subscription.activate();
+      if (!subscription) {
+        throw new NotFoundException('Assinatura não encontrada.');
+      }
 
-    return this.subscriptionRepository.update(subscription);
+      if (subscription.status === SubscriptionStatus.ACTIVE) {
+        throw new BadRequestException('A assinatura já está ativa.');
+      }
+
+      if (subscription.status !== SubscriptionStatus.PENDING) {
+        throw new BadRequestException(
+          'Somente assinaturas PENDING podem ser ativadas.',
+        );
+      }
+
+      /**
+       * A entidade encapsula a transição de estado.
+       */
+      subscription.activate();
+
+      return context.subscriptionRepository.update(subscription);
+    });
   }
 }

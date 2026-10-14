@@ -66,7 +66,7 @@
 .createAccount {
   width: 100%;
 
-  min-height: var(--control-height);
+  min-height: var(--control-height-md);
 
   display: flex;
   align-items: center;
@@ -169,4 +169,22 @@
   .footer {
     flex-direction: column;
   }
+}
+
+
+/* ==========================================================
+   LOGIN ERROR FEEDBACK
+========================================================== */
+
+.errorMessage {
+  padding: var(--spacing-md);
+
+  border: 1px solid var(--status-danger, #dc2626);
+  border-radius: var(--radius-md);
+
+  color: var(--status-danger-text, #b91c1c);
+  background: var(--status-danger-bg, #fef2f2);
+
+  font-size: var(--font-sm);
+  line-height: 1.5;
 }

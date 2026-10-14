@@ -75,7 +75,7 @@
     color var(--transition-fast);
 
   &:hover {
-    background: var(--background-hover);
+    background: var(--surface-hover);
     color: var(--text-primary);
   }
 
@@ -171,7 +171,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
 }
 
 .table {
@@ -214,7 +214,7 @@
     transition: background-color var(--transition-fast);
 
     &:hover {
-      background: var(--background-hover);
+      background: var(--surface-hover);
     }
   }
 }
@@ -282,7 +282,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
   color: var(--text-secondary);
 
   cursor: pointer;
@@ -294,7 +294,7 @@
     transform var(--transition-fast);
 
   &:hover:not(:disabled) {
-    background: var(--background-hover);
+    background: var(--surface-hover);
     border-color: var(--border-secondary);
     color: var(--text-primary);
   }
@@ -321,16 +321,16 @@
 .deleteButton {
   @extend .actionButton;
 
-  color: var(--accent-danger);
+  color: var(--danger);
 
   &:hover:not(:disabled) {
-    background: rgba(var(--accent-danger-rgb), 0.1);
-    border-color: var(--accent-danger);
-    color: var(--accent-danger);
+    background: rgba(var(--danger-rgb), 0.1);
+    border-color: var(--danger);
+    color: var(--danger);
   }
 
   &:focus-visible {
-    outline-color: var(--accent-danger);
+    outline-color: var(--danger);
   }
 }
 
@@ -352,7 +352,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
 
   text-align: center;
 }
@@ -362,7 +362,7 @@
 }
 
 .error {
-  color: var(--accent-danger);
+  color: var(--danger);
 }
 
 .empty {
@@ -395,7 +395,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
 
-  background: var(--background-secondary);
+  background: var(--surface-secondary);
   color: var(--text-primary);
 
   font: inherit;
@@ -408,7 +408,7 @@
     border-color var(--transition-fast);
 
   &:hover {
-    background: var(--background-hover);
+    background: var(--surface-hover);
     border-color: var(--border-secondary);
   }
 
@@ -440,7 +440,7 @@
     border: 1px solid var(--border-primary);
     border-radius: var(--radius-md);
 
-    background: var(--background-secondary);
+    background: var(--surface-secondary);
     color: var(--text-primary);
 
     font: inherit;
@@ -453,7 +453,7 @@
       opacity var(--transition-fast);
 
     &:hover:not(:disabled) {
-      background: var(--background-hover);
+      background: var(--surface-hover);
     }
 
     &:disabled {

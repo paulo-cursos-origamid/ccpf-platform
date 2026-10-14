@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   CalendarDays,
   CreditCard,
@@ -54,6 +56,7 @@ function formatDate(date: string | null): string | null {
 export function SubscriptionSummary({
   collapsed = false,
 }: SubscriptionSummaryProps) {
+  const router = useRouter();
   const {
     subscription,
     plan,
@@ -70,7 +73,9 @@ export function SubscriptionSummary({
 
   if (collapsed) {
     return (
-      <div
+      <button
+        type="button"
+        onClick={() => router.push("/settings/billing")}
         className={`${styles.collapsedSummary} ${
           isTrial ? styles.trial : ""
         } ${isActive ? styles.active : ""}`}
@@ -86,7 +91,7 @@ export function SubscriptionSummary({
         }
       >
         <CreditCard size={20} />
-      </div>
+      </button>
     );
   }
 
@@ -138,6 +143,7 @@ export function SubscriptionSummary({
             type="button"
             variant="outline"
             fullWidth
+            onClick={() => router.push("/settings/billing")}
           >
             Escolher plano
           </Button>
@@ -250,6 +256,7 @@ export function SubscriptionSummary({
           type="button"
           variant="ghost"
           fullWidth
+          onClick={() => router.push("/settings/billing")}
         >
           {actionLabel}
         </Button>

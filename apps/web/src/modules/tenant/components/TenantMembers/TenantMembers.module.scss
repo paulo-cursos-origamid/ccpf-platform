@@ -235,10 +235,10 @@
 .error {
   padding: var(--spacing-md);
 
-  border: 1px solid var(--border-error);
+  border: 1px solid var(--danger);
   border-radius: var(--radius-md);
 
-  background: var(--surface-error);
+  background: var(--danger-soft);
   color: var(--text-error);
 
   font-size: var(--font-sm);
@@ -296,8 +296,8 @@
 }
 
 .planLimitReached {
-  border-color: var(--border-error);
-  background: var(--surface-error);
+  border-color: var(--danger);
+  background: var(--danger-soft);
 
   .progressBar {
     background: var(--text-error);

@@ -15,6 +15,9 @@
 
   --surface-hover: #f8fbff;
 
+  --dashboard-bg-start: var(--surface-primary);
+  --dashboard-bg-end: var(--surface-tertiary);
+
   /* ==================================================
      TEXT
   ================================================== */
@@ -63,6 +66,23 @@
   --info-rgb: 56, 189, 248;
 
   /* ==================================================
+     SEMANTIC STATUS SURFACES
+  ================================================== */
+
+  --accent-soft: rgba(var(--accent-primary-rgb), 0.08);
+
+  --success-primary: var(--success);
+  --success-soft: rgba(var(--success-rgb), 0.10);
+
+  --warning-primary: var(--warning);
+  --warning-soft: rgba(var(--warning-rgb), 0.10);
+
+  --danger-primary: var(--danger);
+  --danger-soft: rgba(var(--danger-rgb), 0.10);
+
+  --text-secondary-rgb: 71, 85, 105;
+
+  /* ==================================================
      BUTTONS
   ================================================== */
 
@@ -92,54 +112,21 @@
      SHADOWS
   ================================================== */
 
-  --shadow-sm: 0 2px 10px rgba(2, 6, 23, 0.04);
-  --shadow-md: 0 8px 25px rgba(2, 6, 23, 0.08);
-  --shadow-lg: 0 20px 50px rgba(2, 6, 23, 0.12);
-
   /* ==================================================
      RADIUS
   ================================================== */
-
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
 
   /* ==================================================
      SPACING
   ================================================== */
 
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-
   /* ==================================================
      TYPOGRAPHY
   ================================================== */
-
-  --font-xs: 12px;
-  --font-sm: 14px;
-  --font-md: 16px;
-  --font-lg: 18px;
-  --font-xl: 20px;
-  --font-2xl: 24px;
-  --font-3xl: 32px;
 
   /* ==================================================
      TRANSITIONS
   ================================================== */
 
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.4s ease;
-
-  --accent-primary: #{v.$color-green};
-  --accent-primary-rgb: 4, 120, 87;
   --accent-primary-hover: #036b4f;
 }

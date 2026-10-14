@@ -120,7 +120,7 @@
 }
 
 .statusActive {
-  color: var(--success-primary);
+  color: var(--success);
   background: var(--success-soft);
 }
 
@@ -130,12 +130,12 @@
 }
 
 .statusWarning {
-  color: var(--warning-primary);
+  color: var(--warning);
   background: var(--warning-soft);
 }
 
 .statusDanger {
-  color: var(--danger-primary);
+  color: var(--danger);
   background: var(--danger-soft);
 }
 
@@ -365,7 +365,7 @@
   gap: 16px;
   margin-bottom: 20px;
   padding: 14px 16px;
-  color: var(--danger-primary);
+  color: var(--danger);
   background: var(--danger-soft);
   border: 1px solid var(--border-primary);
   border-radius: 10px;

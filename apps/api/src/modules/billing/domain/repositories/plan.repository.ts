@@ -1,10 +1,5 @@
 import { PlanEntity } from '../entities/plan.entity';
 
-/**
- * Define o contrato de persistência do domínio Plan.
- *
- * A implementação concreta pertence à infraestrutura.
- */
 export abstract class PlanRepository {
   abstract create(plan: PlanEntity): Promise<PlanEntity>;
 

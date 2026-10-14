@@ -1,31 +1,12 @@
 @use "@/styles/main";
 
 /**
- * Estilos globais da aplicação.
+ * Entry point global da aplicação.
  *
- * O tema é aplicado pelo ThemeProvider no elemento <html>
- * através do atributo data-theme.
- *
- * Os elementos globais utilizam exclusivamente os tokens
- * oficiais definidos nos temas light e dark.
+ * O ThemeProvider controla data-theme no elemento <html>.
+ * Os estilos abaixo são somente os estilos estruturais que
+ * precisam existir no entrypoint final.
  */
-
-html {
-  min-width: 100%;
-  min-height: 100%;
-  background: var(--surface-primary);
-  color: var(--text-primary);
-}
-
-body {
-  min-width: 100%;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  background: var(--surface-primary);
-  color: var(--text-primary);
-}
 
 #__next {
   min-width: 100%;

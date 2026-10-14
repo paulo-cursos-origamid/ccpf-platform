@@ -9,14 +9,10 @@ import {
   type PublicPlan,
 } from "@/modules/billing";
 
+import type { BillingInterval, PublicPlanPrice } from "@/modules/billing/types";
+
 import styles from "./Pricing.module.scss";
 
-/**
- * Textos de apresentação das features comerciais.
- *
- * Os códigos pertencem ao domínio Billing do backend.
- * Estes textos pertencem exclusivamente à camada de apresentação.
- */
 const featureLabels: Record<PlanFeatureCode, string> = {
   DOMESTIC: "Gastos domésticos",
   HEALTH: "Saúde",
@@ -30,44 +26,118 @@ const featureLabels: Record<PlanFeatureCode, string> = {
 };
 
 /**
- * Formata o preço recebido do backend conforme a moeda do plano.
+ * Formata um valor comercial usando a moeda informada pelo backend.
+ *
+ * A Landing não mantém preço ou moeda hardcoded.
  */
 function formatPrice(price: number, currency: string): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(price);
+  const normalizedCurrency = currency?.trim().toUpperCase();
+
+  if (!normalizedCurrency || !Number.isFinite(price)) {
+    return "Preço indisponível";
+  }
+
+  try {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: normalizedCurrency,
+      minimumFractionDigits: 2,
+    }).format(price);
+  } catch {
+    return "Preço indisponível";
+  }
 }
 
 /**
- * Retorna o texto correspondente ao intervalo de cobrança.
+ * Resolve o preço comercial padrão do plano.
+ *
+ * Ordem comercial adotada:
+ * YEARLY → SEMESTERLY → LIFETIME.
+ *
+ * O plano TRIAL não possui PlanPrice e, portanto, retorna null.
  */
-function getBillingIntervalLabel(
-  interval: PublicPlan["billingInterval"],
-): string {
-  return interval === "YEARLY" ? "por ano" : "por mês";
+function getDefaultPrice(plan: PublicPlan): PublicPlanPrice | null {
+  const prices = Array.isArray(plan.prices) ? plan.prices : [];
+
+  return (
+    prices.find((price) => price.interval === "YEARLY") ??
+    prices.find((price) => price.interval === "SEMESTERLY") ??
+    prices.find((price) => price.interval === "LIFETIME") ??
+    null
+  );
 }
 
 /**
- * Retorna a descrição apresentada para o limite de usuários.
+ * Retorna a descrição comercial da modalidade.
+ */
+function getBillingIntervalLabel(interval: BillingInterval): string {
+  switch (interval) {
+    case "SEMESTERLY":
+      return "por semestre";
+
+    case "YEARLY":
+      return "por ano";
+
+    case "LIFETIME":
+      return "pagamento único";
+
+    default:
+      return "modalidade de cobrança";
+  }
+}
+
+/**
+ * Retorna a quantidade de usuários permitida pelo plano.
  */
 function getUsersLabel(maxUsers: number): string {
-  return maxUsers === 1 ? "1 usuário" : `Até ${maxUsers} usuários`;
+  if (maxUsers === -1) {
+    return "Usuários ilimitados";
+  }
+
+  if (maxUsers === 1) {
+    return "1 usuário";
+  }
+
+  return `Até ${maxUsers} usuários`;
 }
 
 /**
- * Seção pública de planos comerciais do CCPF.
+ * Mantém a apresentação comercial do plano TRIAL.
  *
- * Responsabilidades:
- * - carregar os planos públicos disponibilizados pelo Billing;
- * - apresentar os dados comerciais retornados pela API;
- * - encaminhar o visitante para o cadastro com o plano selecionado;
- * - tratar estados de carregamento e erro.
- *
- * O componente não possui preços ou limites comerciais hardcoded.
- * O backend permanece como fonte oficial dessas informações.
+ * O TRIAL não possui PlanPrice porque não é uma modalidade paga.
  */
+function getTrialPriceLabel(plan: PublicPlan): string | null {
+  if (plan.code !== "TRIAL") {
+    return null;
+  }
+
+  return "14 dias grátis";
+}
+
+/**
+ * Resolve a classe visual do plano pelo código comercial.
+ *
+ * O estilo não depende mais da posição do card no grid.
+ */
+function getPlanClassName(plan: PublicPlan): string {
+  switch (plan.code) {
+    case "TRIAL":
+      return styles.trial;
+
+    case "BASIC":
+      return styles.basic;
+
+    case "PRO":
+      return styles.pro;
+
+    case "PREMIUM":
+      return styles.premium;
+
+    default:
+      return "";
+  }
+}
+
 export function Pricing() {
   const [plans, setPlans] = useState<PublicPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,53 +192,64 @@ export function Pricing() {
     };
   }, []);
 
+  const orderedPlans = [...plans].sort((first, second) => {
+    const firstPrice = getDefaultPrice(first);
+    const secondPrice = getDefaultPrice(second);
+
+    if (first.code === "TRIAL") {
+      return -1;
+    }
+
+    if (second.code === "TRIAL") {
+      return 1;
+    }
+
+    return (
+      (firstPrice?.amount ?? Number.MAX_SAFE_INTEGER) -
+      (secondPrice?.amount ?? Number.MAX_SAFE_INTEGER)
+    );
+  });
+
   return (
     <section id="planos" className={styles.section}>
       <div className={styles.container}>
         <div className={styles.heading}>
-          <span>Planos</span>
+          <span className={styles.eyebrow}>PLANOS</span>
 
           <h2>
-            Um produto preparado para
-            <strong> crescer com você.</strong>
+            Escolha o plano ideal
+            <span> para sua vida financeira</span>
           </h2>
 
           <p>
-            Escolha o plano que acompanha a forma como você organiza,
-            compartilha e acompanha sua vida financeira.
+            Comece gratuitamente e evolua conforme suas necessidades. Todos os
+            planos são carregados diretamente da plataforma.
           </p>
         </div>
 
         {isLoading && (
           <div className={styles.grid} aria-label="Carregando planos">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className={styles.skeletonCard}
-                aria-hidden="true"
-              >
-                <div className={styles.skeletonBadge} />
-                <div className={styles.skeletonTitle} />
-                <div className={styles.skeletonDescription} />
+            {[1, 2, 3, 4].map((item) => (
+              <article key={item} className={styles.skeletonCard}>
+                <div className={styles.skeletonLine} />
                 <div className={styles.skeletonPrice} />
-
-                <div className={styles.skeletonFeature} />
-                <div className={styles.skeletonFeature} />
-                <div className={styles.skeletonFeature} />
-              </div>
+                <div className={styles.skeletonLine} />
+                <div className={styles.skeletonLine} />
+                <div className={styles.skeletonLine} />
+              </article>
             ))}
           </div>
         )}
 
         {!isLoading && hasError && (
           <div className={styles.feedback}>
-            <h3>Não foi possível carregar os planos.</h3>
+            <strong>Não foi possível carregar os planos.</strong>
 
-            <p>Verifique sua conexão e tente novamente.</p>
+            <p>Tente novamente em alguns instantes.</p>
 
             <button
               type="button"
-              className={styles.retryButton}
+              className={styles.retry}
               onClick={() => void loadPlans()}
             >
               Tentar novamente
@@ -176,44 +257,79 @@ export function Pricing() {
           </div>
         )}
 
-        {!isLoading && !hasError && plans.length === 0 && (
+        {!isLoading && !hasError && orderedPlans.length === 0 && (
           <div className={styles.feedback}>
-            <h3>Planos indisponíveis no momento.</h3>
+            <strong>Nenhum plano disponível no momento.</strong>
 
-            <p>Estamos preparando as opções comerciais do CCPF.</p>
+            <p>Tente novamente mais tarde.</p>
+
+            <button
+              type="button"
+              className={styles.retry}
+              onClick={() => void loadPlans()}
+            >
+              Tentar novamente
+            </button>
           </div>
         )}
 
-        {!isLoading && !hasError && plans.length > 0 && (
+        {!isLoading && !hasError && orderedPlans.length > 0 && (
           <div className={styles.grid}>
-            {plans.map((plan) => {
+            {orderedPlans.map((plan) => {
               const isFeatured = plan.code === "PRO";
+              const price = getDefaultPrice(plan);
+              const trialPriceLabel = getTrialPriceLabel(plan);
+              const hasCommercialPrice = price !== null;
+
+              const planClassName = getPlanClassName(plan);
+
+              const registrationHref = hasCommercialPrice
+                ? `/register?plan=${encodeURIComponent(
+                    plan.code.toLowerCase(),
+                  )}&price=${encodeURIComponent(price.id)}`
+                : `/register?plan=${encodeURIComponent(
+                    plan.code.toLowerCase(),
+                  )}`;
 
               return (
                 <article
                   key={plan.id}
-                  className={`${styles.planCard} ${
+                  className={`${styles.planCard} ${planClassName} ${
                     isFeatured ? styles.featured : ""
                   }`}
                 >
                   {isFeatured && (
-                    <span className={styles.featuredBadge}>Mais completo</span>
+                    <span className={styles.featuredBadge}>Mais escolhido</span>
                   )}
 
-                  <div className={styles.planHeader}>
+                  <div className={styles.planCardHeader}>
                     <span className={styles.planName}>{plan.name}</span>
 
                     {plan.description && (
-                      <p className={styles.planDescription}>
-                        {plan.description}
-                      </p>
+                      <p className={styles.planDescription}>{plan.description}</p>
                     )}
                   </div>
 
                   <div className={styles.price}>
-                    <strong>{formatPrice(plan.price, plan.currency)}</strong>
+                    {trialPriceLabel ? (
+                      <>
+                        <strong>{trialPriceLabel}</strong>
+                        <span>sem compromisso</span>
+                      </>
+                    ) : price ? (
+                      <>
+                        <strong>
+                          {formatPrice(price.amount, price.currency)}
+                        </strong>
 
-                    <span>{getBillingIntervalLabel(plan.billingInterval)}</span>
+                        <span>{getBillingIntervalLabel(price.interval)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>Indisponível</strong>
+                        <span>consulte disponibilidade</span>
+                      </>
+                    )}
                   </div>
 
                   <div className={styles.userLimit}>
@@ -223,20 +339,14 @@ export function Pricing() {
                   <ul className={styles.features}>
                     {plan.features.map((feature) => (
                       <li key={feature}>
-                        <span className={styles.featureMark}>✓</span>
-
-                        <span>{featureLabels[feature]}</span>
+                        <span aria-hidden="true">✓</span>
+                        <span>{featureLabels[feature] ?? feature}</span>
                       </li>
                     ))}
                   </ul>
 
-                  <Link
-                    href={`/register?plan=${encodeURIComponent(plan.code.toLowerCase())}`}
-                    className={`${styles.cta} ${
-                      isFeatured ? styles.ctaFeatured : ""
-                    }`}
-                  >
-                    Começar agora
+                  <Link href={registrationHref} className={styles.cta}>
+                    {plan.code === "TRIAL" ? "Começar grátis" : "Começar agora"}
                   </Link>
                 </article>
               );

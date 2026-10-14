@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   Inject,
+  Logger,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -23,13 +24,23 @@ import { InvoiceEntity } from '../../../../billing/domain/entities/invoice.entit
 import { InvoiceStatus } from '../../../../billing/domain/enums/invoice-status.enum';
 import { SubscriptionEntity } from '../../../../billing/domain/entities/subscription.entity';
 import { SubscriptionStatus } from '../../../../billing/domain/enums/subscription-status.enum';
-import { BillingInterval } from '../../../../billing/domain/enums/billing-interval.enum';
+import { BillingDateService } from '../../../../billing/domain/services/billing-date.service';
+import { InvoiceInstallmentScheduleService } from '../../../../billing/domain/services/invoice-installment-schedule.service';
+import { InvoiceInstallmentEntity } from '../../../../billing/domain/entities/invoice-installment.entity';
+import { PlanPriceEntity } from '../../../../billing/domain/entities/plan-price.entity';
+
+import { CreateNotificationsForPermissionUseCase } from '../../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../../notifications/domain/enums/notification-type.enum';
 
 export interface CreatePublicUserInput {
   name: string;
   email: string;
   password: string;
   planCode: string;
+  planPriceId?: string;
+  billingDay?: number;
+  installmentCount?: number;
 }
 
 export interface CreatePublicUserOutput {
@@ -38,23 +49,12 @@ export interface CreatePublicUserOutput {
   email: string;
 }
 
-/**
- * Caso de uso responsável pelo cadastro público de um novo cliente SaaS.
- *
- * O cadastro público provisiona, de forma atômica:
- *
- * - User;
- * - Tenant;
- * - TenantMember com papel OWNER;
- * - Subscription inicial;
- * - Invoice inicial para planos pagos.
- *
- * A escolha do plano é uma intenção enviada pelo cliente.
- * A autoridade sobre o plano continua sendo o backend, que
- * consulta o catálogo público de planos antes do provisionamento.
- */
 @Injectable()
 export class CreatePublicUserUseCase {
+  private readonly logger = new Logger(CreatePublicUserUseCase.name);
+
+  private readonly billingDateService = new BillingDateService();
+
   constructor(
     private readonly userRepository: UserRepository,
 
@@ -65,6 +65,8 @@ export class CreatePublicUserUseCase {
     private readonly emailVerificationNotifier: EmailVerificationNotifierContract,
 
     private readonly publicUserProvisioningRepository: PublicUserProvisioningRepository,
+
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreatePublicUserInput): Promise<CreatePublicUserOutput> {
@@ -99,6 +101,73 @@ export class CreatePublicUserUseCase {
       );
     }
 
+    const isTrial = plan.code === 'TRIAL';
+
+    let selectedPrice: PlanPriceEntity | null = null;
+
+    if (!isTrial) {
+      if (!input.planPriceId) {
+        throw new BadRequestException(
+          'A modalidade comercial é obrigatória para planos pagos.',
+        );
+      }
+
+      const rawPrice = plan.prices.find(
+        (price) => price.id === input.planPriceId,
+      );
+
+      if (!rawPrice) {
+        throw new BadRequestException(
+          'A modalidade comercial selecionada não pertence ao plano informado.',
+        );
+      }
+
+      selectedPrice = new PlanPriceEntity(
+        rawPrice.id,
+        plan.id,
+        rawPrice.interval,
+        rawPrice.amount,
+        rawPrice.currency,
+        true,
+        new Date(),
+        new Date(),
+      );
+    }
+
+    const now = new Date();
+
+    const billingDay = selectedPrice
+      ? this.billingDateService.validateBillingDayForInterval(
+          input.billingDay,
+          selectedPrice.interval,
+        )
+      : null;
+
+    const currentPeriodStart = now;
+
+    const currentPeriodEnd = isTrial
+      ? this.calculateTrialEnd(currentPeriodStart)
+      : (this.billingDateService.calculatePeriodEnd(
+          currentPeriodStart,
+          selectedPrice!.interval,
+        ) ?? currentPeriodStart);
+
+    const nextBillingDate = isTrial
+      ? null
+      : this.billingDateService.calculateNextBillingDate(
+          currentPeriodStart,
+          billingDay,
+          selectedPrice!.interval,
+        );
+
+    const trialEndsAt = isTrial
+      ? this.calculateTrialEnd(currentPeriodStart)
+      : null;
+
+    const subscriptionStatus = isTrial
+      ? SubscriptionStatus.TRIALING
+      : SubscriptionStatus.PENDING;
+
     const passwordHash = await this.passwordHasher.hash(input.password);
 
     const verificationToken = randomUUID();
@@ -106,8 +175,6 @@ export class CreatePublicUserUseCase {
     const verificationTokenExpiresAt = new Date(
       Date.now() + 1000 * 60 * 60 * 24,
     );
-
-    const now = new Date();
 
     const user = new UserEntity({
       name,
@@ -138,45 +205,35 @@ export class CreatePublicUserUseCase {
       updatedAt: now,
     });
 
-    const isTrial = plan.code === 'TRIAL';
-
-    const currentPeriodStart = now;
-    const currentPeriodEnd = this.calculatePeriodEnd(
-      currentPeriodStart,
-      plan.billingInterval,
-    );
-
-    const trialEndsAt = isTrial
-      ? this.calculateTrialEnd(currentPeriodStart)
-      : null;
-
-    const subscriptionStatus = isTrial
-      ? SubscriptionStatus.TRIALING
-      : SubscriptionStatus.PENDING;
-
     const subscription = new SubscriptionEntity(
       randomUUID(),
       tenant.id,
       plan.id,
+      selectedPrice?.id ?? null,
       subscriptionStatus,
       now,
       currentPeriodStart,
       currentPeriodEnd,
+      billingDay,
+      nextBillingDate,
       trialEndsAt,
       null,
       now,
       now,
     );
 
-    /**
-     * Planos pagos criam imediatamente uma obrigação financeira.
-     *
-     * A Invoice é construída aqui, mas sua persistência acontece
-     * dentro da mesma transação do User, Tenant, OWNER e Subscription.
-     */
     const invoice = isTrial
       ? null
-      : this.createInitialInvoice(subscription, plan.price, plan.currency, now);
+      : this.createInitialInvoice(
+          subscription,
+          selectedPrice!,
+          now,
+          input.installmentCount ?? 1,
+        );
+
+    const installments = invoice
+      ? InvoiceInstallmentScheduleService.create(invoice)
+      : [];
 
     let result: {
       user: UserEntity;
@@ -184,6 +241,7 @@ export class CreatePublicUserUseCase {
       owner: TenantMemberEntity;
       subscription: SubscriptionEntity;
       invoice: InvoiceEntity | null;
+      installments: InvoiceInstallmentEntity[];
     };
 
     try {
@@ -193,6 +251,7 @@ export class CreatePublicUserUseCase {
         owner,
         subscription,
         invoice,
+        installments,
       );
     } catch (error) {
       if (
@@ -203,6 +262,24 @@ export class CreatePublicUserUseCase {
       }
 
       throw error;
+    }
+
+    try {
+      await this.createNotificationsForPermissionUseCase.execute({
+        permissionCode: 'USERS_READ',
+        type: NotificationType.ACCOUNT_CREATED,
+        severity: NotificationSeverity.INFO,
+        title: 'Nova conta criada',
+        message: `A conta de ${result.user.name} (${result.user.email}) foi criada com sucesso.`,
+        resourceType: 'TENANT',
+        resourceId: result.tenant.id,
+        deduplicationKey: `ACCOUNT_CREATED:${result.user.id}`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Não foi possível criar a notificação de nova conta para o usuário ${result.user.id}.`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
 
     await this.emailVerificationNotifier.sendVerificationEmail({
@@ -218,19 +295,13 @@ export class CreatePublicUserUseCase {
     };
   }
 
-  /**
-   * Cria a Invoice inicial de uma contratação paga.
-   *
-   * A Invoice começa como PENDING porque o pagamento ainda
-   * não foi confirmado.
-   */
   private createInitialInvoice(
     subscription: SubscriptionEntity,
-    amount: number,
-    currency: string,
+    planPrice: PlanPriceEntity,
     referenceDate: Date,
+    installmentCount: number,
   ): InvoiceEntity {
-    if (amount <= 0) {
+    if (planPrice.amount <= 0) {
       throw new BadRequestException(
         'O valor do plano selecionado deve ser maior que zero.',
       );
@@ -244,21 +315,16 @@ export class CreatePublicUserUseCase {
       subscription.id,
       this.generateInvoiceNumber(referenceDate),
       InvoiceStatus.PENDING,
-      amount,
-      currency,
+      planPrice.amount,
+      planPrice.currency,
       dueAt,
       null,
       referenceDate,
       referenceDate,
+      installmentCount,
     );
   }
 
-  /**
-   * Define o vencimento padrão da primeira Invoice.
-   *
-   * A regra segue o comportamento existente do Billing:
-   * sete dias após a criação.
-   */
   private calculateInvoiceDueAt(referenceDate: Date): Date {
     const dueAt = new Date(referenceDate);
 
@@ -267,9 +333,6 @@ export class CreatePublicUserUseCase {
     return dueAt;
   }
 
-  /**
-   * Gera o identificador público da Invoice.
-   */
   private generateInvoiceNumber(referenceDate: Date): string {
     const year = referenceDate.getFullYear();
     const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
@@ -278,11 +341,6 @@ export class CreatePublicUserUseCase {
     return `CCPF-${year}-${month}-${suffix}`;
   }
 
-  /**
-   * Gera um slug determinístico e único para o Tenant recém-criado.
-   *
-   * O UUID parcial evita colisões entre usuários com o mesmo nome.
-   */
   private generateTenantSlug(name: string, tenantId: string): string {
     const normalizedName = name
       .normalize('NFD')
@@ -296,29 +354,6 @@ export class CreatePublicUserUseCase {
     return `${base}-${tenantId.slice(0, 8)}`;
   }
 
-  /**
-   * Calcula o final do período comercial conforme
-   * o intervalo de cobrança definido pelo plano.
-   */
-  private calculatePeriodEnd(
-    start: Date,
-    billingInterval: BillingInterval,
-  ): Date {
-    const end = new Date(start);
-
-    if (billingInterval === BillingInterval.YEARLY) {
-      end.setFullYear(end.getFullYear() + 1);
-      return end;
-    }
-
-    end.setMonth(end.getMonth() + 1);
-
-    return end;
-  }
-
-  /**
-   * Calcula o encerramento dos 14 dias de avaliação gratuita.
-   */
   private calculateTrialEnd(start: Date): Date {
     const trialEnd = new Date(start);
 

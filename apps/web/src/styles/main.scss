@@ -1,6 +1,15 @@
-/* ==========================================================
-   ABSTRACTS
-========================================================== */
+/**
+ * Entry point da arquitetura SCSS.
+ *
+ * Ordem:
+ * 1. Abstracts
+ * 2. Themes
+ * 3. Base
+ * 4. Layout
+ * 5. Components
+ *
+ * @use mantém cada módulo encapsulado e previsível.
+ */
 
 @use "./abstracts/colors";
 @use "./abstracts/variables";
@@ -13,31 +22,23 @@
 @use "./abstracts/animations";
 @use "./abstracts/controls";
 
-/* ==========================================================
-   THEMES
-========================================================== */
-
 @use "./themes/light";
 @use "./themes/dark";
 
-/* ==========================================================
-   BASE
-========================================================== */
-
+@use "./base/tokens";
 @use "./base/reset";
-@use "./base/typography" as base-type;
-
-/* ==========================================================
-   LAYOUT
-========================================================== */
+@use "./base/globals";
+@use "./base/typography";
+@use "./base/scrollbar";
 
 @use "./layout/auth";
 @use "./layout/grid";
 
-/* ==========================================================
-   COMPONENTS
-========================================================== */
-
-// @use "./components/button";
-// @use "./components/input";
-// @use "./components/card";
+@use "./components/button";
+@use "./components/card";
+@use "./components/form";
+@use "./components/input";
+@use "./components/modal";
+@use "./components/stat-card";
+@use "./components/table";
+@use "./components/widget";

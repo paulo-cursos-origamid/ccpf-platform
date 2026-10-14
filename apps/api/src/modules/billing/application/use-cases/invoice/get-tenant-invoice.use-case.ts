@@ -5,7 +5,10 @@ import {
 } from '@nestjs/common';
 
 import { InvoiceEntity } from '../../../domain/entities/invoice.entity';
+import { InvoiceInstallmentEntity } from '../../../domain/entities/invoice-installment.entity';
+import { InvoiceInstallmentRepository } from '../../../domain/repositories/invoice-installment.repository';
 import { InvoiceRepository } from '../../../domain/repositories/invoice.repository';
+import { PaymentRepository } from '../../../domain/repositories/payment.repository';
 
 /**
  * Dados necessários para consultar uma Invoice.
@@ -24,9 +27,21 @@ export interface GetTenantInvoiceInput {
  */
 @Injectable()
 export class GetTenantInvoiceUseCase {
-  constructor(private readonly invoiceRepository: InvoiceRepository) {}
+  constructor(
+    private readonly invoiceRepository: InvoiceRepository,
+    private readonly invoiceInstallmentRepository: InvoiceInstallmentRepository,
+    private readonly paymentRepository: PaymentRepository,
+  ) {}
 
-  async execute(input: GetTenantInvoiceInput): Promise<InvoiceEntity> {
+  async execute(input: GetTenantInvoiceInput): Promise<
+    InvoiceEntity & {
+      installments: Array<
+        InvoiceInstallmentEntity & {
+          payments: Awaited<ReturnType<PaymentRepository['findByInstallment']>>;
+        }
+      >;
+    }
+  > {
     const invoice = await this.invoiceRepository.findById(input.invoiceId);
 
     if (!invoice) {
@@ -37,6 +52,21 @@ export class GetTenantInvoiceUseCase {
       throw new ForbiddenException('A Invoice não pertence ao Tenant ativo.');
     }
 
-    return invoice;
+    // Carrega as parcelas somente depois de validar o acesso ao Tenant.
+    const installments = await this.invoiceInstallmentRepository.findByInvoice(
+      invoice.id,
+    );
+
+    const installmentsWithPayments = await Promise.all(
+      installments.map(async (installment) =>
+        Object.assign(installment, {
+          payments: await this.paymentRepository.findByInstallment(
+            installment.id,
+          ),
+        }),
+      ),
+    );
+
+    return Object.assign(invoice, { installments: installmentsWithPayments });
   }
 }

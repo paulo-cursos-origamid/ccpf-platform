@@ -1,7 +1,15 @@
 /**
  * Intervalos disponíveis para cobrança de planos.
+ *
+ * O contrato acompanha o domínio comercial da API:
+ * - SEMESTERLY: cobrança semestral;
+ * - YEARLY: cobrança anual;
+ * - LIFETIME: contratação definitiva sem recorrência.
  */
-export type BillingInterval = "MONTHLY" | "YEARLY";
+export type BillingInterval =
+  | "SEMESTERLY"
+  | "YEARLY"
+  | "LIFETIME";
 
 /**
  * Estados possíveis de uma assinatura.
@@ -59,20 +67,33 @@ export type PlanFeatureCode =
   | "BILLING";
 
 /**
+ * Representação pública de uma modalidade comercial.
+ *
+ * O ID é necessário para que o frontend envie exatamente
+ * a modalidade escolhida ao criar ou alterar uma assinatura.
+ */
+export interface PublicPlanPrice {
+  id: string;
+  interval: BillingInterval;
+  amount: number;
+  currency: string;
+}
+
+/**
  * Representação pública de um plano comercial.
+ *
+ * Os dados do produto permanecem separados das condições
+ * comerciais disponíveis através de prices[].
  */
 export interface PublicPlan {
   id: string;
   code: string;
   name: string;
   description: string | null;
-  price: number;
-  currency: string;
-  billingInterval: BillingInterval;
   maxUsers: number;
-  trialDays: number;
   active: boolean;
   features: PlanFeatureCode[];
+  prices: PublicPlanPrice[];
 }
 
 /**
@@ -80,6 +101,31 @@ export interface PublicPlan {
  */
 export interface CreateSubscriptionInput {
   planCode: string;
+  planPriceId: string;
+  billingDay?: number;
+}
+
+/**
+ * Dados necessários para alteração de uma assinatura.
+ */
+export interface ChangeSubscriptionPlanInput {
+  planCode: string;
+  planPriceId: string;
+  billingDay?: number;
+}
+
+/**
+ * Dados do plano associado à assinatura atual.
+ * Inclui planos internos que não aparecem no catálogo público.
+ */
+export interface SubscriptionPlanDetails {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  maxUsers: number;
+  active: boolean;
+  features: PlanFeatureCode[];
 }
 
 /**
@@ -92,6 +138,8 @@ export interface Subscription {
   id: string;
   tenantId: string;
   planId: string;
+  planPriceId: string | null;
+  plan?: SubscriptionPlanDetails | null;
   status: SubscriptionStatus;
   startedAt: string;
   currentPeriodStart: string;
@@ -100,6 +148,25 @@ export interface Subscription {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  billingDay?: number | null;
+}
+
+/**
+ * Representação de uma parcela individual de uma fatura.
+ */
+export interface InvoiceInstallment {
+  id: string;
+  invoiceId: string;
+  number: number;
+  totalCount: number;
+  amount: number;
+  currency: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
+  createdAt: string;
+  updatedAt: string;
+  payments?: Payment[];
 }
 
 /**
@@ -124,25 +191,20 @@ export interface Invoice {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+  installments?: InvoiceInstallment[];
 }
 
 /**
  * Dados enviados para criar uma tentativa de pagamento.
  *
- * O invoiceId não faz parte do body porque é informado
- * pela URL do endpoint.
- *
- * O backend valida os dados específicos conforme o método:
- * - PIX exige pixCopyPaste;
- * - BANK_SLIP exige barcode ou linha digitável.
+ * O invoiceId é informado pela URL e o installmentId identifica
+ * a parcela real que será paga. O backend gera os instrumentos.
  */
 export interface CreatePaymentInput {
+  installmentId: string;
   method: PaymentMethod;
   expiresAt?: string;
   externalReference?: string;
-  pixCopyPaste?: string;
-  bankSlipBarcode?: string;
-  bankSlipDigitableLine?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -166,7 +228,7 @@ export interface ConfirmPaymentInput {
  */
 export interface Payment {
   id: string;
-  invoiceId: string;
+  installmentId: string;
   reference: string;
   method: PaymentMethod;
   status: PaymentStatus;
@@ -181,6 +243,7 @@ export interface Payment {
   bankSlipBarcode: string | null;
   bankSlipDigitableLine: string | null;
   metadata: Record<string, unknown> | null;
+  cancellationReason: string | null;
   createdAt: string;
   updatedAt: string;
 }

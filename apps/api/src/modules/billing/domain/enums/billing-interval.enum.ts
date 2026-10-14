@@ -1,9 +1,10 @@
 /**
- * Define o intervalo de cobrança de um plano.
+ * Define a modalidade comercial de cobrança de um PlanPrice.
  *
  * O domínio não depende do enum gerado pelo Prisma.
  */
 export enum BillingInterval {
-  MONTHLY = 'MONTHLY',
+  SEMESTERLY = 'SEMESTERLY',
   YEARLY = 'YEARLY',
+  LIFETIME = 'LIFETIME',
 }

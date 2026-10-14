@@ -9,7 +9,10 @@ import {
 } from '../../domain/repositories/billing-unit-of-work';
 import { PrismaInvoiceRepository } from './prisma-invoice.repository';
 import { PrismaPaymentRepository } from './prisma-payment.repository';
+import { PrismaInvoiceInstallmentRepository } from './prisma-invoice-installment.repository';
 import { PrismaSubscriptionRepository } from './prisma-subscription.repository';
+import { PrismaPlanRepository } from './prisma-plan.repository';
+import { PrismaPlanPriceRepository } from './prisma-plan-price.repository';
 
 /**
  * Implementação Prisma do Unit of Work de Billing.
@@ -30,14 +33,21 @@ export class PrismaBillingUnitOfWork implements BillingUnitOfWork {
     return this.prisma.$transaction(async (transaction) => {
       const invoiceRepository = new PrismaInvoiceRepository(transaction);
       const paymentRepository = new PrismaPaymentRepository(transaction);
+      const invoiceInstallmentRepository =
+        new PrismaInvoiceInstallmentRepository(transaction);
       const subscriptionRepository = new PrismaSubscriptionRepository(
         transaction,
       );
+      const planRepository = new PrismaPlanRepository(transaction);
+      const planPriceRepository = new PrismaPlanPriceRepository(transaction);
 
       const context: BillingUnitOfWorkContext = {
         invoiceRepository,
         paymentRepository,
+        invoiceInstallmentRepository,
         subscriptionRepository,
+        planRepository,
+        planPriceRepository,
 
         /**
          * O lock é aplicado à linha da Invoice para garantir
@@ -49,6 +59,21 @@ export class PrismaBillingUnitOfWork implements BillingUnitOfWork {
               SELECT id
               FROM "Invoice"
               WHERE id = ${invoiceId}
+              FOR UPDATE
+            `,
+          );
+        },
+
+        /**
+         * O lock da Subscription serializa alterações concorrentes
+         * sobre o mesmo ciclo comercial.
+         */
+        lockSubscription: async (subscriptionId: string): Promise<void> => {
+          await transaction.$queryRaw(
+            Prisma.sql`
+              SELECT id
+              FROM "Subscription"
+              WHERE id = ${subscriptionId}
               FOR UPDATE
             `,
           );

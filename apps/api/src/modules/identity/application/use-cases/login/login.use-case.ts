@@ -5,6 +5,7 @@ import { UserRepository } from '../../../domain/repositories/user.repository';
 import { PasswordHasherContract } from '../../../domain/contracts/password-hasher.contract';
 import { TokenProviderContract } from '../../../domain/contracts/token-provider.contract';
 import { UserRole } from '../../../domain/entities/user.entity';
+import { PlatformAuthorizationRepository } from '../../../domain/repositories/platform-authorization.repository';
 
 export interface LoginInput {
   email: string;
@@ -21,6 +22,7 @@ export interface LoginOutput {
     name: string;
     email: string;
     role: UserRole;
+    platformPermissions: string[];
   };
 }
 
@@ -34,6 +36,8 @@ export class LoginUseCase {
 
     @Inject(TokenProviderContract)
     private readonly tokenProvider: TokenProviderContract,
+
+    private readonly platformAuthorizationRepository: PlatformAuthorizationRepository,
   ) {}
 
   async execute(input: LoginInput): Promise<LoginOutput> {
@@ -74,6 +78,9 @@ export class LoginUseCase {
 
     await this.userRepository.update(user);
 
+    const platformPermissions =
+      await this.platformAuthorizationRepository.getUserPermissions(user.id);
+
     return {
       accessToken,
       refreshToken,
@@ -83,6 +90,7 @@ export class LoginUseCase {
         name: user.name,
         email: user.email,
         role: user.role,
+        platformPermissions,
       },
     };
   }

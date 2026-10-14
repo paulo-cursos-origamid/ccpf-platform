@@ -8,7 +8,8 @@ import { PlatformAuthorizationRepository } from '../../domain/repositories/platf
  *
  * Responsabilidade:
  * - Consultar as PlatformRoles vinculadas ao usuário.
- * - Verificar se alguma dessas roles possui a permissão solicitada.
+ * - Verificar se alguma dessas roles possui uma permissão específica.
+ * - Retornar as permissões efetivas das PlatformRoles ativas do usuário.
  */
 @Injectable()
 export class PrismaPlatformAuthorizationRepository implements PlatformAuthorizationRepository {
@@ -49,5 +50,31 @@ export class PrismaPlatformAuthorizationRepository implements PlatformAuthorizat
     });
 
     return rolePermission !== null;
+  }
+
+  async getUserPermissions(userId: string): Promise<string[]> {
+    const rolePermissions = await this.prisma.platformRolePermission.findMany({
+      where: {
+        role: {
+          isActive: true,
+          users: {
+            some: {
+              userId,
+            },
+          },
+        },
+      },
+      select: {
+        permission: {
+          select: {
+            code: true,
+          },
+        },
+      },
+    });
+
+    return [
+      ...new Set(rolePermissions.map(({ permission }) => permission.code)),
+    ].sort();
   }
 }

@@ -17,7 +17,8 @@ import {
   type ProductModuleAccess,
   type ProductModuleSection,
 } from "@/modules/product/catalog";
-import { useIdentityStore } from "@/modules/identity/stores/identity.store";
+import { useHasPermission } from "@/modules/identity/hooks/useHasPermission";
+import { PLATFORM_PERMISSIONS } from "@/modules/identity/utils";
 import { useTenantStore } from "@/modules/tenant/stores";
 
 import styles from "./Sidebar.module.scss";
@@ -56,12 +57,16 @@ export function Sidebar() {
     null,
   );
 
-  const user = useIdentityStore((state) => state.user);
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
+  const activeTenant = useTenantStore((state) => state.getActiveTenant());
 
   const subscription = useTenantSubscription();
 
-  const isPlatformAdmin = user?.role === "ADMIN";
+  const hasPlatformDashboardAccess = useHasPermission(
+    PLATFORM_PERMISSIONS.DASHBOARD_READ,
+  );
+  const canReadUsers = useHasPermission(PLATFORM_PERMISSIONS.USERS_READ);
+  const canManageBilling = useHasPermission(PLATFORM_PERMISSIONS.BILLING_MANAGE);
 
   /**
    * Resolve a visibilidade e o estado de cada módulo
@@ -73,7 +78,14 @@ export function Sidebar() {
       access: resolveModuleAccess(module, {
         subscription,
         hasActiveTenant: Boolean(activeTenantId),
-        isPlatformAdmin,
+        isPlatformAdmin:
+          module.code === "USERS"
+            ? canReadUsers
+            : module.code === "BILLING"
+              ? canManageBilling
+              : module.code === "NOTIFICATIONS"
+                ? hasPlatformDashboardAccess
+                : hasPlatformDashboardAccess,
       }),
     }))
     .filter(({ access }) => !HIDDEN_ACCESS_STATES.includes(access))
@@ -218,9 +230,11 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className={styles.subscription}>
-        <SubscriptionSummary collapsed={collapsed} />
-      </div>
+      {(!activeTenant || String(activeTenant.role).toUpperCase() === "OWNER") && (
+        <div className={styles.subscription}>
+          <SubscriptionSummary collapsed={collapsed} />
+        </div>
+      )}
 
       <ComingSoonFeedback
         moduleName={comingSoonModule}

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 import { UserRepository } from './domain/repositories/user.repository';
 import { PublicUserProvisioningRepository } from './domain/repositories/public-user-provisioning.repository';
 
@@ -39,6 +41,7 @@ import { PrismaPlatformAuthorizationRepository } from './infrastructure/reposito
 import { PlatformPermissionGuard } from './presentation/guards/platform-permission.guard';
 @Module({
   imports: [
+    NotificationsModule,
     PassportModule.register({
       defaultStrategy: 'jwt',
     }),

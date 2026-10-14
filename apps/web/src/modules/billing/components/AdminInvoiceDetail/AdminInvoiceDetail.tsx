@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { useState } from 'react';
 
-import { useAdminInvoice, useConfirmPayment } from "../../hooks/client";
+import Link from "next/link";
+import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
+
+import { useAdminInvoice, useCancelPayment, useConfirmPayment } from "../../hooks/client";
 import type { InvoiceStatus } from "../../types";
 import styles from "./AdminInvoiceDetail.module.scss";
 
@@ -59,6 +61,8 @@ function getPaymentStatusLabel(status: string): string {
       return "Pago";
     case "PENDING":
       return "Pendente";
+    case "PROCESSING":
+      return "Em processamento";
     case "EXPIRED":
       return "Expirado";
     case "CANCELLED":
@@ -73,12 +77,101 @@ function getPaymentStatusLabel(status: string): string {
 export function AdminInvoiceDetail({
   invoiceId,
 }: AdminInvoiceDetailProps) {
+
+  type CancellationReasonOption =
+    | 'Comprovante ilegível'
+    | 'Comprovante inválido'
+    | 'Pagamento não localizado'
+    | 'Valor do pagamento divergente'
+    | 'Pagamento duplicado'
+    | 'Outro motivo';
+
+  const CANCELLATION_REASONS: CancellationReasonOption[] = [
+    'Comprovante ilegível',
+    'Comprovante inválido',
+    'Pagamento não localizado',
+    'Valor do pagamento divergente',
+    'Pagamento duplicado',
+    'Outro motivo',
+  ];
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedCancellationReason, setSelectedCancellationReason] =
+    useState<CancellationReasonOption | ''>('');
+  const [cancellationDetails, setCancellationDetails] = useState('');
+  const [paymentToCancel, setPaymentToCancel] = useState<string | null>(null);
+  const [cancellationFormError, setCancellationFormError] = useState('');
+  const [isSubmittingCancellation, setIsSubmittingCancellation] =
+    useState(false);
+
   const { invoice, loading, error, reload } = useAdminInvoice(invoiceId);
   const {
     confirm,
     loading: confirmingPayment,
     error: confirmationError,
   } = useConfirmPayment();
+
+  const {
+    cancel,
+    loading: cancellingPayment,
+    error: cancellationError,
+  } = useCancelPayment();
+
+  function handleCancelPayment(paymentId: string) {
+    setPaymentToCancel(paymentId);
+    setSelectedCancellationReason('');
+    setCancellationDetails('');
+    setCancellationFormError('');
+    setCancelDialogOpen(true);
+  }
+
+  async function handleConfirmCancellation() {
+    if (!paymentToCancel || !selectedCancellationReason) {
+      setCancellationFormError('Selecione o motivo do cancelamento.');
+      return;
+    }
+
+    const reason =
+      selectedCancellationReason === 'Outro motivo'
+        ? cancellationDetails.trim()
+        : selectedCancellationReason;
+
+    if (reason.length < 5) {
+      setCancellationFormError('Informe uma justificativa com pelo menos 5 caracteres.');
+      return;
+    }
+
+    if (reason.length > 500) {
+      setCancellationFormError('A justificativa deve ter no máximo 500 caracteres.');
+      return;
+    }
+
+    setIsSubmittingCancellation(true);
+    setCancellationFormError('');
+
+    try {
+      const success = await cancel(paymentToCancel, reason);
+
+      if (!success) {
+        setCancellationFormError(
+          'Não foi possível cancelar o pagamento. Verifique o erro e tente novamente.',
+        );
+        return;
+      }
+
+      setCancelDialogOpen(false);
+      setPaymentToCancel(null);
+      setCancellationDetails('');
+      setSelectedCancellationReason('');
+      await reload();
+    } catch {
+      setCancellationFormError(
+        'Não foi possível cancelar o pagamento. Tente novamente.',
+      );
+    } finally {
+      setIsSubmittingCancellation(false);
+    }
+  }
 
   const handleConfirmPayment = async (paymentId: string) => {
     const confirmed = window.confirm(
@@ -130,7 +223,8 @@ export function AdminInvoiceDetail({
   const statusClass = statusClasses[invoice.status] ?? styles.statusPending;
 
   return (
-    <section className={styles.page}>
+    <>
+      <section className={styles.page}>
       <header className={styles.header}>
         <Link href="/admin/billing/invoices" className={styles.backLink}>
           <ArrowLeft size={18} />
@@ -180,7 +274,7 @@ export function AdminInvoiceDetail({
         </article>
 
         <article className={styles.summaryCard}>
-          <span className={styles.cardLabel}>Tenant</span>
+          <span className={styles.cardLabel}>Espaço</span>
           <strong>{invoice.tenant.name}</strong>
           <span className={styles.cardMeta}>
             {invoice.tenant.slug}
@@ -284,7 +378,7 @@ export function AdminInvoiceDetail({
             </div>
 
             <div>
-              <dt>ID do Tenant</dt>
+              <dt>ID do espaço</dt>
               <dd className={styles.mono}>{invoice.tenantId}</dd>
             </div>
 
@@ -344,6 +438,12 @@ export function AdminInvoiceDetail({
           </div>
         )}
 
+        {cancellationError && (
+          <div className={styles.cancellationError} role="alert">
+            {cancellationError}
+          </div>
+        )}
+
         {invoice.payments.length === 0 ? (
           <div className={styles.empty}>
             Nenhum pagamento registrado para esta fatura.
@@ -352,59 +452,187 @@ export function AdminInvoiceDetail({
           <div className={styles.paymentList}>
             {invoice.payments.map((payment) => (
               <div key={payment.id} className={styles.paymentRow}>
-                <div className={styles.paymentMain}>
-                  <strong>{payment.reference}</strong>
-                  <span>
-                    {payment.method} ·{" "}
-                    {payment.provider ?? "Sem provedor"}
-                  </span>
-                </div>
-
-                <div className={styles.paymentAmount}>
-                  <strong>
-                    {formatCurrency(
-                      payment.amount,
-                      payment.currency,
+                  <div className={styles.paymentMain}>
+                    <strong>{payment.reference}</strong>
+                    <span>
+                      {payment.method === "PIX"
+                        ? "PIX"
+                        : payment.method === "BANK_SLIP"
+                          ? "Boleto bancário"
+                          : payment.method}
+                      {" · "}
+                      {payment.provider ?? "Sem provedor"}
+                    </span>
+                    <span>
+                      Tentativa criada em: {formatDateTime(payment.createdAt)}
+                    </span>
+                    {payment.expiresAt && (
+                      <span>
+                        Expira em: {formatDateTime(payment.expiresAt)}
+                      </span>
                     )}
-                  </strong>
-                  <span>
-                    {getPaymentStatusLabel(payment.status)}
-                  </span>
-                </div>
-
-                <div className={styles.paymentDate}>
-                  <span>Pago em</span>
-                  <strong>{formatDateTime(payment.paidAt)}</strong>
-                </div>
-
-                {payment.status === "PENDING" && (
-                  <button
-                    type="button"
-                    className={styles.confirmButton}
-                    onClick={() => void handleConfirmPayment(payment.id)}
-                    disabled={confirmingPayment}
-                  >
-                    {confirmingPayment ? (
-                      <>
-                        <Loader2
-                          size={15}
-                          className={styles.spinner}
-                        />
-                        Confirmando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 size={15} />
-                        Confirmar pagamento
-                      </>
+                    {payment.providerPaymentId && (
+                      <span>
+                        ID no provedor: {payment.providerPaymentId}
+                      </span>
                     )}
-                  </button>
-                )}
-              </div>
+                    {payment.externalReference && (
+                      <span>
+                        Referência externa: {payment.externalReference}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.paymentAmount}>
+                    <strong>
+                      {formatCurrency(payment.amount, payment.currency)}
+                    </strong>
+                    <span>{getPaymentStatusLabel(payment.status)}</span>
+                  </div>
+
+                  <div className={styles.paymentDate}>
+                    <span>Pago em</span>
+                    <strong>{formatDateTime(payment.paidAt)}</strong>
+                  </div>
+
+                  <div className={styles.paymentActions}>
+                    {payment.status === "PENDING" && (
+                      <button
+                        type="button"
+                        className={styles.confirmButton}
+                        onClick={() => void handleConfirmPayment(payment.id)}
+                        disabled={confirmingPayment || cancellingPayment}
+                      >
+                        {confirmingPayment ? (
+                          <>
+                            <Loader2 size={15} className={styles.spinner} />
+                            Confirmando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={15} />
+                            Confirmar pagamento
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {(payment.status === "PENDING" ||
+                      payment.status === "PROCESSING") && (
+                      <button
+                        type="button"
+                        className={styles.cancelButton}
+                        onClick={() => void handleCancelPayment(payment.id)}
+                        disabled={confirmingPayment || cancellingPayment}
+                      >
+                        {cancellingPayment ? (
+                          <>
+                            <Loader2 size={15} className={styles.spinner} />
+                            Cancelando...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle size={15} />
+                            Cancelar pagamento
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
             ))}
           </div>
         )}
       </article>
     </section>
+
+      {cancelDialogOpen && (
+        <div className={styles.cancelDialogOverlay}>
+          <section
+            className={styles.cancelDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-payment-title"
+          >
+            <h2 id="cancel-payment-title">
+              Cancelar tentativa de pagamento
+            </h2>
+
+            <p>
+              O cancelamento afeta somente esta tentativa de pagamento,
+              não a fatura, a parcela ou a assinatura.
+            </p>
+
+            <label htmlFor="cancellation-reason">
+              Motivo do cancelamento
+            </label>
+
+            <select
+              id="cancellation-reason"
+              className={styles.cancelReasonSelect}
+              value={selectedCancellationReason}
+              onChange={(event) =>
+                setSelectedCancellationReason(
+                  event.target.value as CancellationReasonOption | '',
+                )
+              }
+              disabled={isSubmittingCancellation}
+            >
+              <option value="">Selecione um motivo</option>
+              {CANCELLATION_REASONS.map((reason) => (
+                <option key={reason} value={reason}>
+                  {reason}
+                </option>
+              ))}
+            </select>
+
+            {selectedCancellationReason === 'Outro motivo' && (
+              <div className={styles.cancelDetailsField}>
+                <label htmlFor="cancellation-details">
+                  Descreva o motivo
+                </label>
+                <textarea
+                  id="cancellation-details"
+                  value={cancellationDetails}
+                  onChange={(event) => setCancellationDetails(event.target.value)}
+                  placeholder="Explique por que o pagamento foi cancelado..."
+                  minLength={5}
+                  maxLength={500}
+                  rows={4}
+                  disabled={isSubmittingCancellation}
+                />
+                <small>{cancellationDetails.length}/500 caracteres</small>
+              </div>
+            )}
+
+            {cancellationFormError && (
+              <p className={styles.cancelError} role="alert">
+                {cancellationFormError}
+              </p>
+            )}
+
+            <div className={styles.cancelDialogActions}>
+              <button
+                type="button"
+                className={styles.cancelSecondaryButton}
+                onClick={() => setCancelDialogOpen(false)}
+                disabled={isSubmittingCancellation}
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                className={styles.cancelConfirmButton}
+                onClick={handleConfirmCancellation}
+                disabled={isSubmittingCancellation || !selectedCancellationReason}
+              >
+                {isSubmittingCancellation ? 'Cancelando...' : 'Confirmar cancelamento'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+    </>
   );
 }

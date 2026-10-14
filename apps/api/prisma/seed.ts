@@ -90,6 +90,11 @@ const permissions = [
     'Gerenciar cobrança',
     'Permite administrar cobranças.',
   ],
+  [
+    'DASHBOARD_READ',
+    'Visualizar dashboard administrativo',
+    'Permite visualizar o dashboard administrativo da plataforma.',
+  ],
 ] as const;
 
 const roles = [
@@ -108,13 +113,18 @@ const roles = [
       'USERS_UPDATE',
       'TENANTS_READ',
       'TENANTS_UPDATE',
+      'DASHBOARD_READ',
     ],
   },
   {
     code: 'PLATFORM_SUPPORT',
     name: 'Suporte da Plataforma',
     description: 'Responsável pelo atendimento e suporte aos usuários.',
-    permissions: ['USERS_READ', 'TENANTS_READ'],
+    permissions: [
+      'USERS_READ',
+      'TENANTS_READ',
+      'DASHBOARD_READ',
+    ],
   },
   {
     code: 'PLATFORM_BILLING',
@@ -149,88 +159,99 @@ const plans = [
     code: 'TRIAL',
     description:
       'Período gratuito para conhecer os principais recursos do CCPF.',
-    price: '0.00',
-    currency: 'BRL',
-    billingInterval: 'MONTHLY' as const,
     maxUsers: 2,
     isPublic: true,
     isActive: true,
+    prices: [],
     features: [
-      'DOMESTIC',
-      'HEALTH',
-      'TRANSPORT',
-      'VEHICLES',
-      'OTHER',
-      'BASIC_REPORTS',
-    ] as PlanFeatureCode[],
+      PlanFeatureCode.DOMESTIC,
+      PlanFeatureCode.HEALTH,
+      PlanFeatureCode.TRANSPORT,
+      PlanFeatureCode.VEHICLES,
+      PlanFeatureCode.INVESTMENTS,
+      PlanFeatureCode.OTHER,
+      PlanFeatureCode.BASIC_REPORTS,
+    ],
   },
   {
     name: 'Plano Básico',
     code: 'BASIC',
-    description:
-      'Plano para controle financeiro pessoal e familiar com os recursos essenciais.',
-    price: '19.90',
-    currency: 'BRL',
-    billingInterval: 'MONTHLY' as const,
+    description: 'Plano para uso pessoal e pequenos controles financeiros.',
     maxUsers: 3,
     isPublic: true,
     isActive: true,
+    prices: [
+      { interval: 'SEMESTERLY', amount: '119.40', currency: 'BRL' },
+      { interval: 'YEARLY', amount: '238.80', currency: 'BRL' },
+      { interval: 'LIFETIME', amount: '716.40', currency: 'BRL' },
+    ],
     features: [
-      'DOMESTIC',
-      'HEALTH',
-      'TRANSPORT',
-      'VEHICLES',
-      'OTHER',
-      'BASIC_REPORTS',
-    ] as PlanFeatureCode[],
+      PlanFeatureCode.DOMESTIC,
+      PlanFeatureCode.BASIC_REPORTS,
+    ],
   },
   {
     name: 'Plano Pro',
     code: 'PRO',
-    description:
-      'Plano para usuários que precisam de maior controle financeiro e recursos avançados.',
-    price: '39.90',
-    currency: 'BRL',
-    billingInterval: 'MONTHLY' as const,
+    description: 'Plano intermediário para usuários com necessidades maiores.',
     maxUsers: 5,
     isPublic: true,
     isActive: true,
+    prices: [
+      { interval: 'SEMESTERLY', amount: '239.40', currency: 'BRL' },
+      { interval: 'YEARLY', amount: '478.80', currency: 'BRL' },
+      { interval: 'LIFETIME', amount: '1436.40', currency: 'BRL' },
+    ],
     features: [
-      'DOMESTIC',
-      'HEALTH',
-      'TRANSPORT',
-      'VEHICLES',
-      'INVESTMENTS',
-      'OTHER',
-      'BASIC_REPORTS',
-      'ADVANCED_REPORTS',
-    ] as PlanFeatureCode[],
+      PlanFeatureCode.DOMESTIC,
+      PlanFeatureCode.HEALTH,
+      PlanFeatureCode.TRANSPORT,
+      PlanFeatureCode.VEHICLES,
+      PlanFeatureCode.BASIC_REPORTS,
+      PlanFeatureCode.ADVANCED_REPORTS,
+    ],
   },
   {
     name: 'Plano Premium',
     code: 'PREMIUM',
-    description:
-      'Plano completo para famílias e grupos que precisam de maior capacidade e recursos avançados.',
-    price: '69.90',
-    currency: 'BRL',
-    billingInterval: 'MONTHLY' as const,
+    description: 'Plano completo com todos os recursos comerciais.',
     maxUsers: 10,
     isPublic: true,
     isActive: true,
-    features: allFeatures,
+    prices: [
+      { interval: 'SEMESTERLY', amount: '419.40', currency: 'BRL' },
+      { interval: 'YEARLY', amount: '838.80', currency: 'BRL' },
+      { interval: 'LIFETIME', amount: '2516.40', currency: 'BRL' },
+    ],
+    features: [
+      PlanFeatureCode.DOMESTIC,
+      PlanFeatureCode.HEALTH,
+      PlanFeatureCode.TRANSPORT,
+      PlanFeatureCode.VEHICLES,
+      PlanFeatureCode.INVESTMENTS,
+      PlanFeatureCode.OTHER,
+      PlanFeatureCode.BASIC_REPORTS,
+      PlanFeatureCode.ADVANCED_REPORTS,
+    ],
   },
   {
     name: 'System Owner',
     code: 'SYSTEM_OWNER',
-    description:
-      'Plano interno reservado para administração da plataforma CCPF.',
-    price: '0.00',
-    currency: 'BRL',
-    billingInterval: 'MONTHLY' as const,
+    description: 'Plano interno reservado à plataforma.',
     maxUsers: -1,
     isPublic: false,
     isActive: true,
-    features: allFeatures,
+    prices: [],
+    features: [
+      PlanFeatureCode.DOMESTIC,
+      PlanFeatureCode.HEALTH,
+      PlanFeatureCode.TRANSPORT,
+      PlanFeatureCode.VEHICLES,
+      PlanFeatureCode.INVESTMENTS,
+      PlanFeatureCode.OTHER,
+      PlanFeatureCode.BASIC_REPORTS,
+      PlanFeatureCode.ADVANCED_REPORTS,
+    ],
   },
 ] as const;
 
@@ -276,6 +297,20 @@ async function seedRoles() {
       },
     });
 
+    /**
+     * Sincroniza as permissões da role.
+     *
+     * O seed é a fonte de verdade para as roles sistêmicas.
+     * Por isso, removemos as associações atuais antes de recriá-las.
+     * Dessa forma, permissões removidas da definição também são
+     * removidas do banco em execuções posteriores do seed.
+     */
+    await prisma.platformRolePermission.deleteMany({
+      where: {
+        roleId: role.id,
+      },
+    });
+
     for (const permissionCode of roleDefinition.permissions) {
       const permission = await prisma.platformPermission.findUnique({
         where: {
@@ -289,15 +324,8 @@ async function seedRoles() {
         );
       }
 
-      await prisma.platformRolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: role.id,
-            permissionId: permission.id,
-          },
-        },
-        update: {},
-        create: {
+      await prisma.platformRolePermission.create({
+        data: {
           roleId: role.id,
           permissionId: permission.id,
         },
@@ -373,9 +401,6 @@ async function seedPlans() {
       update: {
         name: planDefinition.name,
         description: planDefinition.description,
-        price: planDefinition.price,
-        currency: planDefinition.currency,
-        billingInterval: planDefinition.billingInterval,
         maxUsers: planDefinition.maxUsers,
         isPublic: planDefinition.isPublic,
         isActive: planDefinition.isActive,
@@ -384,14 +409,29 @@ async function seedPlans() {
         name: planDefinition.name,
         code: planDefinition.code,
         description: planDefinition.description,
-        price: planDefinition.price,
-        currency: planDefinition.currency,
-        billingInterval: planDefinition.billingInterval,
         maxUsers: planDefinition.maxUsers,
         isPublic: planDefinition.isPublic,
         isActive: planDefinition.isActive,
       },
     });
+
+    await prisma.planPrice.deleteMany({
+      where: {
+        planId: plan.id,
+      },
+    });
+
+    if (planDefinition.prices?.length) {
+      await prisma.planPrice.createMany({
+        data: planDefinition.prices.map((price) => ({
+          planId: plan.id,
+          interval: price.interval,
+          amount: price.amount,
+          currency: price.currency,
+          isActive: true,
+        })),
+      });
+    }
 
     await prisma.planFeature.deleteMany({
       where: {

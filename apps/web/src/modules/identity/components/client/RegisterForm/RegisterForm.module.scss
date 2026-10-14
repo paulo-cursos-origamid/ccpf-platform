@@ -168,11 +168,11 @@
 
   padding: var(--spacing-md) var(--spacing-lg);
 
-  border: 1px solid var(--border-danger);
+  border: 1px solid var(--danger);
   border-radius: var(--radius-md);
 
-  background: var(--surface-danger);
-  color: var(--text-danger);
+  background: var(--danger-soft);
+  color: var(--text-error);
 
   font-size: var(--font-sm);
   line-height: var(--line-height-normal);
@@ -234,7 +234,7 @@
 
   margin-top: var(--spacing-xl);
 
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 
   font-size: var(--font-xs);
   text-align: center;
@@ -321,7 +321,7 @@
 .verifyButton {
   width: 100%;
 
-  min-height: var(--control-height);
+  min-height: var(--control-height-md);
 
   display: flex;
   align-items: center;
@@ -366,6 +366,28 @@
 /* ==========================================================
    RESPONSIVE
 ========================================================== */
+
+
+.installmentField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.installmentLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+
+
+.installmentHint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, #6b7280);
+}
 
 @media (max-width: 600px) {
   .container {
@@ -412,4 +434,208 @@
 
     border-radius: 18px;
   }
+}
+
+/* ==========================================================
+   COMMERCIAL PRICING
+========================================================== */
+
+.pricingFieldset {
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+}
+
+.pricingLegend {
+  margin-bottom: var(--spacing-sm);
+
+  color: var(--text-primary);
+
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.priceOptions {
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--spacing-sm);
+}
+
+.priceOption {
+  position: relative;
+
+  min-height: 64px;
+
+  display: flex;
+  align-items: center;
+
+  padding: var(--spacing-md) var(--spacing-lg);
+
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+
+  background: var(--surface-card);
+
+  cursor: pointer;
+
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.priceOption:hover {
+  border-color: var(--accent-primary);
+
+  background:
+    rgba(var(--accent-primary-rgb), 0.04);
+
+  transform: translateY(-1px);
+}
+
+.priceOption input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+.priceOptionSelected {
+  border-color: var(--accent-primary);
+
+  background:
+    rgba(var(--accent-primary-rgb), 0.07);
+
+  box-shadow:
+    0 0 0 1px
+      rgba(var(--accent-primary-rgb), 0.12);
+}
+
+.radioIndicator {
+  width: 20px;
+  height: 20px;
+
+  flex: 0 0 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-right: var(--spacing-md);
+
+  border: 2px solid var(--border-primary);
+  border-radius: 50%;
+
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.priceOptionSelected .radioIndicator {
+  border-color: var(--accent-primary);
+
+  background:
+    radial-gradient(
+      circle,
+      var(--accent-primary) 0 5px,
+      transparent 6px
+    );
+}
+
+.priceContent {
+  min-width: 0;
+
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: var(--spacing-md);
+}
+
+.priceInterval {
+  color: var(--text-primary);
+
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.priceValue {
+  color: var(--accent-primary);
+
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+
+  text-align: right;
+}
+
+.trialNotice {
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--spacing-xs);
+
+  padding: var(--spacing-md) var(--spacing-lg);
+
+  border: 1px solid
+    rgba(var(--accent-primary-rgb), 0.2);
+  border-radius: var(--radius-md);
+
+  background:
+    rgba(var(--accent-primary-rgb), 0.06);
+
+  color: var(--text-secondary);
+
+  font-size: var(--font-sm);
+  line-height: var(--line-height-normal);
+}
+
+.trialNotice strong {
+  color: var(--accent-primary);
+
+  font-size: var(--font-md);
+}
+
+@media (max-width: 600px) {
+  .priceContent {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: var(--spacing-xs);
+  }
+
+  .priceValue {
+    text-align: left;
+  }
+}
+
+.billingDayField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.billingDayLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+
+
+.billingDayHint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted, #6b7280);
 }

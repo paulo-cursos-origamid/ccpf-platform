@@ -91,6 +91,8 @@ export class IdentityController {
    * Cria um novo usuário.
    */
   @Post('users')
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
+  @RequirePlatformPermission('USERS_CREATE')
   @ApiOperation({
     summary: 'Criar usuário',
     description:
@@ -119,6 +121,7 @@ export class IdentityController {
       name: dto.name,
       email: dto.email,
       password: dto.password,
+      role: dto.role,
     });
   }
 
@@ -158,6 +161,9 @@ export class IdentityController {
       email: dto.email,
       password: dto.password,
       planCode: dto.planCode,
+      planPriceId: dto.planPriceId,
+      billingDay: dto.billingDay,
+      installmentCount: dto.installmentCount,
     });
   }
 

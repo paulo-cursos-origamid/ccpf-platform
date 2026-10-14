@@ -1,423 +1,433 @@
 "use client";
 
-import {
-  FormEvent,
-  useState,
-} from "react";
+import Image from "next/image";
+import { useCallback, useState } from "react";
+import QRCode from "qrcode";
 
-import { CreditCard } from "@/components/icons";
-
-import { useCreateInvoicePayment } from "../../hooks";
+import { useCreateInvoicePayment } from "../../hooks/client/useCreateInvoicePayment";
 import type {
+  Invoice,
+  InvoiceInstallment,
+  Payment,
   PaymentMethod,
 } from "../../types";
 
 import styles from "./InvoicePayment.module.scss";
 
+import { Select } from "@/components/ui/forms/Select";
 interface InvoicePaymentProps {
-  invoiceId: string;
-  amount: number;
-  currency: string;
+  invoice: Invoice;
 }
 
-/**
- * Permite ao Tenant OWNER registrar uma tentativa de pagamento
- * para uma fatura pendente ou vencida.
- *
- * O backend continua responsável por validar a autorização,
- * o estado da fatura e os dados obrigatórios de cada método.
- */
-export function InvoicePayment({
-  invoiceId,
-  amount,
-  currency,
-}: InvoicePaymentProps) {
-  const {
-    payment,
-    loading,
-    error,
-    createPayment,
-    clearPayment,
-  } = useCreateInvoicePayment();
+export function InvoicePayment({ invoice }: InvoicePaymentProps) {
+  const { payment, loading, error, createPayment, clearPayment } =
+    useCreateInvoicePayment();
 
-  const [method, setMethod] =
-    useState<PaymentMethod>("PIX");
-  const [pixCopyPaste, setPixCopyPaste] =
-    useState("");
-  const [bankSlipCode, setBankSlipCode] =
-    useState("");
+  const [method, setMethod] = useState<PaymentMethod>("PIX");
+  const [selectedInstallmentId, setSelectedInstallmentId] = useState("");
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
+  // Somente parcelas em aberto podem iniciar uma tentativa de pagamento.
+  const payableInstallments = (invoice.installments ?? []).filter(
+    (installment) =>
+      installment.status === "PENDING" || installment.status === "OVERDUE",
+  );
+  const selectedInstallment: InvoiceInstallment | undefined =
+    payableInstallments.find(
+      (installment) => installment.id === selectedInstallmentId,
+    ) ?? payableInstallments[0];
 
-    const input =
-      method === "PIX"
-        ? {
-            method,
-            pixCopyPaste: pixCopyPaste.trim(),
-          }
-        : {
-            method,
-            bankSlipBarcode: bankSlipCode.trim(),
-          };
+  const formatCurrency = useCallback(
+    (amount: number, currency: string) =>
+      new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency,
+      }).format(amount),
+    [],
+  );
 
-    const createdPayment = await createPayment(
-      invoiceId,
-      input,
-    );
+  const formatDate = useCallback((value: string | null) => {
+    if (!value) {
+      return "—";
+    }
+
+    return new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }, []);
+
+  const handleCreatePayment = async () => {
+    setLocalError(null);
+    setCopied(false);
+    setQrCode(null);
+
+    if (!selectedInstallment) {
+      setLocalError("Esta fatura não possui parcelas em aberto para pagamento.");
+      return;
+    }
+
+    const input = {
+      installmentId: selectedInstallment.id,
+      method,
+      externalReference: `CCPF-${invoice.number}-${selectedInstallment.number}`,
+      metadata: {
+        invoiceNumber: invoice.number,
+        installmentNumber: selectedInstallment.number,
+      },
+    };
+
+    const createdPayment = await createPayment(invoice.id, input);
 
     if (!createdPayment) {
       return;
     }
 
-    setPixCopyPaste("");
-    setBankSlipCode("");
-  }
+    if (
+      createdPayment.method === "PIX" &&
+      createdPayment.pixCopyPaste
+    ) {
+      try {
+        const dataUrl = await QRCode.toDataURL(
+          createdPayment.pixCopyPaste,
+          {
+            width: 280,
+            margin: 2,
+            errorCorrectionLevel: "M",
+          },
+        );
 
-  const formattedAmount = formatCurrency(
-    amount,
-    currency,
-  );
+        setQrCode(dataUrl);
+      } catch {
+        setLocalError(
+          "O pagamento foi criado, mas não foi possível gerar o QR Code.",
+        );
+      }
+    }
+  };
+
+  const handleCopyPix = async () => {
+    const value = payment?.pixCopyPaste;
+
+    if (!value) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+    } catch {
+      setLocalError(
+        "Não foi possível copiar o código Pix automaticamente.",
+      );
+    }
+  };
+
+  const handleNewPaymentAttempt = () => {
+    clearPayment();
+    setQrCode(null);
+    setCopied(false);
+    setLocalError(null);
+  };
+
+  const paymentMethodLabel =
+    payment?.method === "PIX" ? "Pix" : "Boleto bancário";
 
   return (
-    <section className={styles.section}>
-      <header className={styles.header}>
-        <div className={styles.titleGroup}>
-          <div className={styles.icon}>
-            <CreditCard size={19} />
-          </div>
-
-          <div>
-            <span className={styles.eyebrow}>
-              Pagamento
-            </span>
-
-            <h2>Registrar pagamento</h2>
-
-            <p>
-              Crie uma tentativa de pagamento no valor de{" "}
-              <strong>{formattedAmount}</strong>.
-            </p>
-          </div>
+    <section className={styles.container}>
+      <div className={styles.header}>
+        <div>
+          <span className={styles.eyebrow}>Pagamento</span>
+          <h2 className={styles.title}>Pagar fatura</h2>
         </div>
-      </header>
 
-      {payment ? (
-        <div className={styles.createdState}>
-          <div className={styles.createdHeader}>
-            <div>
-              <span className={styles.eyebrow}>
-                Tentativa criada
-              </span>
+        <span className={styles.amount}>
+          {formatCurrency(
+            selectedInstallment?.amount ?? invoice.amount,
+            selectedInstallment?.currency ?? invoice.currency,
+          )}
+        </span>
+      </div>
 
-              <h3>Pagamento registrado</h3>
+      {!payment ? (
+        <>
+          {payableInstallments.length > 0 && (
+            <div className={styles.formGroup}>
+              <label htmlFor="invoice-installment">Parcela a pagar</label>
+              <Select
+                id="invoice-installment"
+                value={selectedInstallment?.id ?? ""}
+                onChange={(event) => setSelectedInstallmentId(event.target.value)}
+                disabled={loading}
+              >
+                {payableInstallments.map((installment) => (
+                  <option key={installment.id} value={installment.id}>
+                    Parcela {installment.number}/{installment.totalCount} — {formatCurrency(installment.amount, installment.currency)}
+                  </option>
+                ))}
+              </Select>
             </div>
+          )}
 
-            <span className={styles.paymentStatus}>
-              {formatPaymentStatus(payment.status)}
-            </span>
-          </div>
+          {!selectedInstallment && (
+            <div className={styles.notice} role="status">
+              Esta fatura não possui parcelas em aberto para pagamento.
+            </div>
+          )}
 
-          <div className={styles.paymentGrid}>
-            <PaymentItem
-              label="Referência"
-              value={payment.reference}
-              monospace
-            />
-
-            <PaymentItem
-              label="Método"
-              value={formatPaymentMethod(payment.method)}
-            />
-
-            <PaymentItem
-              label="Valor"
-              value={formatCurrency(
-                payment.amount,
-                payment.currency,
-              )}
-            />
-
-            <PaymentItem
-              label="Criado em"
-              value={formatDateTime(
-                payment.createdAt,
-              )}
-            />
-          </div>
-
-          {payment.method === "PIX" &&
-          payment.pixCopyPaste ? (
-            <PaymentCode
-              label="PIX Copia e Cola"
-              value={payment.pixCopyPaste}
-            />
-          ) : null}
-
-          {payment.method === "BANK_SLIP" &&
-          payment.bankSlipBarcode ? (
-            <PaymentCode
-              label="Código de barras"
-              value={payment.bankSlipBarcode}
-            />
-          ) : null}
-
-          {payment.method === "BANK_SLIP" &&
-          payment.bankSlipDigitableLine ? (
-            <PaymentCode
-              label="Linha digitável"
-              value={payment.bankSlipDigitableLine}
-            />
-          ) : null}
-
-          <div className={styles.createdActions}>
+          <div className={styles.methodSelector}>
             <button
               type="button"
-              className={styles.secondaryButton}
-              onClick={clearPayment}
+              className={`${styles.methodButton} ${
+                method === "PIX" ? styles.methodButtonActive : ""
+              }`}
+              onClick={() => {
+                setMethod("PIX");
+                setLocalError(null);
+              }}
+              disabled={loading}
             >
-              Criar outra tentativa
+              <span className={styles.methodTitle}>Pix</span>
+              <span className={styles.methodDescription}>
+                Pagamento instantâneo
+              </span>
             </button>
-          </div>
-        </div>
-      ) : (
-        <form
-          className={styles.form}
-          onSubmit={handleSubmit}
-        >
-          <div className={styles.methodField}>
-            <span className={styles.fieldLabel}>
-              Método de pagamento
-            </span>
 
-            <div className={styles.methodOptions}>
-              <label
-                className={`${styles.methodOption} ${
-                  method === "PIX"
-                    ? styles.methodOptionActive
-                    : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="payment-method"
-                  value="PIX"
-                  checked={method === "PIX"}
-                  onChange={() => setMethod("PIX")}
-                  disabled={loading}
-                />
-
-                <span>
-                  <strong>PIX</strong>
-                  <small>
-                    Informe o código Copia e Cola.
-                  </small>
-                </span>
-              </label>
-
-              <label
-                className={`${styles.methodOption} ${
-                  method === "BANK_SLIP"
-                    ? styles.methodOptionActive
-                    : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="payment-method"
-                  value="BANK_SLIP"
-                  checked={method === "BANK_SLIP"}
-                  onChange={() =>
-                    setMethod("BANK_SLIP")
-                  }
-                  disabled={loading}
-                />
-
-                <span>
-                  <strong>Boleto</strong>
-                  <small>
-                    Informe o código de barras ou linha
-                    digitável.
-                  </small>
-                </span>
-              </label>
-            </div>
+            <button
+              type="button"
+              className={`${styles.methodButton} ${
+                method === "BANK_SLIP"
+                  ? styles.methodButtonActive
+                  : ""
+              }`}
+              onClick={() => {
+                setMethod("BANK_SLIP");
+                setLocalError(null);
+              }}
+              disabled={loading}
+            >
+              <span className={styles.methodTitle}>Boleto</span>
+              <span className={styles.methodDescription}>
+                Boleto bancário de teste
+              </span>
+            </button>
           </div>
 
           {method === "PIX" ? (
-            <label className={styles.inputField}>
-              <span className={styles.fieldLabel}>
-                PIX Copia e Cola
-              </span>
+            <div className={styles.formGroup}>
+              <label>Pagamento via Pix</label>
 
-              <textarea
-                value={pixCopyPaste}
-                onChange={(event) =>
-                  setPixCopyPaste(event.target.value)
-                }
-                placeholder="Cole aqui o código PIX"
-                rows={4}
-                disabled={loading}
-                required
-              />
-
-              <small>
-                O código será enviado ao sistema para
-                registrar a tentativa de pagamento.
-              </small>
-            </label>
+              <p className={styles.helper}>
+                O backend irá gerar os dados do Pix para a parcela selecionada e exibirá o QR Code após criar a tentativa.
+              </p>
+            </div>
           ) : (
-            <label className={styles.inputField}>
-              <span className={styles.fieldLabel}>
-                Código de barras ou linha digitável
-              </span>
+            <div className={styles.formGroup}>
+              <label>Boleto bancário</label>
 
-              <input
-                type="text"
-                value={bankSlipCode}
-                onChange={(event) =>
-                  setBankSlipCode(event.target.value)
-                }
-                placeholder="Digite ou cole o código"
-                disabled={loading}
-                required
-              />
-
-              <small>
-                Informe pelo menos um dos códigos exigidos
-                para o boleto.
-              </small>
-            </label>
+              <p className={styles.helper}>
+                O backend irá gerar os dados do boleto para a parcela selecionada após criar a tentativa.
+              </p>
+            </div>
           )}
 
-          {error ? (
-            <div className={styles.feedbackError}>
-              <strong>
-                Não foi possível criar o pagamento.
-              </strong>
-
-              <span>{error}</span>
+          {(localError || error) && (
+            <div className={styles.error} role="alert">
+              {localError ?? error}
             </div>
-          ) : null}
+          )}
 
-          <div className={styles.formFooter}>
-            <span>
-              O pagamento será criado com status
-              <strong> Pendente</strong>.
-            </span>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={handleCreatePayment}
+            disabled={loading || !selectedInstallment}
+          >
+            {loading
+              ? "Criando pagamento..."
+              : method === "PIX"
+                ? "Gerar Pix de teste"
+                : "Gerar boleto de teste"}
+          </button>
 
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={loading}
-            >
-              {loading
-                ? "Registrando..."
-                : "Registrar pagamento"}
-            </button>
-          </div>
-        </form>
+          <p className={styles.notice}>
+            Gerar o Pix ou boleto registra uma tentativa de pagamento. A fatura continuará <strong>pendente</strong> até que o pagamento seja validado e confirmado pela administração.
+          </p>
+        </>
+      ) : (
+        <PaymentCreated
+          payment={payment}
+          qrCode={qrCode}
+          copied={copied}
+          paymentMethodLabel={paymentMethodLabel}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+          onCopyPix={handleCopyPix}
+          onNewPaymentAttempt={handleNewPaymentAttempt}
+        />
       )}
     </section>
   );
 }
 
-interface PaymentItemProps {
-  label: string;
-  value: string;
-  monospace?: boolean;
+interface PaymentCreatedProps {
+  payment: Payment;
+  qrCode: string | null;
+  copied: boolean;
+  paymentMethodLabel: string;
+  formatCurrency: (amount: number, currency: string) => string;
+  formatDate: (value: string | null) => string;
+  onCopyPix: () => void;
+  onNewPaymentAttempt: () => void;
 }
 
-function PaymentItem({
-  label,
-  value,
-  monospace = false,
-}: PaymentItemProps) {
+/**
+ * Exibe os dados da tentativa criada pela API.
+ *
+ * A confirmação não é realizada aqui porque pertence ao fluxo
+ * administrativo da plataforma.
+ */
+function PaymentCreated({
+  payment,
+  qrCode,
+  copied,
+  paymentMethodLabel,
+  formatCurrency,
+  formatDate,
+  onCopyPix,
+  onNewPaymentAttempt,
+}: PaymentCreatedProps) {
   return (
-    <div className={styles.paymentItem}>
-      <span>{label}</span>
+    <div className={styles.result}>
+      <div className={styles.success}>
+        <strong>Pagamento criado</strong>
+        <span>
+          A tentativa foi registrada, mas isso ainda não significa que a fatura foi paga. A confirmação depende da administração.
+        </span>
+      </div>
 
-      <strong
-        className={
-          monospace ? styles.monospace : undefined
-        }
+      <div className={styles.referenceCard}>
+        <span className={styles.referenceLabel}>
+          Referência do pagamento
+        </span>
+
+        <strong className={styles.reference}>
+          {payment.reference}
+        </strong>
+
+        <span className={styles.referenceHint}>
+          Informe esta referência ao responsável pelo financeiro.
+        </span>
+      </div>
+
+      <div className={styles.summary}>
+        <div>
+          <span>Método</span>
+          <strong>{paymentMethodLabel}</strong>
+        </div>
+
+        <div>
+          <span>Valor</span>
+          <strong>
+            {formatCurrency(payment.amount, payment.currency)}
+          </strong>
+        </div>
+
+        <div>
+          <span>Status</span>
+          <strong className={styles.pending}>Pendente</strong>
+        </div>
+
+        <div>
+          <span>Criado em</span>
+          <strong>{formatDate(payment.createdAt)}</strong>
+        </div>
+      </div>
+
+      {payment.method === "PIX" && payment.pixCopyPaste && (
+        <div className={styles.paymentContent}>
+          <div className={styles.pixHeader}>
+            <div>
+              <h3>Pagamento via Pix</h3>
+              <p>
+                Escaneie o QR Code ou copie o código Pix copia e
+                cola.
+              </p>
+            </div>
+          </div>
+
+          {qrCode && (
+            <div className={styles.qrCodeWrapper}>
+              <Image
+                src={qrCode}
+                alt="QR Code para pagamento via Pix"
+                width={280}
+                height={280}
+                unoptimized
+              />
+            </div>
+          )}
+
+          <div className={styles.copyField}>
+            <textarea
+              value={payment.pixCopyPaste}
+              readOnly
+              rows={5}
+              aria-label="Código Pix copia e cola"
+            />
+
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={onCopyPix}
+            >
+              {copied ? "Código copiado" : "Copiar código Pix"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {payment.method === "BANK_SLIP" && (
+        <div className={styles.paymentContent}>
+          <h3>Boleto bancário de teste</h3>
+
+          {payment.bankSlipBarcode && (
+            <div className={styles.codeBlock}>
+              <span>Código de barras</span>
+              <code>{payment.bankSlipBarcode}</code>
+            </div>
+          )}
+
+          {payment.bankSlipDigitableLine && (
+            <div className={styles.codeBlock}>
+              <span>Linha digitável</span>
+              <code>{payment.bankSlipDigitableLine}</code>
+            </div>
+          )}
+
+          <p className={styles.notice}>
+            Este boleto é um instrumento de teste. A confirmação
+            ocorrerá somente através do painel administrativo.
+          </p>
+        </div>
+      )}
+
+      <div className={styles.pendingNotice}>
+        <strong>Aguardando confirmação</strong>
+        <span>
+          Esta tela não confirma o pagamento. A fatura só será considerada paga depois que a administração validar e confirmar o pagamento na plataforma.
+        </span>
+      </div>
+
+      <button
+        type="button"
+        className={styles.secondaryButton}
+        onClick={onNewPaymentAttempt}
       >
-        {value}
-      </strong>
+        Criar outra tentativa
+      </button>
     </div>
   );
-}
-
-function PaymentCode({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={styles.codeBlock}>
-      <span>{label}</span>
-
-      <code>{value}</code>
-    </div>
-  );
-}
-
-function formatPaymentMethod(
-  method: PaymentMethod,
-): string {
-  return method === "PIX" ? "PIX" : "Boleto";
-}
-
-function formatPaymentStatus(
-  status: string,
-): string {
-  switch (status) {
-    case "PENDING":
-      return "Pendente";
-    case "PROCESSING":
-      return "Processando";
-    case "PAID":
-      return "Pago";
-    case "FAILED":
-      return "Falhou";
-    case "REFUNDED":
-      return "Estornado";
-    case "CANCELLED":
-      return "Cancelado";
-    default:
-      return status;
-  }
-}
-
-function formatCurrency(
-  value: number,
-  currency: string,
-): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency,
-    }).format(value);
-  } catch {
-    return `${currency} ${value.toFixed(2)}`;
-  }
-}
-
-function formatDateTime(
-  date: string,
-): string {
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(parsedDate);
 }

@@ -1,163 +1,178 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
-import { PlanEntity } from '../../domain/entities/plan.entity';
-import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
-import { BillingInterval } from '../../domain/enums/billing-interval.enum';
-import { SubscriptionStatus } from '../../domain/enums/subscription-status.enum';
-import { PlanRepository } from '../../domain/repositories/plan.repository';
-import { SubscriptionRepository } from '../../domain/repositories/subscription.repository';
-import { SubscriptionLifecycleService } from '../services/subscription-lifecycle.service';
-import { CreateInvoiceUseCase } from './invoice/create-invoice.use-case';
+import { CreateNotificationsForPermissionUseCase } from '../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
+import { NotificationSeverity } from '../../../notifications/domain/enums/notification-severity.enum';
+import { NotificationType } from '../../../notifications/domain/enums/notification-type.enum';
 
-/**
- * Dados necessários para criar uma assinatura.
- */
+import { SubscriptionEntity } from '../../domain/entities/subscription.entity';
+import { SubscriptionStatus } from '../../domain/enums/subscription-status.enum';
+import { PlanPriceRepository } from '../../domain/repositories/plan-price.repository';
+import { PlanRepository } from '../../domain/repositories/plan.repository';
+import { BillingDateService } from '../../domain/services/billing-date.service';
+import { SubscriptionLifecycleApplicationService } from '../services/subscription-lifecycle-application.service';
+import { InvoiceCreationService } from '../services/invoice-creation.service';
+import { BillingUnitOfWork } from '../../domain/repositories/billing-unit-of-work';
+
 export interface CreateSubscriptionInput {
   tenantId: string;
+  userId: string;
   planCode: string;
+  planPriceId: string;
+  billingDay?: number;
+  installmentCount?: number;
 }
 
-/**
- * Caso de uso responsável pela criação de uma assinatura comercial.
- *
- * Regras principais:
- * - o plano precisa existir;
- * - o plano precisa estar ativo;
- * - o plano precisa estar disponível publicamente para contratação;
- * - o Tenant não pode possuir outra assinatura corrente;
- * - o plano TRIAL inicia como TRIALING;
- * - planos pagos iniciam como PENDING;
- * - planos pagos geram uma Invoice pendente para cobrança.
- *
- * O processamento do pagamento não pertence a este caso de uso.
- */
 @Injectable()
 export class CreateSubscriptionUseCase {
   constructor(
     private readonly planRepository: PlanRepository,
-    private readonly subscriptionRepository: SubscriptionRepository,
-    private readonly subscriptionLifecycleService: SubscriptionLifecycleService,
-    private readonly createInvoiceUseCase: CreateInvoiceUseCase,
+    private readonly planPriceRepository: PlanPriceRepository,
+    private readonly subscriptionLifecycleApplicationService: SubscriptionLifecycleApplicationService,
+    private readonly billingDateService: BillingDateService,
+    private readonly invoiceCreationService: InvoiceCreationService,
+    private readonly billingUnitOfWork: BillingUnitOfWork,
+    private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
 
   async execute(input: CreateSubscriptionInput): Promise<SubscriptionEntity> {
-    const plan = await this.planRepository.findByCode(input.planCode);
+    const planCode = input.planCode.trim().toUpperCase();
 
-    if (!plan) {
-      throw new NotFoundException('Plano não encontrado.');
-    }
+    const plan = await this.planRepository.findByCode(planCode);
 
-    if (!plan.isActive) {
-      throw new BadRequestException('O plano selecionado não está ativo.');
-    }
-
-    if (!plan.isPublic) {
+    if (!plan || !plan.isActive || !plan.isPublic) {
       throw new BadRequestException(
         'O plano selecionado não está disponível para contratação.',
       );
     }
 
-    const currentSubscription =
-      await this.subscriptionLifecycleService.resolveCurrent(input.tenantId);
+    const planPrice = await this.planPriceRepository.findById(
+      input.planPriceId,
+    );
 
-    if (currentSubscription) {
+    if (!planPrice || !planPrice.isActive || planPrice.planId !== plan.id) {
       throw new BadRequestException(
-        'O Tenant já possui uma assinatura vigente.',
+        'A modalidade comercial selecionada não pertence ao plano informado ou está indisponível.',
       );
     }
 
     const now = new Date();
     const isTrial = plan.code === 'TRIAL';
 
-    const currentPeriodStart = now;
-    const currentPeriodEnd = this.calculatePeriodEnd(now, plan);
-    const trialEndsAt = isTrial ? this.calculateTrialEnd(now) : null;
+    if (isTrial && planPrice.planId) {
+      throw new BadRequestException(
+        'O plano Trial não utiliza uma modalidade comercial paga.',
+      );
+    }
 
-    const status = isTrial
-      ? SubscriptionStatus.TRIALING
-      : SubscriptionStatus.PENDING;
+    const billingDay = isTrial
+      ? null
+      : this.billingDateService.validateBillingDayForInterval(
+          input.billingDay,
+          planPrice.interval,
+        );
+
+    const currentPeriodEnd =
+      this.billingDateService.calculatePeriodEnd(now, planPrice.interval) ??
+      now;
+
+    const nextBillingDate = this.billingDateService.calculateNextBillingDate(
+      now,
+      billingDay,
+      planPrice.interval,
+    );
+
+    const trialEndsAt = isTrial ? this.calculateTrialEnd(now) : null;
 
     const subscription = new SubscriptionEntity(
       randomUUID(),
       input.tenantId,
       plan.id,
-      status,
+      planPrice.id,
+      isTrial ? SubscriptionStatus.TRIALING : SubscriptionStatus.PENDING,
       now,
-      currentPeriodStart,
+      now,
       currentPeriodEnd,
+      billingDay,
+      nextBillingDate,
       trialEndsAt,
       null,
       now,
       now,
     );
 
-    try {
-      const createdSubscription =
-        await this.subscriptionRepository.create(subscription);
+    const persisted = await this.billingUnitOfWork.execute(async (context) => {
+      const {
+        subscriptionRepository,
+        invoiceRepository,
+        planRepository,
+        planPriceRepository,
+        invoiceInstallmentRepository,
+      } = context;
 
       /**
-       * Planos pagos geram imediatamente a obrigação financeira.
+       * Sincroniza o lifecycle dentro da mesma transação.
        *
-       * O plano TRIAL não gera Invoice porque não existe
-       * cobrança comercial durante o período gratuito.
+       * Isso permite que uma assinatura TRIALING já expirada
+       * seja marcada como EXPIRED antes de verificar se o Tenant
+       * possui uma assinatura corrente.
        */
-      if (!isTrial) {
-        await this.createInvoiceUseCase.execute({
-          subscriptionId: createdSubscription.id,
-        });
-      }
+      const current =
+        await this.subscriptionLifecycleApplicationService.synchronize(
+          input.tenantId,
+          context,
+          now,
+        );
 
-      return createdSubscription;
-    } catch (error) {
-      /**
-       * A verificação anterior é necessária para a experiência normal.
-       * A restrição do banco protege contra requisições concorrentes.
-       */
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException(
+      if (current) {
+        throw new BadRequestException(
           'O Tenant já possui uma assinatura vigente.',
         );
       }
 
-      throw error;
+      const createdSubscription =
+        await subscriptionRepository.create(subscription);
+
+      if (!isTrial) {
+        await this.invoiceCreationService.execute(
+          {
+            subscriptionId: createdSubscription.id,
+            installmentCount: input.installmentCount,
+          },
+          {
+            invoiceRepository,
+            planRepository,
+            planPriceRepository,
+            subscriptionRepository,
+            invoiceInstallmentRepository,
+          },
+        );
+      }
+
+      return createdSubscription;
+    });
+
+    try {
+      await this.createNotificationsForPermissionUseCase.execute({
+        permissionCode: 'USERS_READ',
+        type: NotificationType.SUBSCRIPTION_CREATED,
+        severity: NotificationSeverity.INFO,
+        title: 'Nova assinatura criada',
+        message: `Uma nova assinatura do plano ${plan.name} foi criada.`,
+        resourceType: 'SUBSCRIPTION',
+        resourceId: persisted.id,
+        deduplicationKey: `SUBSCRIPTION_CREATED:${persisted.id}`,
+      });
+    } catch {
+      // Notificações não podem invalidar a operação financeira concluída.
     }
+
+    return persisted;
   }
 
-  /**
-   * Calcula o final do período comercial conforme
-   * o intervalo de cobrança definido pelo plano.
-   */
-  private calculatePeriodEnd(start: Date, plan: PlanEntity): Date {
-    const end = new Date(start);
-
-    if (plan.billingInterval === BillingInterval.YEARLY) {
-      end.setFullYear(end.getFullYear() + 1);
-      return end;
-    }
-
-    end.setMonth(end.getMonth() + 1);
-
-    return end;
-  }
-
-  /**
-   * Calcula o término do período gratuito do plano TRIAL.
-   */
-  private calculateTrialEnd(start: Date): Date {
-    const trialEnd = new Date(start);
-
-    trialEnd.setDate(trialEnd.getDate() + 14);
-
-    return trialEnd;
+  private calculateTrialEnd(referenceDate: Date): Date {
+    const trialEndsAt = new Date(referenceDate);
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+    return trialEndsAt;
   }
 }

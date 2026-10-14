@@ -5,17 +5,26 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 
 import { PaymentMethod } from '../../domain/enums/payment-method.enum';
 
 /**
  * Dados recebidos pela API para criar uma tentativa
- * de pagamento de uma Invoice.
+ * de pagamento de uma parcela da Invoice.
  *
- * O invoiceId é obtido pela rota e não faz parte do body.
+ * O invoiceId é obtido pela rota.
+ * O valor e os instrumentos de pagamento são gerados pelo backend.
  */
 export class CreatePaymentDto {
+  @ApiProperty({
+    description: 'Identificador da parcela que será paga.',
+    example: '8b6c7d8e-1234-4567-8901-abcdef123456',
+  })
+  @IsUUID()
+  installmentId!: string;
+
   @ApiProperty({
     enum: PaymentMethod,
     example: PaymentMethod.PIX,
@@ -26,7 +35,8 @@ export class CreatePaymentDto {
 
   @ApiPropertyOptional({
     example: '2026-10-04T17:58:20.631Z',
-    description: 'Data de expiração da cobrança.',
+    description:
+      'Data de expiração da cobrança. Se omitida, utiliza o vencimento da parcela.',
   })
   @IsOptional()
   @IsISO8601()
@@ -39,30 +49,6 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   externalReference?: string;
-
-  @ApiPropertyOptional({
-    example: '00020126580014BR.GOV.BCB.PIX0136...',
-    description: 'Código PIX copia e cola.',
-  })
-  @IsOptional()
-  @IsString()
-  pixCopyPaste?: string;
-
-  @ApiPropertyOptional({
-    example: '00190500954014481606906809350314337370000000100',
-    description: 'Código de barras do boleto.',
-  })
-  @IsOptional()
-  @IsString()
-  bankSlipBarcode?: string;
-
-  @ApiPropertyOptional({
-    example: '00190.50095 40144.816069 06809.350314 3 37370000000100',
-    description: 'Linha digitável do boleto.',
-  })
-  @IsOptional()
-  @IsString()
-  bankSlipDigitableLine?: string;
 
   @ApiPropertyOptional({
     description: 'Metadados específicos do pagamento.',

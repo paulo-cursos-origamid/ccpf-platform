@@ -11,7 +11,7 @@
   color: var(--text-primary);
 
   font: inherit;
-  font-size: var(--font-size-md);
+  font-size: var(--font-md);
 
   outline: none;
 
@@ -21,7 +21,7 @@
     background var(--transition-fast);
 
   &::placeholder {
-    color: var(--text-tertiary);
+    color: var(--text-muted);
   }
 
   &:hover {
