@@ -6,25 +6,13 @@ import { persist } from "zustand/middleware";
 import type { Tenant } from "../types";
 
 interface TenantState {
-  // Lista de Tenants atualmente disponibilizada pelo backend.
   tenants: Tenant[];
-
-  // ID do Tenant atualmente selecionado.
   activeTenantId: string | null;
-
-  // Indica se os Tenants estão sendo carregados.
   loading: boolean;
-
-  // Substitui a lista de Tenants disponíveis.
   setTenants: (tenants: Tenant[]) => void;
-
-  // Define manualmente o Tenant ativo.
   setActiveTenantId: (tenantId: string) => void;
-
-  // Limpa o contexto de Tenant, utilizado principalmente no logout.
+  setLoading: (loading: boolean) => void;
   clear: () => void;
-
-  // Retorna o Tenant atualmente ativo.
   getActiveTenant: () => Tenant | null;
 }
 
@@ -48,6 +36,7 @@ export const useTenantStore = create<TenantState>()(
           return {
             tenants,
             activeTenantId: nextActiveTenantId,
+            loading: false,
           };
         });
       },
@@ -58,23 +47,22 @@ export const useTenantStore = create<TenantState>()(
             (tenant) => tenant.id === tenantId,
           );
 
-          if (!tenantExists) {
+          if (!tenantExists || state.activeTenantId === tenantId) {
             return state;
           }
 
-          return {
-            activeTenantId: tenantId,
-          };
+          return { activeTenantId: tenantId };
         });
       },
 
-      clear: () => {
+      setLoading: (loading) => set({ loading }),
+
+      clear: () =>
         set({
           tenants: [],
           activeTenantId: null,
           loading: false,
-        });
-      },
+        }),
 
       getActiveTenant: () => {
         const { tenants, activeTenantId } = get();
@@ -83,9 +71,7 @@ export const useTenantStore = create<TenantState>()(
           return null;
         }
 
-        return (
-          tenants.find((tenant) => tenant.id === activeTenantId) ?? null
-        );
+        return tenants.find((tenant) => tenant.id === activeTenantId) ?? null;
       },
     }),
     {

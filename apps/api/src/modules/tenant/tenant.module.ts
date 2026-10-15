@@ -7,6 +7,7 @@ import { CreateTenantUseCase } from './application/use-cases/create-tenant/creat
 import { ListMyTenantsUseCase } from './application/use-cases/list-my-tenants.use-case';
 import { ListTenantMembersUseCase } from './application/use-cases/list-tenant-members/list-tenant-members.use-case';
 import { ListAvailableTenantUsersUseCase } from './application/use-cases/list-available-tenant-users/list-available-tenant-users.use-case';
+import { CreateTenantMemberUserUseCase } from './application/use-cases/create-tenant-member-user/create-tenant-member-user.use-case';
 import { AddTenantMemberUseCase } from './application/use-cases/add-tenant-member/add-tenant-member.use-case';
 import { UpdateTenantMemberRoleUseCase } from './application/use-cases/update-tenant-member-role/update-tenant-member-role.use-case';
 import { BlockTenantMemberUseCase } from './application/use-cases/block-tenant-member/block-tenant-member.use-case';
@@ -50,6 +51,7 @@ import { TenantContextGuard } from './presentation/guards/tenant-context.guard';
     ListMyTenantsUseCase,
     ListTenantMembersUseCase,
     ListAvailableTenantUsersUseCase,
+    CreateTenantMemberUserUseCase,
     AddTenantMemberUseCase,
     UpdateTenantMemberRoleUseCase,
     BlockTenantMemberUseCase,

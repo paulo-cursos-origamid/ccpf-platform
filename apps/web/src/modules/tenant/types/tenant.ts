@@ -6,4 +6,5 @@ export interface Tenant {
   name: string;
   slug: string;
   role: TenantRole;
+  origin: "EXISTING_USER" | "TENANT_CREATED";
 }

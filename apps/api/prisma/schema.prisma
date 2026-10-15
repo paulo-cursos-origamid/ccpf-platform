@@ -108,6 +108,7 @@ model TenantMember {
 
   role   TenantRole
   status TenantMemberStatus @default(ACTIVE)
+  origin TenantMemberOrigin @default(EXISTING_USER)
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [userId], references: [id])
@@ -119,6 +120,11 @@ model TenantMember {
   @@index([tenantId])
   @@index([userId])
   @@index([status])
+}
+
+enum TenantMemberOrigin {
+  EXISTING_USER
+  TENANT_CREATED
 }
 
 enum TenantRole {

@@ -1,3 +1,4 @@
+import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum';
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
@@ -32,6 +33,7 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
         userId: member.userId,
         role: member.role,
         status: member.status,
+        origin: member.origin,
       },
     });
 
@@ -132,6 +134,7 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
       data: {
         role: member.role,
         status: member.status,
+        origin: member.origin,
       },
     });
 
@@ -151,6 +154,7 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
     userId: string;
     role: string;
     status: string;
+    origin: string;
     createdAt: Date;
     updatedAt: Date;
   }): TenantMemberEntity {
@@ -160,6 +164,7 @@ export class PrismaTenantMemberRepository implements TenantMemberRepository {
       userId: rawMember.userId,
       role: rawMember.role as TenantRole,
       status: rawMember.status as TenantMemberStatus,
+      origin: rawMember.origin as TenantMemberOrigin,
       createdAt: rawMember.createdAt,
       updatedAt: rawMember.updatedAt,
     });

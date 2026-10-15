@@ -71,6 +71,25 @@ class TenantService {
   }
 
   /**
+   * Cria um usuário novo já vinculado ao Tenant ativo.
+   * A API grava origin=TENANT_CREATED e aplica os limites do plano.
+   */
+  createMemberUser(input: {
+    name: string;
+    email: string;
+    password: string;
+    role: Exclude<TenantRole, "OWNER">;
+  }) {
+    return api.post<{
+      id: string;
+      name: string;
+      email: string;
+      role: Exclude<TenantRole, "OWNER">;
+      origin: "TENANT_CREATED";
+    }>("/tenants/members/create-user", input);
+  }
+
+  /**
    * Altera a role de um membro dentro do Tenant.
    */
   updateMemberRole(memberId: string, input: UpdateTenantMemberRoleInput) {

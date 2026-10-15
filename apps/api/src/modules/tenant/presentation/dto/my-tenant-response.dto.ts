@@ -6,6 +6,8 @@ import { ApiProperty } from '@nestjs/swagger';
  * Este DTO expõe somente os dados necessários para o frontend
  * identificar e selecionar o Tenant ativo.
  */
+import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum';
+
 export class MyTenantResponseDto {
   @ApiProperty({
     description: 'Identificador único do Tenant.',
@@ -31,4 +33,6 @@ export class MyTenantResponseDto {
     enum: ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'],
   })
   role!: string;
+  @ApiProperty({ enum: TenantMemberOrigin, enumName: 'TenantMemberOrigin' })
+  origin!: TenantMemberOrigin;
 }

@@ -1,3 +1,4 @@
+import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum';
 import { Injectable } from '@nestjs/common';
 
 import { TenantMemberStatus } from '../../domain/enums/tenant-member-status.enum';
@@ -16,6 +17,7 @@ export interface MyTenantResult {
   name: string;
   slug: string;
   role: TenantRole;
+  origin: TenantMemberOrigin;
 }
 
 /**
@@ -61,6 +63,7 @@ export class ListMyTenantsUseCase {
           name: tenant.name,
           slug: tenant.slug,
           role: membership.role,
+        origin: membership.origin,
         };
       }),
     );

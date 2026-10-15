@@ -3,12 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { TenantMemberStatus } from '../enums/tenant-member-status.enum';
 import { TenantRole } from '../enums/tenant-role.enum';
 
+import { TenantMemberOrigin } from '../enums/tenant-member-origin.enum';
+
 export interface TenantMemberProps {
   id?: string;
   tenantId: string;
   userId: string;
   role: TenantRole;
   status?: TenantMemberStatus;
+  origin?: TenantMemberOrigin;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -31,6 +34,7 @@ export class TenantMemberEntity {
 
   private _role: TenantRole;
   private _status: TenantMemberStatus;
+  private _origin: TenantMemberOrigin;
 
   private readonly _createdAt: Date;
   private _updatedAt: Date;
@@ -45,6 +49,7 @@ export class TenantMemberEntity {
 
     this._role = props.role;
     this._status = props.status ?? TenantMemberStatus.ACTIVE;
+    this._origin = props.origin ?? TenantMemberOrigin.EXISTING_USER;
 
     this._createdAt = props.createdAt ?? new Date();
     this._updatedAt = props.updatedAt ?? new Date();
@@ -64,6 +69,10 @@ export class TenantMemberEntity {
 
   get role(): TenantRole {
     return this._role;
+  }
+
+  get origin(): TenantMemberOrigin {
+    return this._origin;
   }
 
   get status(): TenantMemberStatus {

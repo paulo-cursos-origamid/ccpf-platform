@@ -1,5 +1,6 @@
 import {
   Body,
+  ForbiddenException,
   Controller,
   Get,
   HttpCode,
@@ -8,6 +9,8 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+
+import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -29,6 +32,7 @@ import { BlockTenantMemberUseCase } from '../../application/use-cases/block-tena
 import { ListMyTenantsUseCase } from '../../application/use-cases/list-my-tenants.use-case';
 import { ListTenantMembersUseCase } from '../../application/use-cases/list-tenant-members/list-tenant-members.use-case';
 import { ListAvailableTenantUsersUseCase } from '../../application/use-cases/list-available-tenant-users/list-available-tenant-users.use-case';
+import { CreateTenantMemberUserUseCase } from '../../application/use-cases/create-tenant-member-user/create-tenant-member-user.use-case';
 import { UnblockTenantMemberUseCase } from '../../application/use-cases/unblock-tenant-member/unblock-tenant-member.use-case';
 import { RemoveTenantMemberUseCase } from '../../application/use-cases/remove-tenant-member/remove-tenant-member.use-case';
 import { UpdateTenantMemberRoleUseCase } from '../../application/use-cases/update-tenant-member-role/update-tenant-member-role.use-case';
@@ -38,6 +42,7 @@ import { AddTenantMemberDto } from '../dto/add-tenant-member.dto';
 import { MyTenantResponseDto } from '../dto/my-tenant-response.dto';
 import { TenantMemberResponseDto } from '../dto/tenant-member-response.dto';
 import { AvailableTenantUserResponseDto } from '../dto/available-tenant-user-response.dto';
+import { CreateTenantMemberUserDto } from '../dto/create-tenant-member-user.dto';
 import { UpdateTenantMemberRoleDto } from '../dto/update-tenant-member-role.dto';
 
 import type { TenantContext } from '../interfaces/tenant-context.interface';
@@ -59,6 +64,7 @@ export class TenantController {
     private readonly listMyTenantsUseCase: ListMyTenantsUseCase,
     private readonly listTenantMembersUseCase: ListTenantMembersUseCase,
     private readonly listAvailableTenantUsersUseCase: ListAvailableTenantUsersUseCase,
+    private readonly createTenantMemberUserUseCase: CreateTenantMemberUserUseCase,
     private readonly addTenantMemberUseCase: AddTenantMemberUseCase,
     private readonly updateTenantMemberRoleUseCase: UpdateTenantMemberRoleUseCase,
     private readonly blockTenantMemberUseCase: BlockTenantMemberUseCase,
@@ -202,8 +208,51 @@ export class TenantController {
   async listAvailableTenantUsers(
     @CurrentTenant() tenant: TenantContext,
   ): Promise<AvailableTenantUserResponseDto[]> {
+    if (tenant.origin === TenantMemberOrigin.TENANT_CREATED) {
+      throw new ForbiddenException(
+        'Você não tem permissão para administrar membros deste espaço.',
+      );
+    }
+
     return this.listAvailableTenantUsersUseCase.execute({
       tenantId: tenant.tenantId,
+    });
+  }
+
+  /**
+   * Cria um novo usuário e seu vínculo com o Tenant atual.
+   * O vínculo recebe origem TENANT_CREATED e não poderá administrar
+   * outros membros, independentemente do papel selecionado.
+   */
+  @Post('members/create-user')
+  @UseGuards(TenantContextGuard)
+  @ApiOperation({
+    summary: 'Criar usuário dentro do Tenant',
+    description:
+      'Cria usuário e vínculo de forma atômica. Disponível somente para OWNER ou ADMIN com origem EXISTING_USER.',
+  })
+  @ApiResponse({ status: 201, description: 'Usuário criado e vinculado.' })
+  @ApiResponse({ status: 403, description: 'Sem permissão ou limite do plano atingido.' })
+  @ApiResponse({ status: 409, description: 'O e-mail já está cadastrado.' })
+  async createTenantMemberUser(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: CreateTenantMemberUserDto,
+  ) {
+    if (
+      tenant.origin === TenantMemberOrigin.TENANT_CREATED ||
+      (tenant.role !== 'OWNER' && tenant.role !== 'ADMIN')
+    ) {
+      throw new ForbiddenException(
+        'Você não tem permissão para administrar membros deste espaço.',
+      );
+    }
+
+    return this.createTenantMemberUserUseCase.execute({
+      tenantId: tenant.tenantId,
+      name: dto.name,
+      email: dto.email,
+      password: dto.password,
+      role: dto.role,
     });
   }
 

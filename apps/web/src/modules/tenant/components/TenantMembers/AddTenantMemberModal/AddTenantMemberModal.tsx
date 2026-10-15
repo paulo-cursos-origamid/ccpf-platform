@@ -5,7 +5,7 @@ import { useState } from "react";
 import { UserRound } from "@/components/icons";
 import { Button, Field, Select } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay/Modal";
-import { CreateUserModal } from "@/modules/identity/components/client/CreateUserModal";
+import { CreateTenantMemberUserModal } from "./CreateTenantMemberUserModal";
 
 import {
   useAddTenantMember,
@@ -142,15 +142,14 @@ export function AddTenantMemberModal({
   }) {
     setValidationError(null);
 
-    await addTenantMember({
-      userId: user.id,
-      role,
-    });
-
+    // A rota local já cria o usuário e o vínculo na mesma transação.
+    // Não chamar addTenantMember aqui, pois isso duplicaria o vínculo.
     await onSuccess();
-
     setCreateUserOpen(false);
-    handleClose();
+    setUserId("");
+    setRole("MEMBER");
+    setValidationError(null);
+    onClose();
   }
 
   const errorMessage =
@@ -296,10 +295,10 @@ export function AddTenantMemberModal({
         </form>
       </Modal>
 
-      <CreateUserModal
-        open={createUserOpen}
+      <CreateTenantMemberUserModal
+        open={open && createUserOpen}
+        role={role}
         onClose={handleCloseCreateUser}
-        onSuccess={() => undefined}
         onCreated={handleUserCreated}
       />
     </>

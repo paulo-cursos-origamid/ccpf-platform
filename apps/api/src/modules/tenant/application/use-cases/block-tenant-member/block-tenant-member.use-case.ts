@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { TenantMemberOrigin } from '../../../domain/enums/tenant-member-origin.enum';
 import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.enum';
 import { TenantRole } from '../../../domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../../domain/repositories/tenant-member.repository';
@@ -39,6 +40,12 @@ export class BlockTenantMemberUseCase {
 
     if (!currentMember) {
       throw new ForbiddenException('User does not belong to this Tenant');
+    }
+
+    if (currentMember.origin === TenantMemberOrigin.TENANT_CREATED) {
+      throw new ForbiddenException(
+        'Usuários criados dentro deste espaço não podem administrar membros.',
+      );
     }
 
     if (currentMember.status !== TenantMemberStatus.ACTIVE) {

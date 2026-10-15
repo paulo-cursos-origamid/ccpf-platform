@@ -82,7 +82,7 @@ export function TenantMembers() {
 
   const isOwner = activeTenant?.role === "OWNER";
 
-  const canManageMembers = isOwner || activeTenant?.role === "ADMIN";
+  const canManageMembers = activeTenant?.origin !== "TENANT_CREATED" && (isOwner || activeTenant?.role === "ADMIN");
 
   /**
    * Verifica se o plano permite adicionar mais um usuário.

@@ -104,6 +104,7 @@ import { PlatformPermissionGuard } from './presentation/guards/platform-permissi
     CreateUserUseCase,
     LoginUseCase,
     PasswordHasherContract,
+    EmailVerificationNotifierContract,
     UserRepository,
     PlatformPermissionGuard,
     PlatformAuthorizationRepository,

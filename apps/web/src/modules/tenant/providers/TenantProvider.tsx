@@ -12,26 +12,28 @@ interface TenantProviderProps {
 }
 
 /**
- * Inicializa e mantém o contexto de Tenant do usuário autenticado.
+ * Carrega os espaços aos quais o usuário autenticado tem acesso.
  *
- * A lista de Tenants é sempre obtida do backend através de
- * GET /tenants/me.
- *
- * Somente o activeTenantId é persistido localmente pelo TenantStore.
- *
- * O carregamento depende explicitamente do estado de autenticação,
- * garantindo que uma troca de usuário provoque uma nova consulta
- * dos Tenants disponíveis.
+ * Aguarda a inicialização da sessão antes de consultar a API.
+ * A lista é sempre validada pelo backend; o navegador persiste
+ * somente o identificador do espaço selecionado.
  */
 export function TenantProvider({ children }: TenantProviderProps) {
   const isAuthenticated = useIdentityStore(
     (state) => state.isAuthenticated,
   );
+  const initialized = useIdentityStore((state) => state.initialized);
 
   const setTenants = useTenantStore((state) => state.setTenants);
+  const setLoading = useTenantStore((state) => state.setLoading);
   const clear = useTenantStore((state) => state.clear);
 
   useEffect(() => {
+    // Não interpretar a sessão como encerrada enquanto ela inicializa.
+    if (!initialized) {
+      return;
+    }
+
     if (!isAuthenticated) {
       clear();
       return;
@@ -40,6 +42,8 @@ export function TenantProvider({ children }: TenantProviderProps) {
     let cancelled = false;
 
     async function loadTenants() {
+      setLoading(true);
+
       try {
         const tenants = await tenantService.listMine();
 
@@ -62,7 +66,13 @@ export function TenantProvider({ children }: TenantProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [clear, isAuthenticated, setTenants]);
+  }, [
+    clear,
+    initialized,
+    isAuthenticated,
+    setLoading,
+    setTenants,
+  ]);
 
   return <>{children}</>;
 }

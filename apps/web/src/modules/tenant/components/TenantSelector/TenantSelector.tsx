@@ -8,27 +8,47 @@ import { useTenantStore } from "../../stores";
 
 import styles from "./TenantSelector.module.scss";
 
-// Componente responsável exclusivamente pela seleção do Tenant ativo.
-//
-// A lista de Tenants e o Tenant atualmente selecionado são obtidos do
-// TenantStore. A comunicação com a API permanece no TenantProvider,
-// mantendo a separação entre apresentação e infraestrutura.
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: "Proprietário",
+  ADMIN: "Administrador",
+  MEMBER: "Membro",
+  VIEWER: "Visualizador",
+};
+
+/**
+ * Permite selecionar o espaço ativo e visualizar o papel do usuário
+ * em cada espaço. A autorização continua sendo responsabilidade da API.
+ */
 export function TenantSelector() {
   const tenants = useTenantStore((state) => state.tenants);
-  const activeTenantId = useTenantStore(
-    (state) => state.activeTenantId,
-  );
+  const activeTenantId = useTenantStore((state) => state.activeTenantId);
+  const loading = useTenantStore((state) => state.loading);
   const setActiveTenantId = useTenantStore(
     (state) => state.setActiveTenantId,
   );
 
-  // Não renderiza o seletor enquanto o Tenant ainda não estiver disponível.
-  if (tenants.length === 0) {
-    return null;
-  }
-
   function handleChange(event: ChangeEvent<HTMLSelectElement>) {
     setActiveTenantId(event.target.value);
+  }
+
+  if (loading && tenants.length === 0) {
+    return (
+      <div className={styles.container}>
+        <Select
+          value=""
+          onChange={() => undefined}
+          aria-label="Carregando espaços"
+          disabled
+          fullWidth={false}
+        >
+          <option value="">Carregando espaços...</option>
+        </Select>
+      </div>
+    );
+  }
+
+  if (tenants.length === 0) {
+    return null;
   }
 
   return (
@@ -37,12 +57,12 @@ export function TenantSelector() {
         value={activeTenantId ?? ""}
         onChange={handleChange}
         aria-label="Selecionar espaço"
-        disabled={tenants.length <= 1}
+        disabled={loading || tenants.length <= 1}
         fullWidth={false}
       >
         {tenants.map((tenant) => (
           <option key={tenant.id} value={tenant.id}>
-            {tenant.name}
+            {tenant.name} — {ROLE_LABELS[tenant.role] ?? tenant.role}
           </option>
         ))}
       </Select>

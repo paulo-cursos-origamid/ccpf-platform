@@ -90,6 +90,7 @@ export class TenantContextGuard implements CanActivate {
       tenantId,
       userId: user.sub,
       role: member.role,
+      origin: member.origin,
     };
 
     return true;

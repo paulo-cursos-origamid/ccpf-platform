@@ -11,8 +11,11 @@ import { TenantRole } from '../../domain/enums/tenant-role.enum';
  * - Tenant informado através do header X-Tenant-Id;
  * - vínculo TenantMember validado pelo backend.
  */
+import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum';
+
 export interface TenantContext {
   tenantId: string;
   userId: string;
   role: TenantRole;
+  origin: TenantMemberOrigin;
 }
