@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import { UserRepository } from '../../../../identity/domain/repositories/user.repository';
 // import { TenantMemberStatus } from '../../../tenant/domain/enums/tenant-member-status.enum';
@@ -7,6 +7,7 @@ import { TenantMemberStatus } from '../../../../tenant/domain/enums/tenant-membe
 import { TenantMemberRepository } from '../../../../tenant/domain/repositories/tenant-member.repository';
 
 import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
+import { AccountMemberStatus } from '../../../domain/enums/account-member-status.enum';
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
 
 /**
@@ -53,6 +54,11 @@ export class ListAvailableAccountUsersUseCase {
 
     if (!currentMember) {
       throw new NotFoundException('Account not found');
+    }
+
+    // Membros bloqueados não podem consultar usuários disponíveis.
+    if (currentMember.status !== AccountMemberStatus.ACTIVE) {
+      throw new ForbiddenException('Account access is blocked');
     }
 
     // Somente OWNER e MANAGER podem administrar membros.

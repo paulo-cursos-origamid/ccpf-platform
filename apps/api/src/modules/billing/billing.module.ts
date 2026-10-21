@@ -5,6 +5,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { TenantModule } from '../tenant/tenant.module';
 
 import { SubscriptionLifecycleService } from './application/services/subscription-lifecycle.service';
+import { SubscriptionFeatureAccessService } from './application/services/subscription-feature-access.service';
 import { SubscriptionLifecycleApplicationService } from './application/services/subscription-lifecycle-application.service';
 import { InvoiceCreationService } from './application/services/invoice-creation.service';
 import { ManualPaymentInstrumentService } from './application/services/manual-payment-instrument.service';
@@ -75,6 +76,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
     ConfirmPaymentUseCase,
     CancelPaymentUseCase,
     SubscriptionLifecycleService,
+    SubscriptionFeatureAccessService,
     SubscriptionLifecycleApplicationService,
     InvoiceCreationService,
     BillingDateService,
@@ -118,6 +120,7 @@ import { PrismaSubscriptionRepository } from './infrastructure/persistence/prism
   ],
 
   exports: [
+    SubscriptionFeatureAccessService,
     PlanRepository,
     PlanPriceRepository,
     InvoiceRepository,

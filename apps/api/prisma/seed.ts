@@ -160,6 +160,7 @@ const plans = [
     description:
       'Período gratuito para conhecer os principais recursos do CCPF.',
     maxUsers: 2,
+    maxTenants: 1,
     isPublic: true,
     isActive: true,
     prices: [],
@@ -178,6 +179,7 @@ const plans = [
     code: 'BASIC',
     description: 'Plano para uso pessoal e pequenos controles financeiros.',
     maxUsers: 3,
+    maxTenants: 1,
     isPublic: true,
     isActive: true,
     prices: [
@@ -195,6 +197,7 @@ const plans = [
     code: 'PRO',
     description: 'Plano intermediário para usuários com necessidades maiores.',
     maxUsers: 5,
+    maxTenants: 3,
     isPublic: true,
     isActive: true,
     prices: [
@@ -216,6 +219,7 @@ const plans = [
     code: 'PREMIUM',
     description: 'Plano completo com todos os recursos comerciais.',
     maxUsers: 10,
+    maxTenants: 10,
     isPublic: true,
     isActive: true,
     prices: [
@@ -239,6 +243,7 @@ const plans = [
     code: 'SYSTEM_OWNER',
     description: 'Plano interno reservado à plataforma.',
     maxUsers: -1,
+    maxTenants: -1,
     isPublic: false,
     isActive: true,
     prices: [],

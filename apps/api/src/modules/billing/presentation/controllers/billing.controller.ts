@@ -108,16 +108,16 @@ export class BillingController {
    * Operação exclusiva de plataforma e sem cobrança comercial.
    */
   @Patch('subscription/system-owner')
-  @UseGuards(JwtAuthGuard, TenantContextGuard, PlatformPermissionGuard)
+  @UseGuards(JwtAuthGuard, PlatformPermissionGuard)
   @RequirePlatformPermission('BILLING_MANAGE')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Atribuir plano interno SYSTEM_OWNER',
     description:
-      'Ativa o plano interno ilimitado para o Tenant selecionado, sem gerar fatura comercial.',
+      'Ativa o plano interno ilimitado para o Tenant informado, sem gerar fatura comercial.',
   })
-  async assignSystemOwnerPlan(@CurrentTenant() tenant: TenantContext) {
-    return this.assignSystemOwnerPlanUseCase.execute(tenant.tenantId);
+  async assignSystemOwnerPlan(@Body() body: { tenantId?: string }) {
+    return this.assignSystemOwnerPlanUseCase.execute(body?.tenantId ?? '');
   }
 
   @Get('subscription')

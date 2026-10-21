@@ -66,6 +66,74 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   // --------------------------------------------------
+  /**
+   * Cria usuário administrativo e o associa ao Tenant interno existente.
+   * Não cria nem altera assinaturas.
+   */
+  async createForPlatformAdmin(user: UserEntity): Promise<UserEntity> {
+    const createdUser = await this.prisma.$transaction(async (tx) => {
+      const systemTenant = await tx.tenant.findFirst({
+        where: { name: 'CCPF - Sistema', status: 'ACTIVE' },
+        select: { id: true },
+      });
+
+      if (!systemTenant) {
+        throw new InternalServerErrorException(
+          'Tenant interno CCPF - Sistema não encontrado ou inativo.',
+        );
+      }
+
+      const systemSubscription = await tx.subscription.findFirst({
+        where: {
+          tenantId: systemTenant.id,
+          plan: { code: 'SYSTEM_OWNER' },
+        },
+        select: { id: true },
+      });
+
+      if (!systemSubscription) {
+        throw new InternalServerErrorException(
+          'Assinatura SYSTEM_OWNER existente não encontrada no Tenant de sistema.',
+        );
+      }
+
+      const created = await tx.user.create({
+        data: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          password: user.password,
+          role: user.role,
+          isActive: user.isActive,
+          emailVerified: user.emailVerified,
+          verificationToken: user.verificationToken,
+          verificationTokenExpiresAt: user.verificationTokenExpiresAt,
+          refreshTokenHash: user.refreshTokenHash,
+          passwordResetToken: user.passwordResetToken,
+          passwordResetExpiresAt: user.passwordResetExpiresAt,
+          lastLoginAt: user.lastLoginAt,
+          deletedAt: user.deletedAt,
+        },
+      });
+
+      await this.syncPlatformRole(tx, created.id, user.role);
+
+      await tx.tenantMember.create({
+        data: {
+          tenantId: systemTenant.id,
+          userId: created.id,
+          role: 'MEMBER',
+          status: 'ACTIVE',
+          origin: 'EXISTING_USER',
+        },
+      });
+
+      return created;
+    });
+
+    return this.toDomain(createdUser);
+  }
+
   // FIND BY EMAIL
   // --------------------------------------------------
 

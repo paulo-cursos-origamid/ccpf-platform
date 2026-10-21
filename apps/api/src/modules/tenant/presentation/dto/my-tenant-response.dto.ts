@@ -35,4 +35,10 @@ export class MyTenantResponseDto {
   role!: string;
   @ApiProperty({ enum: TenantMemberOrigin, enumName: 'TenantMemberOrigin' })
   origin!: TenantMemberOrigin;
+
+  @ApiProperty({
+    description: 'Indica se o nome da empresa foi confirmado.',
+    example: false,
+  })
+  nameConfirmed!: boolean;
 }

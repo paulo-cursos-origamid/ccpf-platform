@@ -130,7 +130,7 @@ export const productModules: ProductModule[] = [
     icon: Tags,
     href: "/dashboard/categories",
     feature: "DOMESTIC",
-    implemented: false,
+    implemented: true,
     tenantRequired: true,
   },
 

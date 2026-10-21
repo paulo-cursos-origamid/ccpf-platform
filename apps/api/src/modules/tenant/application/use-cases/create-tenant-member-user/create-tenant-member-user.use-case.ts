@@ -13,9 +13,12 @@ import { EmailVerificationNotifierContract } from '../../../../identity/domain/c
 import { PasswordHasherContract } from '../../../../identity/domain/contracts/password-hasher.contract';
 import { TenantRole } from '../../../domain/enums/tenant-role.enum';
 import { TenantPlanLimitsRepository } from '../../../domain/repositories/tenant-plan-limits.repository';
+import { TenantMemberRepository } from '../../../domain/repositories/tenant-member.repository';
+import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.enum';
 
 export interface CreateTenantMemberUserInput {
   tenantId: string;
+  userId: string;
   name: string;
   email: string;
   password: string;
@@ -35,6 +38,7 @@ export class CreateTenantMemberUserUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantPlanLimitsRepository: TenantPlanLimitsRepository,
+    private readonly tenantMemberRepository: TenantMemberRepository,
     @Inject(PasswordHasherContract)
     private readonly passwordHasher: PasswordHasherContract,
     @Inject(EmailVerificationNotifierContract)
@@ -44,6 +48,24 @@ export class CreateTenantMemberUserUseCase {
   async execute(
     input: CreateTenantMemberUserInput,
   ): Promise<CreateTenantMemberUserOutput> {
+    const currentMember =
+      await this.tenantMemberRepository.findByTenantAndUser(
+        input.tenantId,
+        input.userId,
+      );
+
+    if (
+      !currentMember ||
+      currentMember.status !== TenantMemberStatus.ACTIVE ||
+      (currentMember.role !== TenantRole.OWNER &&
+        currentMember.role !== TenantRole.ADMIN) ||
+      currentMember.origin === 'TENANT_CREATED'
+    ) {
+      throw new ForbiddenException(
+        'Você não tem permissão para criar usuários neste Tenant.',
+      );
+    }
+
     const email = input.email.trim().toLowerCase();
     const existingUser = await this.prisma.user.findUnique({
       where: { email },

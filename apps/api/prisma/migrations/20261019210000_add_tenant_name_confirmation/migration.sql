@@ -1,0 +1,2 @@
+ALTER TABLE "Tenant"
+ADD COLUMN "nameConfirmed" BOOLEAN NOT NULL DEFAULT true;

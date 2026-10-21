@@ -2,6 +2,7 @@ import { TenantMemberOrigin } from '../../domain/enums/tenant-member-origin.enum
 import { Injectable } from '@nestjs/common';
 
 import { TenantMemberStatus } from '../../domain/enums/tenant-member-status.enum';
+import { TenantStatus } from '../../domain/enums/tenant-status.enum';
 import { TenantRole } from '../../domain/enums/tenant-role.enum';
 import { TenantMemberRepository } from '../../domain/repositories/tenant-member.repository';
 import { TenantRepository } from '../../domain/repositories/tenant.repository';
@@ -18,6 +19,7 @@ export interface MyTenantResult {
   slug: string;
   role: TenantRole;
   origin: TenantMemberOrigin;
+  nameConfirmed: boolean;
 }
 
 /**
@@ -54,7 +56,7 @@ export class ListMyTenantsUseCase {
           membership.tenantId,
         );
 
-        if (!tenant) {
+        if (!tenant || tenant.status !== TenantStatus.ACTIVE) {
           return null;
         }
 
@@ -64,6 +66,7 @@ export class ListMyTenantsUseCase {
           slug: tenant.slug,
           role: membership.role,
         origin: membership.origin,
+        nameConfirmed: tenant.nameConfirmed,
         };
       }),
     );

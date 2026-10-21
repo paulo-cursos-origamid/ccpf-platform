@@ -194,6 +194,7 @@ export class CreatePublicUserUseCase {
       TenantStatus.ACTIVE,
       now,
       now,
+      false,
     );
 
     const owner = new TenantMemberEntity({

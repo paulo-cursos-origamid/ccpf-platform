@@ -3,48 +3,58 @@
 import { useEffect, useState } from "react";
 
 import { tenantService } from "../../services";
-
+import { useTenantStore } from "../../stores";
 import type { AvailableTenantUser } from "../../types";
 
-/**
- * Hook responsável por carregar os usuários globais que podem
- * ser adicionados ao Tenant atualmente selecionado.
- *
- * A consulta acontece somente quando o modal é aberto.
- */
 export function useAvailableTenantUsers(open: boolean) {
+  const activeTenantId = useTenantStore((state) => state.activeTenantId);
   const [users, setUsers] = useState<AvailableTenantUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     let cancelled = false;
+
+    // Nunca manter na tela usuários disponíveis de outro Tenant.
+    setUsers([]);
+    setError(null);
+
+    if (!open || !activeTenantId) {
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     async function fetchUsers() {
       setLoading(true);
-      setError(null);
 
       try {
         const response = await tenantService.listAvailableUsers();
 
-        if (cancelled) {
+        if (
+          cancelled ||
+          useTenantStore.getState().activeTenantId !== activeTenantId
+        ) {
           return;
         }
 
         setUsers(response);
-      } catch (error) {
-        if (cancelled) {
+      } catch (caught) {
+        if (
+          cancelled ||
+          useTenantStore.getState().activeTenantId !== activeTenantId
+        ) {
           return;
         }
 
         setUsers([]);
-        setError(error);
+        setError(caught);
       } finally {
-        if (!cancelled) {
+        if (
+          !cancelled &&
+          useTenantStore.getState().activeTenantId === activeTenantId
+        ) {
           setLoading(false);
         }
       }
@@ -55,11 +65,7 @@ export function useAvailableTenantUsers(open: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, activeTenantId]);
 
-  return {
-    users,
-    loading,
-    error,
-  };
+  return { users, loading, error };
 }

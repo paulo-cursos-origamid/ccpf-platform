@@ -1,10 +1,88 @@
 .container {
   min-width: 220px;
+  display: inline-flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.container:focus-within {
+  border-color: var(--border-focus);
 }
 
 .container select {
+  min-width: 150px;
   height: 40px;
   padding-top: 0;
   padding-bottom: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
   font-size: var(--font-sm);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  white-space: nowrap;
+}
+
+.createButton {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 12px;
+
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.createButton:hover {
+  background: var(--surface-secondary);
+  color: var(--accent-primary);
+}
+
+.createButton:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -3px;
+}
+
+@media (max-width: 760px) {
+  .container {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .container select {
+    min-width: 100px;
+    max-width: 190px;
+  }
+
+  .createButton {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
 }

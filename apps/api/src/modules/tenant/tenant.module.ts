@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
+import { ConfirmTenantNameUseCase } from './application/use-cases/confirm-tenant-name.use-case';
 import { CreateTenantUseCase } from './application/use-cases/create-tenant/create-tenant.use-case';
 import { ListMyTenantsUseCase } from './application/use-cases/list-my-tenants.use-case';
 import { ListTenantMembersUseCase } from './application/use-cases/list-tenant-members/list-tenant-members.use-case';
@@ -47,6 +48,7 @@ import { TenantContextGuard } from './presentation/guards/tenant-context.guard';
   controllers: [TenantController],
 
   providers: [
+    ConfirmTenantNameUseCase,
     CreateTenantUseCase,
     ListMyTenantsUseCase,
     ListTenantMembersUseCase,

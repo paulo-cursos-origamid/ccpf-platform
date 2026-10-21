@@ -13,6 +13,7 @@ export interface FindUsersResult {
 
 export abstract class UserRepository {
   abstract create(user: UserEntity): Promise<UserEntity>;
+  createForPlatformAdmin?(user: UserEntity): Promise<UserEntity>;
 
   abstract findByEmail(email: string): Promise<UserEntity | null>;
 

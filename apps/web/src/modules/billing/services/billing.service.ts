@@ -42,10 +42,10 @@ export const billingService = {
    * Solicita a atribuição do plano interno SYSTEM_OWNER.
    * A API valida a permissão administrativa e não cria fatura.
    */
-  async assignSystemOwnerPlan(): Promise<Subscription> {
+  async assignSystemOwnerPlan(tenantId: string): Promise<Subscription> {
     return api.patch<Subscription>(
       "/billing/subscription/system-owner",
-      {},
+      { tenantId },
     );
   },
 

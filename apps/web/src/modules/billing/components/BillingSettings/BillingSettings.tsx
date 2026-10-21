@@ -414,7 +414,11 @@ export function BillingSettings() {
         return;
       }
 
-      await billingService.assignSystemOwnerPlan();
+      const tenantId = useTenantStore.getState().activeTenantId;
+      if (!tenantId) {
+        throw new Error("Selecione um Tenant antes de atribuir SYSTEM_OWNER.");
+      }
+      await billingService.assignSystemOwnerPlan(tenantId);
       await reload();
     } catch (error) {
       setActionError(

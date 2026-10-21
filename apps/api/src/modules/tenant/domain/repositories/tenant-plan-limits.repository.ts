@@ -16,4 +16,15 @@ export abstract class TenantPlanLimitsRepository {
    * - null: Tenant sem assinatura utilizável.
    */
   abstract findMaxUsersByTenant(tenantId: string): Promise<number | null>;
+
+  /**
+   * Retorna o limite de Tenants do plano associado à assinatura
+   * utilizável de um Tenant em que o usuário é OWNER.
+   */
+  abstract findMaxTenantsByUser(userId: string): Promise<number | null>;
+
+  /**
+   * Conta os Tenants em que o usuário possui vínculo OWNER ativo.
+   */
+  abstract countOwnedTenantsByUser(userId: string): Promise<number>;
 }

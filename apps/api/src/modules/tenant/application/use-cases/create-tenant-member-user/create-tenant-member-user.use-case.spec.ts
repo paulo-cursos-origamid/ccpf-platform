@@ -1,3 +1,6 @@
+import { TenantRole } from '../../../domain/enums/tenant-role.enum';
+import { TenantMemberStatus } from '../../../domain/enums/tenant-member-status.enum';
+import { TenantMemberRepository } from '../../../domain/repositories/tenant-member.repository';
 import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
@@ -23,6 +26,7 @@ describe('CreateTenantMemberUserUseCase', () => {
     tenantMember: { count: jest.Mock; create: jest.Mock };
   };
   let planLimits: { findMaxUsersByTenant: jest.Mock };
+  let tenantMembers: { findByTenantAndUser: jest.Mock };
   let passwordHasher: { hash: jest.Mock };
   let notifier: { sendVerificationEmail: jest.Mock };
   let useCase: CreateTenantMemberUserUseCase;
@@ -52,6 +56,16 @@ describe('CreateTenantMemberUserUseCase', () => {
       findMaxUsersByTenant: jest.fn().mockResolvedValue(3),
     };
 
+    tenantMembers = {
+      findByTenantAndUser: jest.fn().mockResolvedValue({
+        tenantId: 'tenant-123',
+        userId: 'owner-123',
+        role: TenantRole.OWNER,
+        status: TenantMemberStatus.ACTIVE,
+        origin: 'EXISTING_USER',
+      }),
+    };
+
     passwordHasher = {
       hash: jest.fn().mockResolvedValue('hashed-password'),
     };
@@ -63,18 +77,95 @@ describe('CreateTenantMemberUserUseCase', () => {
     useCase = new CreateTenantMemberUserUseCase(
       prisma as unknown as PrismaService,
       planLimits as unknown as TenantPlanLimitsRepository,
+      tenantMembers as unknown as TenantMemberRepository,
       passwordHasher as unknown as PasswordHasherContract,
       notifier as unknown as EmailVerificationNotifierContract,
     );
   });
 
-  const input = {
+  const input: {
+    tenantId: string;
+    userId: string;
+    name: string;
+    email: string;
+    password: string;
+    role: Exclude<TenantRole, TenantRole.OWNER>;
+  } = {
     tenantId: 'tenant-123',
+    userId: 'owner-123',
     name: ' Novo usuário ',
     email: ' NOVO@EXAMPLE.COM ',
     password: 'StrongPassword123!',
-    role: 'MEMBER' as const,
+    role: TenantRole.MEMBER,
   };
+
+  it('consulta a associação do solicitante no Tenant informado', async () => {
+    await useCase.execute(input);
+
+    expect(tenantMembers.findByTenantAndUser).toHaveBeenCalledWith(
+      'tenant-123',
+      'owner-123',
+    );
+  });
+
+  it('bloqueia solicitante sem associação ativa', async () => {
+    tenantMembers.findByTenantAndUser.mockResolvedValue(null);
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia membro comum', async () => {
+    tenantMembers.findByTenantAndUser.mockResolvedValue({
+      tenantId: 'tenant-123',
+      userId: 'owner-123',
+      role: TenantRole.MEMBER,
+      status: TenantMemberStatus.ACTIVE,
+      origin: 'EXISTING_USER',
+    });
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia administrador com associação bloqueada', async () => {
+    tenantMembers.findByTenantAndUser.mockResolvedValue({
+      tenantId: 'tenant-123',
+      userId: 'owner-123',
+      role: TenantRole.ADMIN,
+      status: TenantMemberStatus.BLOCKED,
+      origin: 'EXISTING_USER',
+    });
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia ADMIN com origem TENANT_CREATED', async () => {
+    tenantMembers.findByTenantAndUser.mockResolvedValue({
+      tenantId: 'tenant-123',
+      userId: 'owner-123',
+      role: TenantRole.ADMIN,
+      status: TenantMemberStatus.ACTIVE,
+      origin: 'TENANT_CREATED',
+    });
+
+    await expect(useCase.execute(input)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
 
   it('cria o usuário e o vínculo TENANT_CREATED na mesma transação serializável', async () => {
     const result = await useCase.execute(input);
@@ -112,7 +203,7 @@ describe('CreateTenantMemberUserUseCase', () => {
       data: {
         tenantId: 'tenant-123',
         userId: createdUser.id,
-        role: 'MEMBER',
+        role: TenantRole.MEMBER,
         status: 'ACTIVE',
         origin: 'TENANT_CREATED',
       },
@@ -120,7 +211,7 @@ describe('CreateTenantMemberUserUseCase', () => {
 
     expect(result).toEqual({
       ...createdUser,
-      role: 'MEMBER',
+      role: TenantRole.MEMBER,
       origin: 'TENANT_CREATED',
     });
 
@@ -154,7 +245,7 @@ describe('CreateTenantMemberUserUseCase', () => {
       data: {
         tenantId: 'tenant-123',
         userId: createdUser.id,
-        role: 'MEMBER',
+        role: TenantRole.MEMBER,
         status: 'ACTIVE',
         origin: 'TENANT_CREATED',
       },

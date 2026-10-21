@@ -1,3 +1,5 @@
+import { ConfirmTenantNameUseCase } from '../../application/use-cases/confirm-tenant-name.use-case';
+import { ConfirmTenantNameDto } from '../dto/confirm-tenant-name.dto';
 import {
   Body,
   ForbiddenException,
@@ -58,6 +60,7 @@ import { TenantContextGuard } from '../guards/tenant-context.guard';
 @ApiBearerAuth('access-token')
 @Controller('tenants')
 @UseGuards(JwtAuthGuard)
+
 export class TenantController {
   constructor(
     private readonly createTenantUseCase: CreateTenantUseCase,
@@ -70,6 +73,7 @@ export class TenantController {
     private readonly blockTenantMemberUseCase: BlockTenantMemberUseCase,
     private readonly unblockTenantMemberUseCase: UnblockTenantMemberUseCase,
     private readonly removeTenantMemberUseCase: RemoveTenantMemberUseCase,
+    private readonly confirmTenantNameUseCase: ConfirmTenantNameUseCase,
   ) {}
 
   /**
@@ -80,6 +84,30 @@ export class TenantController {
    * Este endpoint não exige X-Tenant-Id porque o Tenant
    * ainda está sendo criado.
    */
+
+  @Patch('confirm-name')
+  @HttpCode(204)
+  @UseGuards(TenantContextGuard)
+  @ApiOperation({ summary: 'Confirmar o nome da empresa' })
+  @ApiResponse({ status: 204, description: 'Nome confirmado.' })
+  async confirmTenantName(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: ConfirmTenantNameDto,
+  ): Promise<void> {
+    if (tenant.role !== 'OWNER') {
+      throw new ForbiddenException(
+        'Somente o proprietário pode confirmar o nome da empresa.',
+      );
+    }
+
+    await this.confirmTenantNameUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+      name: dto.name,
+    });
+  }
+
+
   @Post()
   @ApiOperation({
     summary: 'Criar Tenant',
@@ -249,6 +277,7 @@ export class TenantController {
 
     return this.createTenantMemberUserUseCase.execute({
       tenantId: tenant.tenantId,
+      userId: tenant.userId,
       name: dto.name,
       email: dto.email,
       password: dto.password,

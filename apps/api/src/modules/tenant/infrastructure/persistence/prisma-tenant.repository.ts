@@ -29,6 +29,7 @@ export class PrismaTenantRepository implements TenantRepository {
         name: tenant.name,
         slug: tenant.slug,
         status: tenant.status,
+        nameConfirmed: tenant.nameConfirmed,
       },
     });
 
@@ -81,6 +82,7 @@ export class PrismaTenantRepository implements TenantRepository {
         name: tenant.name,
         slug: tenant.slug,
         status: tenant.status,
+        nameConfirmed: tenant.nameConfirmed,
       },
     });
 
@@ -96,6 +98,7 @@ export class PrismaTenantRepository implements TenantRepository {
     name: string;
     slug: string;
     status: string;
+    nameConfirmed: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): TenantEntity {
@@ -106,6 +109,7 @@ export class PrismaTenantRepository implements TenantRepository {
       rawTenant.status as TenantStatus,
       rawTenant.createdAt,
       rawTenant.updatedAt,
+      rawTenant.nameConfirmed,
     );
   }
 }
