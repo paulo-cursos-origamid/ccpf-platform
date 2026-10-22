@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { TenantRole } from '../../../tenant/domain/enums/tenant-role.enum';
+import { TenantMemberRepository } from '../../../tenant/domain/repositories/tenant-member.repository';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 import { CreateNotificationsForPermissionUseCase } from '../../../notifications/application/use-cases/create-notifications-for-permission.use-case';
@@ -26,6 +28,7 @@ export interface CreateSubscriptionInput {
 @Injectable()
 export class CreateSubscriptionUseCase {
   constructor(
+    private readonly tenantMemberRepository: TenantMemberRepository,
     private readonly planRepository: PlanRepository,
     private readonly planPriceRepository: PlanPriceRepository,
     private readonly subscriptionLifecycleApplicationService: SubscriptionLifecycleApplicationService,
@@ -36,6 +39,19 @@ export class CreateSubscriptionUseCase {
   ) {}
 
   async execute(input: CreateSubscriptionInput): Promise<SubscriptionEntity> {
+
+    const tenantMember = await this.tenantMemberRepository.findByTenantAndUser(
+      input.tenantId,
+      input.userId,
+    );
+
+    if (!tenantMember || tenantMember.role !== TenantRole.OWNER) {
+      throw new ForbiddenException(
+        'Apenas o OWNER do Tenant pode criar uma assinatura.',
+      );
+    }
+
+
     const planCode = input.planCode.trim().toUpperCase();
 
     const plan = await this.planRepository.findByCode(planCode);

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
+import { AccountMemberStatus } from '../../../domain/enums/account-member-status.enum';
 import { AccountType } from '../../../domain/enums/account-type.enum';
 
 import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
@@ -58,6 +59,11 @@ export class UpdateAccountUseCase {
 
     // Não expõe a existência da conta para usuários sem vínculo.
     if (!currentMember) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Membros bloqueados não podem editar a conta.
+    if (currentMember.status !== AccountMemberStatus.ACTIVE) {
       throw new NotFoundException('Account not found');
     }
 

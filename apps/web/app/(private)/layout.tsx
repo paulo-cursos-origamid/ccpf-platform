@@ -1,4 +1,5 @@
 "use client";
+import { TenantNameConfirmationGuard } from "@/modules/tenant/components/TenantNameConfirmationGuard";
 
 import type { ReactNode } from "react";
 
@@ -10,7 +11,9 @@ export default function PrivateLayout({ children }: { children: ReactNode }) {
   return (
     <AuthBoundary>
       <TenantProvider>
+        <TenantNameConfirmationGuard>
         <AppLayout>{children}</AppLayout>
+      </TenantNameConfirmationGuard>
       </TenantProvider>
     </AuthBoundary>
   );

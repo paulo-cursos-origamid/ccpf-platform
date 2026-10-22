@@ -34,12 +34,26 @@ export class PrismaTenantProvisioningRepository implements TenantProvisioningRep
     owner: TenantMemberEntity;
   }> {
     return this.prisma.$transaction(async (tx) => {
+      const billingAccount = await tx.billingAccount.findUnique({
+        where: { ownerUserId: owner.userId },
+        select: { id: true },
+      });
+
+      if (!billingAccount) {
+        throw new Error(
+          'Conta comercial não encontrada para o proprietário. '
+          + 'É necessária a migração dos dados existentes antes de criar outro Tenant.',
+        );
+      }
+
       const createdTenant = await tx.tenant.create({
         data: {
           id: tenant.id,
           name: tenant.name,
           slug: tenant.slug,
+          billingAccountId: billingAccount.id,
           status: tenant.status,
+          nameConfirmed: tenant.nameConfirmed,
           createdAt: tenant.createdAt,
           updatedAt: tenant.updatedAt,
         },
@@ -56,6 +70,78 @@ export class PrismaTenantProvisioningRepository implements TenantProvisioningRep
           updatedAt: owner.updatedAt,
         },
       });
+
+      // A cópia faz parte da mesma transação do tenant e do proprietário.
+      const categoryTemplates = await tx.categoryTemplate.findMany({
+        include: {
+          domains: true,
+          subCategories: true,
+        },
+        orderBy: [{ type: 'asc' }, { name: 'asc' }],
+      });
+
+      for (const template of categoryTemplates) {
+        let category = await tx.category.findUnique({
+          where: {
+            tenantId_slug: {
+              tenantId: createdTenant.id,
+              slug: template.slug,
+            },
+          },
+        });
+
+        if (!category) {
+          category = await tx.category.create({
+            data: {
+              tenantId: createdTenant.id,
+              name: template.name,
+              slug: template.slug,
+              type: template.type,
+              description: template.description,
+              color: template.color,
+              icon: template.icon,
+              isVehicleCategory: template.isVehicleCategory,
+              templateId: template.id,
+              domains: {
+                create: template.domains.map(({ domain }) => ({ domain })),
+              },
+            },
+          });
+        }
+
+        // Não restaura categorias excluídas logicamente.
+        if (category.deletedAt) {
+          continue;
+        }
+
+        for (const subTemplate of template.subCategories) {
+          const existingSubCategory = await tx.subCategory.findUnique({
+            where: {
+              categoryId_slug: {
+                categoryId: category.id,
+                slug: subTemplate.slug,
+              },
+            },
+          });
+
+          // Preserva subcategorias existentes e suas personalizações.
+          if (existingSubCategory) {
+            continue;
+          }
+
+          await tx.subCategory.create({
+            data: {
+              categoryId: category.id,
+              name: subTemplate.name,
+              slug: subTemplate.slug,
+              description: subTemplate.description,
+              color: subTemplate.color,
+              icon: subTemplate.icon,
+              templateId: subTemplate.id,
+            },
+          });
+        }
+      }
 
       return {
         tenant: this.toTenantEntity(createdTenant),
@@ -95,6 +181,7 @@ export class PrismaTenantProvisioningRepository implements TenantProvisioningRep
     name: string;
     slug: string;
     status: PrismaTenantStatus;
+    nameConfirmed: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): TenantEntity {
@@ -105,6 +192,7 @@ export class PrismaTenantProvisioningRepository implements TenantProvisioningRep
       this.toTenantStatus(data.status),
       data.createdAt,
       data.updatedAt,
+      data.nameConfirmed,
     );
   }
 

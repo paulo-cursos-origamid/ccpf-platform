@@ -189,11 +189,17 @@ describe('ChangeSubscriptionPlanUseCase', () => {
         .mockImplementation((entity: SubscriptionEntity) =>
           Promise.resolve(entity),
         ),
+    create: jest.fn(),
+    findById: jest.fn(),
+    findByTenant: jest.fn(),
     };
 
     const planRepository = {
       findById: jest.fn().mockResolvedValue(resolvedCurrentPlan),
       findByCode: jest.fn().mockResolvedValue(resolvedTargetPlan),
+    create: jest.fn(),
+    findPublicPlans: jest.fn(),
+    update: jest.fn(),
     };
 
     const planPriceRepository = {
@@ -208,18 +214,41 @@ describe('ChangeSubscriptionPlanUseCase', () => {
 
         return null;
       }),
+    create: jest.fn(),
+    findByPlanAndInterval: jest.fn(),
+    findActiveByPlan: jest.fn(),
+    update: jest.fn(),
     };
 
     const invoiceRepository = {
       findOpenBySubscription: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
+      findById: jest.fn(),
+      findByNumber: jest.fn(),
+      findByTenant: jest.fn(),
+      findBySubscription: jest.fn(),
+      update: jest.fn(),
+      findManyForAdmin: jest.fn(),
+      findAdminById: jest.fn(),
     };
 
-    const paymentRepository = {};
+    const paymentRepository = {
+    create: jest.fn(),
+    findById: jest.fn(),
+    findByReference: jest.fn(),
+    findByInstallment: jest.fn(),
+    update: jest.fn(),
+  };
 
     const billingContext = {
       invoiceRepository,
-      invoiceInstallmentRepository: {},
+      invoiceInstallmentRepository: {
+        create: jest.fn(),
+        createMany: jest.fn(),
+        findById: jest.fn(),
+        findByInvoice: jest.fn(),
+        update: jest.fn(),
+      },
       paymentRepository,
       subscriptionRepository,
       planRepository,

@@ -176,12 +176,21 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         },
       });
 
+      const billingAccount = await tx.billingAccount.create({
+        data: {
+          name: createdUser.name,
+          ownerUserId: createdUser.id,
+        },
+      });
+
       const createdTenant = await tx.tenant.create({
         data: {
           id: tenant.id,
           name: tenant.name,
           slug: tenant.slug,
+          billingAccountId: billingAccount.id,
           status: tenant.status,
+          nameConfirmed: tenant.nameConfirmed,
           createdAt: tenant.createdAt,
           updatedAt: tenant.updatedAt,
         },
@@ -199,10 +208,49 @@ export class PrismaPublicUserProvisioningRepository implements PublicUserProvisi
         },
       });
 
+      // Provisiona categorias e subcategorias padrão para o tenant inicial.
+      const categoryTemplates = await tx.categoryTemplate.findMany({
+        include: {
+          domains: true,
+          subCategories: true,
+        },
+        orderBy: [{ type: 'asc' }, { name: 'asc' }],
+      });
+
+      for (const template of categoryTemplates) {
+        const category = await tx.category.create({
+          data: {
+            tenantId: createdTenant.id,
+            name: template.name,
+            slug: template.slug,
+            type: template.type,
+            description: template.description,
+            color: template.color,
+            icon: template.icon,
+            isVehicleCategory: template.isVehicleCategory,
+            templateId: template.id,
+            domains: {
+              create: template.domains.map(({ domain }) => ({ domain })),
+            },
+            subCategories: {
+              create: template.subCategories.map((subTemplate) => ({
+                name: subTemplate.name,
+                slug: subTemplate.slug,
+                description: subTemplate.description,
+                color: subTemplate.color,
+                icon: subTemplate.icon,
+                templateId: subTemplate.id,
+              })),
+            },
+          },
+        });
+      }
+
       const createdSubscription = await tx.subscription.create({
         data: {
           id: subscription.id,
           tenantId: subscription.tenantId,
+          billingAccountId: billingAccount.id,
           planId: transactionalPlan.id,
           planPriceId: subscription.planPriceId,
           pendingPlanId: subscription.pendingPlanId,

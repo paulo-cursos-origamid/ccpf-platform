@@ -1,7 +1,8 @@
-import {
-  BadRequestException,
+import { BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
@@ -16,6 +17,7 @@ import { TenantRole } from '../../../domain/enums/tenant-role.enum';
 import { TenantStatus } from '../../../domain/enums/tenant-status.enum';
 import { TenantProvisioningRepository } from '../../../domain/repositories/tenant-provisioning.repository';
 import { TenantRepository } from '../../../domain/repositories/tenant.repository';
+import { TenantPlanLimitsRepository } from '../../../domain/repositories/tenant-plan-limits.repository';
 
 export interface CreateTenantInput {
   name: string;
@@ -27,6 +29,7 @@ export interface CreateTenantInput {
 export class CreateTenantUseCase {
   constructor(
     private readonly tenantRepository: TenantRepository,
+    private readonly tenantPlanLimitsRepository: TenantPlanLimitsRepository,
     private readonly tenantProvisioningRepository: TenantProvisioningRepository,
     private readonly createNotificationsForPermissionUseCase: CreateNotificationsForPermissionUseCase,
   ) {}
@@ -47,6 +50,26 @@ export class CreateTenantUseCase {
       throw new BadRequestException(
         'Usuário proprietário do Tenant é obrigatório.',
       );
+    }
+
+    const maxTenants =
+      await this.tenantPlanLimitsRepository.findMaxTenantsByUser(input.ownerUserId);
+
+    if (maxTenants === null) {
+      throw new ForbiddenException(
+        'Não foi encontrada uma assinatura ativa ou um período de teste válido para criar outro Tenant.',
+      );
+    }
+
+    if (maxTenants !== -1) {
+      const currentTenants =
+        await this.tenantPlanLimitsRepository.countOwnedTenantsByUser(input.ownerUserId);
+
+      if (currentTenants >= maxTenants) {
+        throw new ForbiddenException(
+          'O limite de Tenants do seu plano foi atingido.',
+        );
+      }
     }
 
     const existingTenant = await this.tenantRepository.findBySlug(slug);

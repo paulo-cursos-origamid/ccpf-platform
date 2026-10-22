@@ -17,5 +17,6 @@ export class TenantEntity {
     public status: TenantStatus,
     public readonly createdAt: Date,
     public updatedAt: Date,
+    public nameConfirmed: boolean = true,
   ) {}
 }

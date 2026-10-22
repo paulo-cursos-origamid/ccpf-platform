@@ -56,6 +56,7 @@ model User {
   platformRoles  UserPlatformRole[]
   accountMembers AccountMember[]
   notifications  Notification[]
+  billingAccount BillingAccount?
 }
 
 enum UserRole {
@@ -74,18 +75,23 @@ enum UserRole {
 // Todo dado financeiro pertencente ao cliente deverá estar
 // associado ao Tenant correspondente.
 model Tenant {
-  id     String       @id @default(uuid())
-  name   String
-  slug   String       @unique
-  status TenantStatus @default(ACTIVE)
+  id            String       @id @default(uuid())
+  name          String
+  slug          String       @unique
+  status        TenantStatus @default(ACTIVE)
+  nameConfirmed Boolean      @default(true)
 
   members       TenantMember[]
   accounts      Account[]
+  categories    Category[]
   subscriptions Subscription[]
   invoices      Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  billingAccountId String?
+  billingAccount   BillingAccount? @relation(fields: [billingAccountId], references: [id])
+  @@index([billingAccountId])
 }
 
 // Estado operacional do Tenant.
@@ -156,6 +162,7 @@ model Plan {
   code        String  @unique
   description String?
   maxUsers    Int
+  maxTenants  Int     @default(1)
   isPublic    Boolean @default(true)
   isActive    Boolean @default(true)
 
@@ -284,6 +291,9 @@ model Subscription {
   @@index([pendingPlanPriceId])
   @@index([pendingPlanEffectiveAt])
   @@index([pendingPlanInvoiceId])
+  billingAccountId String?
+  billingAccount   BillingAccount? @relation(fields: [billingAccountId], references: [id])
+  @@index([billingAccountId])
 }
 
 enum SubscriptionPlanChangeType {
@@ -636,4 +646,162 @@ model Notification {
   @@index([userId, readAt])
   @@index([userId, type])
   @@index([resourceType, resourceId])
+}
+// ============================================================
+// CATEGORIES
+// ============================================================
+
+// Categoria financeira pertencente a um Tenant.
+// A hierarquia parent/children permite categorias aninhadas.
+// A exclusão lógica preserva a possibilidade de manter histórico.
+model CategoryTemplate {
+  id                String   @id @default(uuid())
+  name              String
+  slug              String   @unique
+  type              CategoryType
+  description       String?
+  color             String?
+  icon              String?
+  isVehicleCategory Boolean  @default(false)
+
+  subCategories SubCategoryTemplate[]
+  domains       CategoryTemplateDomain[]
+  categories    Category[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+}
+
+model SubCategoryTemplate {
+  id                String   @id @default(uuid())
+  categoryTemplateId String
+  name              String
+  slug              String
+  description       String?
+  color             String?
+  icon              String?
+
+  categoryTemplate CategoryTemplate @relation(fields: [categoryTemplateId], references: [id], onDelete: Cascade)
+  categories       SubCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([categoryTemplateId, slug])
+  @@index([categoryTemplateId])
+}
+
+model CategoryTemplateDomain {
+  templateId String
+  domain     CategoryDomain
+
+  template CategoryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, domain])
+  @@index([domain])
+}
+
+model CategoryDomainLink {
+  categoryId String
+  domain     CategoryDomain
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, domain])
+  @@index([domain])
+}
+
+model Category {
+  id                String       @id @default(uuid())
+  tenantId          String
+  templateId        String?
+  name              String
+  slug              String
+  type              CategoryType
+  description       String?
+  color             String?
+  icon              String?
+  isVehicleCategory Boolean      @default(false)
+  isDomesticCategory Boolean @default(false)
+  isHealthCategory Boolean @default(false)
+  isTransportCategory Boolean @default(false)
+  isInvestmentCategory Boolean @default(false)
+  isOtherCategory Boolean @default(false)
+  parentId          String?
+  deletedAt         DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  template     CategoryTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  domains      CategoryDomainLink[]
+  parent       Category?    @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children     Category[]   @relation("CategoryHierarchy")
+  subCategories SubCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([templateId])
+  @@index([tenantId, type])
+  @@index([parentId])
+  @@index([deletedAt])
+}
+
+// Subcategoria vinculada a uma categoria.
+// O tenant é obtido pela categoria proprietária e deverá ser
+// validado pela aplicação em todas as operações por identificador.
+model SubCategory {
+  id          String    @id @default(uuid())
+  categoryId  String
+  templateId  String?
+  name        String
+  slug        String
+  description String?
+  color       String?
+  icon        String?
+  deletedAt   DateTime?
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  template  SubCategoryTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@index([templateId])
+  @@index([deletedAt])
+}
+
+enum CategoryDomain {
+  DOMESTIC
+  HEALTH
+  TRANSPORT
+  VEHICLES
+  INVESTMENTS
+  OTHER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+
+model BillingAccount {
+  id        String   @id @default(uuid())
+  name      String
+  ownerUserId String @unique
+
+  owner         User           @relation(fields: [ownerUserId], references: [id])
+  tenants       Tenant[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerUserId])
 }

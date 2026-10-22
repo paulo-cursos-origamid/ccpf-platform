@@ -1,11 +1,13 @@
 "use client";
 
 import type { ChangeEvent } from "react";
+import { useState } from "react";
 
 import { Select } from "@/components/ui/forms/Select";
 
 import { useTenantStore } from "../../stores";
 
+import { CreateTenantModal } from "./CreateTenantModal";
 import styles from "./TenantSelector.module.scss";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,10 +18,11 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 /**
- * Permite selecionar o espaço ativo e visualizar o papel do usuário
- * em cada espaço. A autorização continua sendo responsabilidade da API.
+ * Permite selecionar o espaço ativo.
+ * A autorização continua sendo responsabilidade da API.
  */
 export function TenantSelector() {
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const tenants = useTenantStore((state) => state.tenants);
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
   const loading = useTenantStore((state) => state.loading);
@@ -31,9 +34,9 @@ export function TenantSelector() {
     setActiveTenantId(event.target.value);
   }
 
-  if (loading && tenants.length === 0) {
-    return (
-      <div className={styles.container}>
+  return (
+    <div className={styles.container}>
+      {loading && tenants.length === 0 ? (
         <Select
           value=""
           onChange={() => undefined}
@@ -43,29 +46,28 @@ export function TenantSelector() {
         >
           <option value="">Carregando espaços...</option>
         </Select>
-      </div>
-    );
-  }
+      ) : tenants.length > 0 ? (
+        <Select
+          value={activeTenantId ?? ""}
+          onChange={handleChange}
+          aria-label="Selecionar espaço"
+          disabled={loading || tenants.length <= 1}
+          fullWidth={false}
+        >
+          {tenants.map((tenant) => (
+            <option key={tenant.id} value={tenant.id}>
+              {tenant.name} — {ROLE_LABELS[tenant.role] ?? tenant.role}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        <span className={styles.empty}>Nenhum espaço cadastrado</span>
+      )}
 
-  if (tenants.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className={styles.container}>
-      <Select
-        value={activeTenantId ?? ""}
-        onChange={handleChange}
-        aria-label="Selecionar espaço"
-        disabled={loading || tenants.length <= 1}
-        fullWidth={false}
-      >
-        {tenants.map((tenant) => (
-          <option key={tenant.id} value={tenant.id}>
-            {tenant.name} — {ROLE_LABELS[tenant.role] ?? tenant.role}
-          </option>
-        ))}
-      </Select>
+      <CreateTenantModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
     </div>
   );
 }

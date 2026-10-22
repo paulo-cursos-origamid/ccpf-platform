@@ -26,10 +26,16 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
   ) {}
 
   async create(subscription: SubscriptionEntity): Promise<SubscriptionEntity> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: subscription.tenantId },
+      select: { billingAccountId: true },
+    });
+
     const created = await this.prisma.subscription.create({
       data: {
         id: subscription.id,
         tenantId: subscription.tenantId,
+        billingAccountId: tenant?.billingAccountId ?? null,
         planId: subscription.planId,
         planPriceId: subscription.planPriceId,
         status: subscription.status,
@@ -65,9 +71,23 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
   async findCurrentByTenant(
     tenantId: string,
   ): Promise<SubscriptionEntity | null> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { billingAccountId: true },
+    });
+
+    // Tenants vinculados a uma conta comercial compartilham sua
+    // assinatura. Não usar uma assinatura isolada do Tenant como
+    // fallback, pois isso permitiria planos divergentes na mesma conta.
+    // Tenants sem conta comercial mantêm a busca legada por tenantId,
+    // incluindo o Tenant especial CCPF - Sistema.
+    const subscriptionWhere = tenant?.billingAccountId
+      ? { billingAccountId: tenant.billingAccountId }
+      : { tenantId };
+
     const subscription = await this.prisma.subscription.findFirst({
       where: {
-        tenantId,
+        ...subscriptionWhere,
         status: {
           in: [
             PrismaSubscriptionStatus.PENDING,

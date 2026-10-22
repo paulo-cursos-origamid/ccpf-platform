@@ -32,6 +32,25 @@ export interface UpdateTenantMemberRoleInput {
  */
 class TenantService {
   /**
+   * Cria um espaço para o usuário autenticado.
+   * Não envia X-Tenant-Id, pois o espaço ainda não existe.
+   */
+  createTenant(input: { name: string; slug: string }) {
+    return api.post<unknown>("/tenants", input, {
+      tenantAware: false,
+    });
+  }
+
+
+  /**
+   * Confirma o nome de apresentação do Tenant ativo.
+   */
+  confirmName(name: string) {
+    return api.patch<void>('/tenants/confirm-name', { name });
+  }
+
+
+  /**
    * Lista os Tenants aos quais o usuário autenticado pertence.
    *
    * A requisição não utiliza X-Tenant-Id porque seu objetivo

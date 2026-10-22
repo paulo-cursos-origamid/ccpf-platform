@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { EmailVerificationNotifierContract } from '../../../domain/contracts/email-verification-notifier.contract';
@@ -59,7 +59,13 @@ export class CreateUserUseCase {
     let savedUser: UserEntity;
 
     try {
-      savedUser = await this.userRepository.create(user);
+      const provision = this.userRepository.createForPlatformAdmin;
+      if (!provision) {
+        throw new InternalServerErrorException(
+          'Provisionamento administrativo de Tenant não está configurado.',
+        );
+      }
+      savedUser = await provision.call(this.userRepository, user);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
