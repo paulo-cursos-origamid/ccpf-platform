@@ -51,6 +51,31 @@ export class CreateCategoryDto {
   @IsBoolean()
   isVehicleCategory?: boolean;
 
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isDomesticCategory?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isHealthCategory?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isTransportCategory?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isInvestmentCategory?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isOtherCategory?: boolean;
+
   @ApiPropertyOptional({
     enum: CategoryDomain,
     isArray: true,

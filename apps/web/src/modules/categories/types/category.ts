@@ -1,5 +1,18 @@
 export type CategoryType = "INCOME" | "EXPENSE";
 
+export type CategoryDomain =
+  | "DOMESTIC"
+  | "HEALTH"
+  | "TRANSPORT"
+  | "VEHICLES"
+  | "INVESTMENTS"
+  | "OTHER";
+
+export interface CategoryDomainLink {
+  categoryId: string;
+  domain: CategoryDomain;
+}
+
 export interface Category {
   id: string;
   tenantId: string;
@@ -10,6 +23,12 @@ export interface Category {
   color?: string | null;
   icon?: string | null;
   isVehicleCategory: boolean;
+  isDomesticCategory: boolean;
+  isHealthCategory: boolean;
+  isTransportCategory: boolean;
+  isInvestmentCategory: boolean;
+  isOtherCategory: boolean;
+  domains?: CategoryDomainLink[];
   parentId?: string | null;
   children?: Category[];
   subCategories?: SubCategory[];
@@ -34,6 +53,12 @@ export interface SaveCategoryInput {
   color?: string;
   icon?: string;
   isVehicleCategory?: boolean;
+  isDomesticCategory?: boolean;
+  isHealthCategory?: boolean;
+  isTransportCategory?: boolean;
+  isInvestmentCategory?: boolean;
+  isOtherCategory?: boolean;
+  domains?: CategoryDomain[];
   parentId?: string | null;
 }
 

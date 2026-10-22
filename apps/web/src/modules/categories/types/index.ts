@@ -5,3 +5,4 @@ export type {
   SaveCategoryInput,
   SaveSubCategoryInput,
 } from "./category";
+export type { CategoryDomain } from "./category";

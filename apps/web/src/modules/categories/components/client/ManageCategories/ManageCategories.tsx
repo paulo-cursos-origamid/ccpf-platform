@@ -16,6 +16,7 @@ import { useCategories } from "@/modules/categories/hooks";
 import { categoriesService } from "@/modules/categories/services/categories.service";
 import type {
   Category,
+  CategoryDomain,
   CategoryType,
   SaveCategoryInput,
   SubCategory,
@@ -30,6 +31,11 @@ type CategoryForm = {
   color: string;
   icon: string;
   isVehicleCategory: boolean;
+  isDomesticCategory: boolean;
+  isHealthCategory: boolean;
+  isTransportCategory: boolean;
+  isInvestmentCategory: boolean;
+  isOtherCategory: boolean;
   parentId: string;
 };
 
@@ -47,6 +53,11 @@ const EMPTY_CATEGORY: CategoryForm = {
   color: "#64748b",
   icon: "",
   isVehicleCategory: false,
+  isDomesticCategory: false,
+  isHealthCategory: false,
+  isTransportCategory: false,
+  isInvestmentCategory: false,
+  isOtherCategory: true,
   parentId: "",
 };
 
@@ -55,6 +66,15 @@ const EMPTY_SUBCATEGORY: SubCategoryForm = {
   description: "",
   color: "",
   icon: "",
+};
+
+const CATEGORY_DOMAIN_LABELS: Record<CategoryDomain, string> = {
+  DOMESTIC: "Doméstico",
+  HEALTH: "Saúde",
+  TRANSPORT: "Transportes",
+  VEHICLES: "Veicular",
+  INVESTMENTS: "Investimentos",
+  OTHER: "Outros",
 };
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -128,6 +148,11 @@ export function ManageCategories() {
       color: category.color ?? "#64748b",
       icon: category.icon ?? "",
       isVehicleCategory: category.isVehicleCategory,
+      isDomesticCategory: category.isDomesticCategory ?? false,
+      isHealthCategory: category.isHealthCategory ?? false,
+      isTransportCategory: category.isTransportCategory ?? false,
+      isInvestmentCategory: category.isInvestmentCategory ?? false,
+      isOtherCategory: category.isOtherCategory ?? false,
       parentId: category.parentId ?? "",
     });
     setCategoryError("");
@@ -150,6 +175,19 @@ export function ManageCategories() {
       color: categoryForm.color.trim() || undefined,
       icon: categoryForm.icon.trim() || undefined,
       isVehicleCategory: categoryForm.isVehicleCategory,
+      isDomesticCategory: categoryForm.isDomesticCategory,
+      isHealthCategory: categoryForm.isHealthCategory,
+      isTransportCategory: categoryForm.isTransportCategory,
+      isInvestmentCategory: categoryForm.isInvestmentCategory,
+      isOtherCategory: categoryForm.isOtherCategory,
+      domains: [
+        ...(categoryForm.isDomesticCategory ? ["DOMESTIC" as CategoryDomain] : []),
+        ...(categoryForm.isHealthCategory ? ["HEALTH" as CategoryDomain] : []),
+        ...(categoryForm.isTransportCategory ? ["TRANSPORT" as CategoryDomain] : []),
+        ...(categoryForm.isVehicleCategory ? ["VEHICLES" as CategoryDomain] : []),
+        ...(categoryForm.isInvestmentCategory ? ["INVESTMENTS" as CategoryDomain] : []),
+        ...(categoryForm.isOtherCategory ? ["OTHER" as CategoryDomain] : []),
+      ],
       parentId: categoryForm.parentId || null,
     };
 
@@ -417,9 +455,21 @@ export function ManageCategories() {
                           aria-hidden="true"
                         />
                         <strong>{category.name}</strong>
-                        {category.isVehicleCategory && (
-                          <span className={styles.vehicleTag}>Veicular</span>
-                        )}
+                        {([
+                          ["DOMESTIC", category.isDomesticCategory],
+                          ["HEALTH", category.isHealthCategory],
+                          ["TRANSPORT", category.isTransportCategory],
+                          ["VEHICLES", category.isVehicleCategory],
+                          ["INVESTMENTS", category.isInvestmentCategory],
+                          ["OTHER", category.isOtherCategory],
+                        ] as [CategoryDomain, boolean | undefined][])
+                          .filter(([, enabled]) => enabled)
+                          .map(([domain]) => (
+                            <span key={domain} className={styles.vehicleTag}
+                              title={`Domínio: ${CATEGORY_DOMAIN_LABELS[domain]}`}>
+                              {CATEGORY_DOMAIN_LABELS[domain]}
+                            </span>
+                          ))}
                       </div>
                     </td>
                     <td className={styles.descriptionCell}>
@@ -655,20 +705,40 @@ export function ManageCategories() {
             </Field>
           </div>
 
-          <label className={styles.checkbox}>
-            <input
-              type="checkbox"
-              checked={categoryForm.isVehicleCategory}
-              onChange={(event) =>
-                setCategoryForm({
-                  ...categoryForm,
-                  isVehicleCategory: event.target.checked,
-                })
-              }
-              disabled={categorySaving}
-            />
-            Categoria relacionada a veículos
-          </label>
+          <fieldset className={styles.domainsSection} disabled={categorySaving}>
+            <legend>Domínios financeiros</legend>
+            <p className={styles.domainsHint}>
+              Selecione todos os contextos em que esta categoria pode ser utilizada.
+            </p>
+            <div className={styles.domainsGrid}>
+              {([
+                ["DOMESTIC", "isDomesticCategory"],
+                ["HEALTH", "isHealthCategory"],
+                ["TRANSPORT", "isTransportCategory"],
+                ["VEHICLES", "isVehicleCategory"],
+                ["INVESTMENTS", "isInvestmentCategory"],
+                ["OTHER", "isOtherCategory"],
+              ] as [CategoryDomain, keyof Pick<CategoryForm,
+                "isDomesticCategory" | "isHealthCategory" | "isTransportCategory" |
+                "isVehicleCategory" | "isInvestmentCategory" | "isOtherCategory">][]).map(
+                ([domain, field]) => (
+                  <label key={domain} className={styles.domainCheckbox}>
+                    <input
+                      type="checkbox"
+                      checked={categoryForm[field]}
+                      onChange={(event) =>
+                        setCategoryForm((current) => ({
+                          ...current,
+                          [field]: event.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{CATEGORY_DOMAIN_LABELS[domain]}</span>
+                  </label>
+                ),
+              )}
+            </div>
+          </fieldset>
 
           {categoryError && (
             <div className={styles.error} role="alert">

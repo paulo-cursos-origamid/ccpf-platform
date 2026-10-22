@@ -1,4 +1,4 @@
-import { PrismaClient, CategoryType } from '@prisma/client';
+import { PrismaClient, CategoryDomain, CategoryType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +27,11 @@ type CategorySeed = {
   color: string;
   icon: string;
   isVehicleCategory?: boolean;
+  isDomesticCategory?: boolean;
+  isHealthCategory?: boolean;
+  isTransportCategory?: boolean;
+  isInvestmentCategory?: boolean;
+  isOtherCategory?: boolean;
   subCategories: SubCategorySeed[];
 };
 
@@ -313,17 +318,18 @@ const categories: CategorySeed[] = [
   },
 ];
 
-const categoryDomains: Record<string, string[]> = {
-  moradia: ['DOMESTIC'],
-  alimentacao: ['DOMESTIC'],
-  transporte: ['TRANSPORT'],
-  veiculos: ['VEHICLES'],
-  saude: ['HEALTH'],
-  investimentos: ['INVESTMENTS'],
-  'investimentos-despesas': ['INVESTMENTS'],
-  'outras-despesas': ['OTHER'],
-  'outras-receitas': ['OTHER'],
-  'rendimentos-financeiros': ['INVESTMENTS'],
+const categoryDomains: Record<string, CategoryDomain[]> = {
+  moradia: [CategoryDomain.DOMESTIC],
+  alimentacao: [CategoryDomain.DOMESTIC],
+  transporte: [CategoryDomain.TRANSPORT],
+  veiculos: [CategoryDomain.VEHICLES],
+  saude: [CategoryDomain.HEALTH],
+  investimentos: [CategoryDomain.INVESTMENTS],
+  'investimentos-despesas': [CategoryDomain.INVESTMENTS],
+  'rendimentos-financeiros': [CategoryDomain.INVESTMENTS],
+  'aluguéis-recebidos': [CategoryDomain.DOMESTIC, CategoryDomain.VEHICLES],
+  'outras-despesas': [CategoryDomain.OTHER],
+  'outras-receitas': [CategoryDomain.OTHER],
 };
 
 async function seedCategoryTemplates() {
@@ -349,7 +355,7 @@ async function seedCategoryTemplates() {
       },
     });
 
-    const desiredDomains = categoryDomains[item.slug] ?? ['DOMESTIC'];
+    const desiredDomains = categoryDomains[item.slug] ?? [CategoryDomain.OTHER];
     const existingDomains = await prisma.categoryTemplateDomain.findMany({
       where: { templateId: template.id },
       select: { domain: true },
@@ -363,7 +369,7 @@ async function seedCategoryTemplates() {
         await prisma.categoryTemplateDomain.create({
           data: {
             templateId: template.id,
-            domain: domain as never,
+            domain,
           },
         });
       }
@@ -422,6 +428,11 @@ async function seedCategoriesForTenant(tenantId: string, tenantName: string) {
           color: item.color,
           icon: item.icon,
           isVehicleCategory: item.isVehicleCategory ?? false,
+          isDomesticCategory: (categoryDomains[item.slug] ?? [CategoryDomain.OTHER]).includes(CategoryDomain.DOMESTIC),
+          isHealthCategory: (categoryDomains[item.slug] ?? [CategoryDomain.OTHER]).includes(CategoryDomain.HEALTH),
+          isTransportCategory: (categoryDomains[item.slug] ?? [CategoryDomain.OTHER]).includes(CategoryDomain.TRANSPORT),
+          isInvestmentCategory: (categoryDomains[item.slug] ?? [CategoryDomain.OTHER]).includes(CategoryDomain.INVESTMENTS),
+          isOtherCategory: (categoryDomains[item.slug] ?? [CategoryDomain.OTHER]).includes(CategoryDomain.OTHER),
         },
       });
 
@@ -433,6 +444,51 @@ async function seedCategoriesForTenant(tenantId: string, tenantName: string) {
       skippedDeleted += 1;
       continue;
     }
+
+    // Sincroniza os domínios sem remover vínculos personalizados existentes.
+    const existingDomainLinks = await prisma.categoryDomainLink.findMany({
+      where: { categoryId: category.id },
+      select: { domain: true },
+    });
+
+    const desiredDomains = categoryDomains[item.slug] ?? [
+      CategoryDomain.OTHER,
+    ];
+
+    const allDomains = new Set([
+      ...existingDomainLinks.map((link) => link.domain),
+      ...desiredDomains,
+      ...(category.isVehicleCategory ? [CategoryDomain.VEHICLES] : []),
+      ...(category.isDomesticCategory ? [CategoryDomain.DOMESTIC] : []),
+      ...(category.isHealthCategory ? [CategoryDomain.HEALTH] : []),
+      ...(category.isTransportCategory ? [CategoryDomain.TRANSPORT] : []),
+      ...(category.isInvestmentCategory ? [CategoryDomain.INVESTMENTS] : []),
+      ...(category.isOtherCategory ? [CategoryDomain.OTHER] : []),
+    ]);
+
+    await prisma.categoryDomainLink.createMany({
+      data: [...allDomains].map((domain) => ({
+        categoryId: category.id,
+        domain,
+      })),
+      skipDuplicates: true,
+    });
+
+    await prisma.category.updateMany({
+      where: {
+        id: category.id,
+        tenantId,
+        deletedAt: null,
+      },
+      data: {
+        isVehicleCategory: allDomains.has(CategoryDomain.VEHICLES),
+        isDomesticCategory: allDomains.has(CategoryDomain.DOMESTIC),
+        isHealthCategory: allDomains.has(CategoryDomain.HEALTH),
+        isTransportCategory: allDomains.has(CategoryDomain.TRANSPORT),
+        isInvestmentCategory: allDomains.has(CategoryDomain.INVESTMENTS),
+        isOtherCategory: allDomains.has(CategoryDomain.OTHER),
+      },
+    });
 
     for (const subItem of item.subCategories) {
       const existingSubCategory = await prisma.subCategory.findUnique({

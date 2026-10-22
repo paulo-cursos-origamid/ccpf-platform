@@ -61,7 +61,57 @@ export class CategoriesService {
   async update(tenantId: string, id: string, input: Partial<CategoryInput>) {
     const current = await this.get(tenantId, id);
     const data = this.normalizeCategory(input, false);
-    if (data.domains !== undefined) {
+
+    const domainByFlag = {
+      isDomesticCategory: CategoryDomain.DOMESTIC,
+      isHealthCategory: CategoryDomain.HEALTH,
+      isTransportCategory: CategoryDomain.TRANSPORT,
+      isVehicleCategory: CategoryDomain.VEHICLES,
+      isInvestmentCategory: CategoryDomain.INVESTMENTS,
+      isOtherCategory: CategoryDomain.OTHER,
+    } as const;
+
+    const flagFields = Object.keys(domainByFlag) as Array<
+      keyof typeof domainByFlag
+    >;
+
+    const hasFlags = flagFields.some((field) => input[field] !== undefined);
+    const hasDomains = input.domains !== undefined;
+
+    if (hasFlags || hasDomains) {
+      const values = {
+        isDomesticCategory: current.isDomesticCategory,
+        isHealthCategory: current.isHealthCategory,
+        isTransportCategory: current.isTransportCategory,
+        isVehicleCategory: current.isVehicleCategory,
+        isInvestmentCategory: current.isInvestmentCategory,
+        isOtherCategory: current.isOtherCategory,
+      };
+
+      if (hasDomains) {
+        for (const field of flagFields) {
+          values[field] = input.domains!.includes(domainByFlag[field]);
+        }
+      }
+
+      if (hasFlags) {
+        for (const field of flagFields) {
+          if (input[field] !== undefined) {
+            values[field] = input[field]!;
+          }
+        }
+      }
+
+      for (const field of flagFields) {
+        data[field] = values[field];
+      }
+
+      // As flags são a representação principal; os vínculos antigos
+      // permanecem sincronizados para compatibilidade com código legado.
+      data.domains = flagFields
+        .filter((field) => values[field])
+        .map((field) => domainByFlag[field]);
+
       await this.assertDomainsAvailable(tenantId, data.domains);
     }
 
@@ -243,12 +293,36 @@ export class CategoriesService {
       }
     }
 
-    if (input.isVehicleCategory !== undefined) {
-      data.isVehicleCategory = input.isVehicleCategory;
+    const domainFlagFields = [
+      'isVehicleCategory',
+      'isDomesticCategory',
+      'isHealthCategory',
+      'isTransportCategory',
+      'isInvestmentCategory',
+      'isOtherCategory',
+    ] as const;
+
+    for (const field of domainFlagFields) {
+      if (input[field] !== undefined) {
+        data[field] = input[field];
+      }
     }
 
     if (input.domains !== undefined) {
       data.domains = [...new Set(input.domains)];
+    } else if (creating && domainFlagFields.some((field) => input[field] !== undefined)) {
+      const domainByFlag = {
+        isDomesticCategory: CategoryDomain.DOMESTIC,
+        isHealthCategory: CategoryDomain.HEALTH,
+        isTransportCategory: CategoryDomain.TRANSPORT,
+        isVehicleCategory: CategoryDomain.VEHICLES,
+        isInvestmentCategory: CategoryDomain.INVESTMENTS,
+        isOtherCategory: CategoryDomain.OTHER,
+      } as const;
+
+      data.domains = domainFlagFields
+        .filter((field) => input[field] === true)
+        .map((field) => domainByFlag[field]);
     }
 
     if (input.parentId !== undefined) {
@@ -337,6 +411,11 @@ export interface CategoryInput {
   color?: string | null;
   icon?: string | null;
   isVehicleCategory?: boolean;
+  isDomesticCategory?: boolean;
+  isHealthCategory?: boolean;
+  isTransportCategory?: boolean;
+  isInvestmentCategory?: boolean;
+  isOtherCategory?: boolean;
   domains?: CategoryDomain[];
   parentId?: string | null;
 }

@@ -724,6 +724,11 @@ model Category {
   color             String?
   icon              String?
   isVehicleCategory Boolean      @default(false)
+  isDomesticCategory Boolean @default(false)
+  isHealthCategory Boolean @default(false)
+  isTransportCategory Boolean @default(false)
+  isInvestmentCategory Boolean @default(false)
+  isOtherCategory Boolean @default(false)
   parentId          String?
   deletedAt         DateTime?
 

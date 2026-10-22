@@ -65,6 +65,11 @@ export class PrismaCategoryRepository implements CategoryRepository {
         color: data.color ?? null,
         icon: data.icon ?? null,
         isVehicleCategory: data.isVehicleCategory ?? false,
+        isDomesticCategory: data.isDomesticCategory ?? false,
+        isHealthCategory: data.isHealthCategory ?? false,
+        isTransportCategory: data.isTransportCategory ?? false,
+        isInvestmentCategory: data.isInvestmentCategory ?? false,
+        isOtherCategory: data.isOtherCategory ?? false,
         parentId: data.parentId ?? null,
         ...(data.domains !== undefined
           ? {
@@ -105,6 +110,11 @@ export class PrismaCategoryRepository implements CategoryRepository {
           ...(data.isVehicleCategory !== undefined
             ? { isVehicleCategory: data.isVehicleCategory }
             : {}),
+          ...(data.isDomesticCategory !== undefined ? { isDomesticCategory: data.isDomesticCategory } : {}),
+          ...(data.isHealthCategory !== undefined ? { isHealthCategory: data.isHealthCategory } : {}),
+          ...(data.isTransportCategory !== undefined ? { isTransportCategory: data.isTransportCategory } : {}),
+          ...(data.isInvestmentCategory !== undefined ? { isInvestmentCategory: data.isInvestmentCategory } : {}),
+          ...(data.isOtherCategory !== undefined ? { isOtherCategory: data.isOtherCategory } : {}),
           ...(data.parentId !== undefined ? { parentId: data.parentId } : {}),
         },
       });

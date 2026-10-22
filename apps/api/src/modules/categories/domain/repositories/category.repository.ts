@@ -16,6 +16,11 @@ export interface CategoryData {
   color?: string | null;
   icon?: string | null;
   isVehicleCategory?: boolean;
+  isDomesticCategory?: boolean;
+  isHealthCategory?: boolean;
+  isTransportCategory?: boolean;
+  isInvestmentCategory?: boolean;
+  isOtherCategory?: boolean;
   parentId?: string | null;
   domains?: CategoryDomain[];
 }
