@@ -141,7 +141,7 @@ export const productModules: ProductModule[] = [
     icon: ArrowLeftRight,
     href: "/dashboard/transactions",
     feature: "DOMESTIC",
-    implemented: false,
+    implemented: true,
     tenantRequired: true,
   },
 

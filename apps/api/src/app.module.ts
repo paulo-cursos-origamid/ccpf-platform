@@ -7,6 +7,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { AccountsModule } from './modules/accounts/accounts.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
@@ -22,6 +23,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ProfileModule,
     AccountsModule,
     CategoriesModule,
+    TransactionsModule,
     TenantModule,
     BillingModule,
     PlatformAdminModule,
