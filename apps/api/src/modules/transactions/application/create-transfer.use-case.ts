@@ -1,3 +1,4 @@
+import { runSerializableTransaction } from './run-serializable-transaction';
 import {
   BadRequestException,
   ForbiddenException,
@@ -39,121 +40,125 @@ export class CreateTransferUseCase {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const accountIds = [input.fromAccountId, input.toAccountId];
+    return runSerializableTransaction(
+      this.prisma,
+      async (tx) => {
+        const accountIds = [input.fromAccountId, input.toAccountId];
 
-      const accounts = await tx.account.findMany({
-        where: {
-          id: { in: accountIds },
-          tenantId: input.tenantId,
-          archivedAt: null,
-        },
-      });
+        const accounts = await tx.account.findMany({
+          where: {
+            id: { in: accountIds },
+            tenantId: input.tenantId,
+            archivedAt: null,
+          },
+        });
 
-      const fromAccount = accounts.find(
-        (account) => account.id === input.fromAccountId,
-      );
-      const toAccount = accounts.find(
-        (account) => account.id === input.toAccountId,
-      );
-
-      if (!fromAccount || !toAccount) {
-        throw new NotFoundException(
-          'Conta de origem ou destino não encontrada neste Espaço.',
+        const fromAccount = accounts.find(
+          (account) => account.id === input.fromAccountId,
         );
-      }
-
-      const memberships = await tx.accountMember.findMany({
-        where: {
-          accountId: { in: accountIds },
-          userId: input.userId,
-          status: 'ACTIVE',
-        },
-      });
-
-      const accessibleAccountIds = new Set(
-        memberships.map((membership) => membership.accountId),
-      );
-
-      if (
-        !accessibleAccountIds.has(fromAccount.id) ||
-        !accessibleAccountIds.has(toAccount.id)
-      ) {
-        throw new ForbiddenException(
-          'Você precisa ter acesso ativo às duas contas.',
+        const toAccount = accounts.find(
+          (account) => account.id === input.toAccountId,
         );
-      }
 
-      const transfer = await tx.transfer.create({
-        data: {
-          tenantId: input.tenantId,
-          userId: input.userId,
-          fromAccountId: fromAccount.id,
-          toAccountId: toAccount.id,
-          amount,
-          description: input.description?.trim() || null,
-        },
-      });
+        if (!fromAccount || !toAccount) {
+          throw new NotFoundException(
+            'Conta de origem ou destino não encontrada neste Espaço.',
+          );
+        }
 
-      const description =
-        input.description?.trim() || 'Transferência entre contas';
+        const memberships = await tx.accountMember.findMany({
+          where: {
+            accountId: { in: accountIds },
+            userId: input.userId,
+            status: 'ACTIVE',
+          },
+        });
 
-      await tx.ledgerEntry.createMany({
-        data: [
-          {
+        const accessibleAccountIds = new Set(
+          memberships.map((membership) => membership.accountId),
+        );
+
+        if (
+          !accessibleAccountIds.has(fromAccount.id) ||
+          !accessibleAccountIds.has(toAccount.id)
+        ) {
+          throw new ForbiddenException(
+            'Você precisa ter acesso ativo às duas contas.',
+          );
+        }
+
+        const transfer = await tx.transfer.create({
+          data: {
             tenantId: input.tenantId,
             userId: input.userId,
-            accountId: fromAccount.id,
-            type: LedgerEntryType.DEBIT,
+            fromAccountId: fromAccount.id,
+            toAccountId: toAccount.id,
             amount,
-            description,
-            referenceId: transfer.id,
-            referenceType: LedgerReferenceType.TRANSFER,
+            description: input.description?.trim() || null,
           },
-          {
+        });
+
+        const description =
+          input.description?.trim() || 'Transferência entre contas';
+
+        await tx.ledgerEntry.createMany({
+          data: [
+            {
+              tenantId: input.tenantId,
+              userId: input.userId,
+              accountId: fromAccount.id,
+              type: LedgerEntryType.DEBIT,
+              amount,
+              description,
+              referenceId: transfer.id,
+              referenceType: LedgerReferenceType.TRANSFER,
+            },
+            {
+              tenantId: input.tenantId,
+              userId: input.userId,
+              accountId: toAccount.id,
+              type: LedgerEntryType.CREDIT,
+              amount,
+              description,
+              referenceId: transfer.id,
+              referenceType: LedgerReferenceType.TRANSFER,
+            },
+          ],
+        });
+
+        const debit = await tx.account.updateMany({
+          where: {
+            id: fromAccount.id,
             tenantId: input.tenantId,
-            userId: input.userId,
-            accountId: toAccount.id,
-            type: LedgerEntryType.CREDIT,
-            amount,
-            description,
-            referenceId: transfer.id,
-            referenceType: LedgerReferenceType.TRANSFER,
+            archivedAt: null,
           },
-        ],
-      });
+          data: { balance: { decrement: amount } },
+        });
 
-      const debit = await tx.account.updateMany({
-        where: {
-          id: fromAccount.id,
-          tenantId: input.tenantId,
-          archivedAt: null,
-        },
-        data: { balance: { decrement: amount } },
-      });
+        if (debit.count !== 1) {
+          throw new NotFoundException(
+            'A conta de origem não está mais disponível.',
+          );
+        }
 
-      if (debit.count !== 1) {
-        throw new NotFoundException(
-          'A conta de origem não está mais disponível.',
-        );
-      }
+        const credit = await tx.account.updateMany({
+          where: {
+            id: toAccount.id,
+            tenantId: input.tenantId,
+            archivedAt: null,
+          },
+          data: { balance: { increment: amount } },
+        });
 
-      const credit = await tx.account.updateMany({
-        where: {
-          id: toAccount.id,
-          tenantId: input.tenantId,
-          archivedAt: null,
-        },
-        data: { balance: { increment: amount } },
-      });
+        if (credit.count !== 1) {
+          throw new NotFoundException(
+            'A conta de destino não está mais disponível.',
+          );
+        }
 
-      if (credit.count !== 1) {
-        throw new NotFoundException(
-          'A conta de destino não está mais disponível.',
-        );
-      }
-
-      return transfer;
-    });
+        return transfer;
+      },
+      'Conflito de concorrência ao registrar a transferência. Tente novamente.',
+    );
   }
 }

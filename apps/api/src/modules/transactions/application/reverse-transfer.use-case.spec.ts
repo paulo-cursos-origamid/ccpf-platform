@@ -36,6 +36,12 @@ describe('ReverseTransferUseCase', () => {
         findFirst: jest.fn().mockResolvedValue(transfer),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      accountMember: {
+        findMany: jest.fn().mockResolvedValue([
+          { accountId: 'account-1' },
+          { accountId: 'account-2' },
+        ]),
+      },
       account: {
         findFirst: jest.fn(({ where }) =>
           Promise.resolve({

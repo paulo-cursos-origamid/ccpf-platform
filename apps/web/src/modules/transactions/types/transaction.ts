@@ -14,6 +14,15 @@ export interface Transaction {
   updatedAt?: string;
 }
 
+export interface Transfer {
+  id: string;
+  amount: number | string;
+  description?: string | null;
+  createdAt: string;
+  fromAccount: { id: string; name: string; currency: string };
+  toAccount: { id: string; name: string; currency: string };
+}
+
 export interface CreateTransactionInput {
   title: string;
   amount: string;

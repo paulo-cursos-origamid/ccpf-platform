@@ -58,9 +58,12 @@ model User {
   notifications  Notification[]
   billingAccount BillingAccount?
 
-  transactions  Transaction[]
-  transfers     Transfer[]
-  ledgerEntries LedgerEntry[]
+  transactions     Transaction[]
+  transfers        Transfer[]
+  ledgerEntries    LedgerEntry[]
+  installmentPlans InstallmentPlan[]
+
+  recurringBills RecurringBill[]
 }
 
 enum UserRole {
@@ -96,11 +99,16 @@ model Tenant {
   billingAccountId String?
   billingAccount   BillingAccount? @relation(fields: [billingAccountId], references: [id])
 
-  transactions  Transaction[]
-  transfers     Transfer[]
-  ledgerEntries LedgerEntry[]
+  transactions     Transaction[]
+  transfers        Transfer[]
+  ledgerEntries    LedgerEntry[]
+  installmentPlans InstallmentPlan[]
+  installments     Installment[]
 
   @@index([billingAccountId])
+
+  recurringBills RecurringBill[]
+  recurringBillOccurrences RecurringBillOccurrence[]
 }
 
 // Estado operacional do Tenant.
@@ -510,13 +518,16 @@ model Account {
   updatedAt DateTime @updatedAt
 
   transactions      Transaction[]
-  sentTransfers     Transfer[]    @relation("TransferFromAccount")
-  receivedTransfers Transfer[]    @relation("TransferToAccount")
+  sentTransfers     Transfer[]        @relation("TransferFromAccount")
+  receivedTransfers Transfer[]        @relation("TransferToAccount")
   ledgerEntries     LedgerEntry[]
+  installmentPlans  InstallmentPlan[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
   @@index([status])
+
+  recurringBills RecurringBill[]
 }
 
 // Representa um vínculo entre um usuário e uma conta financeira.
@@ -758,7 +769,8 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions Transaction[]
+  transactions     Transaction[]
+  installmentPlans InstallmentPlan[]
 
   @@unique([tenantId, slug])
   @@unique([id, tenantId])
@@ -767,6 +779,8 @@ model Category {
   @@index([tenantId, type])
   @@index([parentId])
   @@index([deletedAt])
+
+  recurringBills RecurringBill[]
 }
 
 // Subcategoria vinculada a uma categoria.
@@ -789,13 +803,16 @@ model SubCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions Transaction[]
+  transactions     Transaction[]
+  installmentPlans InstallmentPlan[]
 
   @@unique([categoryId, slug])
   @@unique([id, categoryId])
   @@index([categoryId])
   @@index([templateId])
   @@index([deletedAt])
+
+  recurringBills RecurringBill[]
 }
 
 enum CategoryDomain {
@@ -842,6 +859,13 @@ enum TransactionType {
 // Natureza do lançamento no livro-razão.
 // CREDIT registra um crédito na conta.
 // DEBIT registra um débito na conta.
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+}
+
 enum LedgerEntryType {
   CREDIT
   DEBIT
@@ -894,6 +918,63 @@ model Transaction {
   @@index([tenantId, categoryId, date])
   @@index([tenantId, type, date])
   @@index([tenantId, deletedAt])
+
+  recurringBillOccurrences RecurringBillOccurrence[]
+  installments Installment[]
+}
+
+// Planejamento de uma compra parcelada. Não movimenta saldo nem ledger.
+model InstallmentPlan {
+  id               String    @id @default(cuid())
+  tenantId         String
+  userId           String
+  accountId        String
+  categoryId       String
+  subCategoryId    String?
+  title            String
+  totalAmount      Decimal   @db.Decimal(12, 2)
+  purchaseDate     DateTime
+  installmentCount Int
+  firstDueDate     DateTime
+  description      String?
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  account      Account       @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  category     Category      @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  subCategory  SubCategory?  @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict)
+  installments Installment[]
+
+  @@unique([id, tenantId])
+  @@index([tenantId, purchaseDate])
+  @@index([tenantId, accountId])
+  @@index([tenantId, deletedAt])
+}
+
+// Parcela planejada. Só a futura efetivação poderá gerar movimentação financeira.
+model Installment {
+  id                String            @id @default(cuid())
+  tenantId          String
+  installmentPlanId String
+  transactionId     String? @unique
+  installmentNumber Int
+  amount            Decimal           @db.Decimal(12, 2)
+  dueDate           DateTime
+  status            InstallmentStatus @default(PENDING)
+  paidAt            DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  plan   InstallmentPlan @relation(fields: [installmentPlanId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@unique([installmentPlanId, installmentNumber])
+  @@index([tenantId, dueDate, status])
+  @@index([tenantId, installmentPlanId])
 }
 
 // ============================================================
@@ -961,11 +1042,87 @@ model LedgerEntry {
   reversalOf LedgerEntry?  @relation("LedgerReversal", fields: [reversalOfId, tenantId], references: [id, tenantId], onDelete: Restrict)
   reversals  LedgerEntry[] @relation("LedgerReversal")
 
+  @@unique([id, tenantId])
+  @@unique([tenantId, accountId, referenceType, referenceId, type], map: "LedgerEntry_operation_account_type_key")
+  @@unique([reversalOfId], map: "LedgerEntry_reversalOfId_key")
   // Índices para extrato, rastreabilidade e auditoria por Espaço.
   @@index([tenantId, accountId, createdAt])
   @@index([tenantId, referenceType, referenceId])
   @@index([tenantId, reversalOfId])
+}
+
+
+// ============================================================
+// CONTAS RECORRENTES
+// ============================================================
+
+enum RecurringBillFrequency {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum RecurringBillOccurrenceStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+model RecurringBill {
+  id             String @id @default(cuid())
+  tenantId       String
+  userId         String
+  accountId      String
+  categoryId     String
+  subCategoryId  String?
+
+  title          String
+  expectedAmount Decimal? @db.Decimal(12, 2)
+  frequency      RecurringBillFrequency @default(MONTHLY)
+  dueDay         Int
+  startDate      DateTime
+  endDate        DateTime?
+  description    String?
+  isActive       Boolean @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant @relation(fields: [tenantId], references: [id])
+  user           User @relation(fields: [userId], references: [id])
+  account        Account @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  category       Category @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  subCategory    SubCategory? @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict)
+
+  occurrences    RecurringBillOccurrence[]
+
   @@unique([id, tenantId])
-  @@unique([tenantId, accountId, referenceType, referenceId, type], map: "LedgerEntry_operation_account_type_key")
-  @@unique([reversalOfId], map: "LedgerEntry_reversalOfId_key")
+  @@index([tenantId, accountId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, dueDay])
+}
+
+model RecurringBillOccurrence {
+  id              String @id @default(cuid())
+  tenantId        String
+  recurringBillId String
+  transactionId   String? @unique
+
+  referenceMonth  DateTime
+  dueDate         DateTime
+  expectedAmount  Decimal? @db.Decimal(12, 2)
+  paidAmount      Decimal? @db.Decimal(12, 2)
+  paidAt          DateTime?
+  status          RecurringBillOccurrenceStatus @default(PENDING)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant @relation(fields: [tenantId], references: [id])
+  recurringBill   RecurringBill @relation(fields: [recurringBillId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  transaction     Transaction? @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@unique([recurringBillId, referenceMonth])
+  @@index([tenantId, dueDate, status])
+  @@index([tenantId, recurringBillId])
 }

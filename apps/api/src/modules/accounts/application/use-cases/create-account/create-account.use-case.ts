@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import {
+  LedgerEntryType,
+  LedgerReferenceType,
+  Prisma,
+} from '@prisma/client';
 
+import { PrismaService } from '../../../../../infrastructure/database/prisma.service';
 import { AccountMemberEntity } from '../../../domain/entities/account-member.entity';
 import { AccountEntity } from '../../../domain/entities/account.entity';
-
 import { AccountMemberRole } from '../../../domain/enums/account-member-role.enum';
 import { AccountType } from '../../../domain/enums/account-type.enum';
-
-import { AccountMemberRepository } from '../../../domain/repositories/account-member.repository';
-import { AccountRepository } from '../../../domain/repositories/account.repository';
 
 export interface CreateAccountInput {
   userId: string;
@@ -33,10 +35,7 @@ export interface CreateAccountOutput {
 
 @Injectable()
 export class CreateAccountUseCase {
-  constructor(
-    private readonly accountRepository: AccountRepository,
-    private readonly accountMemberRepository: AccountMemberRepository,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async execute(input: CreateAccountInput): Promise<CreateAccountOutput> {
     const account = new AccountEntity({
@@ -46,30 +45,68 @@ export class CreateAccountUseCase {
       initialBalance: input.initialBalance,
     });
 
-    const savedAccount = await this.accountRepository.create(
-      account,
-      input.tenantId,
-    );
+    return this.prisma.$transaction(async (tx) => {
+      const savedAccount = await tx.account.create({
+        data: {
+          id: account.id,
+          tenantId: input.tenantId,
+          name: account.name,
+          type: account.type,
+          currency: account.currency,
+          initialBalance: new Prisma.Decimal(account.initialBalance),
+          balance: new Prisma.Decimal(account.balance),
+          status: account.status,
+          archivedAt: account.archivedAt,
+        },
+      });
 
-    const owner = new AccountMemberEntity({
-      accountId: savedAccount.id,
-      userId: input.userId,
-      role: AccountMemberRole.OWNER,
+      const owner = new AccountMemberEntity({
+        accountId: savedAccount.id,
+        userId: input.userId,
+        role: AccountMemberRole.OWNER,
+      });
+
+      await tx.accountMember.create({
+        data: {
+          id: owner.id,
+          accountId: owner.accountId,
+          userId: owner.userId,
+          role: owner.role,
+          status: owner.status,
+        },
+      });
+
+      const initialBalance = new Prisma.Decimal(account.initialBalance);
+
+      if (!initialBalance.isZero()) {
+        await tx.ledgerEntry.create({
+          data: {
+            tenantId: input.tenantId,
+            userId: input.userId,
+            accountId: savedAccount.id,
+            type: initialBalance.isPositive()
+              ? LedgerEntryType.CREDIT
+              : LedgerEntryType.DEBIT,
+            amount: initialBalance.abs(),
+            description: 'Saldo inicial da conta',
+            referenceId: savedAccount.id,
+            referenceType: LedgerReferenceType.ADJUSTMENT,
+          },
+        });
+      }
+
+      return {
+        id: savedAccount.id,
+        name: savedAccount.name,
+        type: savedAccount.type as AccountType,
+        currency: savedAccount.currency,
+        initialBalance: Number(savedAccount.initialBalance),
+        balance: Number(savedAccount.balance),
+        status: savedAccount.status,
+        archivedAt: savedAccount.archivedAt,
+        createdAt: savedAccount.createdAt,
+        updatedAt: savedAccount.updatedAt,
+      };
     });
-
-    await this.accountMemberRepository.create(owner);
-
-    return {
-      id: savedAccount.id,
-      name: savedAccount.name,
-      type: savedAccount.type,
-      currency: savedAccount.currency,
-      initialBalance: savedAccount.initialBalance,
-      balance: savedAccount.balance,
-      status: savedAccount.status,
-      archivedAt: savedAccount.archivedAt,
-      createdAt: savedAccount.createdAt,
-      updatedAt: savedAccount.updatedAt,
-    };
   }
 }

@@ -7,6 +7,7 @@ import { useAccounts } from "@/modules/accounts/hooks";
 import { useCategories } from "@/modules/categories/hooks";
 import { categoriesService } from "@/modules/categories/services/categories.service";
 import type { SubCategory } from "@/modules/categories/types";
+import { recurringBillsService } from "@/modules/recurring-bills/services/recurring-bills.service";
 import { transactionsService } from "../../services/transactions.service";
 import type { Transaction, TransactionType } from "../../types/transaction";
 import styles from "./CreateTransactionModal.module.scss";
@@ -15,10 +16,16 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: (transaction: Transaction) => void;
+  initialType?: TransactionType;
 }
 
-export function CreateTransactionModal({ open, onClose, onCreated }: Props) {
-  const [type, setType] = useState<TransactionType>("EXPENSE");
+export function CreateTransactionModal({
+  open,
+  onClose,
+  onCreated,
+  initialType = "EXPENSE",
+}: Props) {
+  const [type, setType] = useState<TransactionType>(initialType);
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState("");
@@ -26,12 +33,18 @@ export function CreateTransactionModal({ open, onClose, onCreated }: Props) {
   const [subCategoryId, setSubCategoryId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [dueDay, setDueDay] = useState(10);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const { accounts } = useAccounts();
   const { categories } = useCategories(type);
+
+  useEffect(() => {
+    if (open) setType(initialType);
+  }, [open, initialType]);
 
   useEffect(() => {
     setCategoryId("");
@@ -81,6 +94,28 @@ export function CreateTransactionModal({ open, onClose, onCreated }: Props) {
     setLoading(true);
 
     try {
+      if (type === "EXPENSE" && isRecurring) {
+        await recurringBillsService.create({
+          title: title.trim(),
+          expectedAmount: parsedAmount.toFixed(2),
+          accountId,
+          categoryId,
+          frequency: "MONTHLY",
+          dueDay,
+          startDate: new Date(`${date}T12:00:00`).toISOString(),
+          ...(description.trim() ? { description: description.trim() } : {}),
+        });
+
+        setTitle("");
+        setAmount("");
+        setDescription("");
+        setSubCategoryId("");
+        setIsRecurring(false);
+        window.dispatchEvent(new Event("ccpf:recurring-bills-changed"));
+        onClose();
+        return;
+      }
+
       const transaction = await transactionsService.create({
         title: title.trim(),
         amount: parsedAmount.toFixed(2),
@@ -109,7 +144,7 @@ export function CreateTransactionModal({ open, onClose, onCreated }: Props) {
     <Modal
       open={open}
       onClose={() => !loading && onClose()}
-      title="Nova transação"
+      title={type === "INCOME" ? "Nova receita" : "Nova despesa"}
       closeOnOverlayClick={!loading}
     >
       <form className={styles.form} onSubmit={handleSubmit}>
@@ -208,6 +243,41 @@ export function CreateTransactionModal({ open, onClose, onCreated }: Props) {
               ))}
             </Select>
           </Field>
+        )}
+
+        {type === "EXPENSE" && (
+          <div className={styles.recurringOptions}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(event) => setIsRecurring(event.target.checked)}
+                disabled={loading}
+              />
+              Conta recorrente
+            </label>
+
+            {isRecurring && (
+              <>
+                <Field label="Dia do vencimento mensal" htmlFor="recurring-due-day" required>
+                  <Input
+                    id="recurring-due-day"
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={dueDay}
+                    onChange={(event) => setDueDay(Number(event.target.value))}
+                    disabled={loading}
+                    required
+                  />
+                </Field>
+                <p>
+                  A recorrência será cadastrada sem movimentar o saldo.
+                  Confirme cada pagamento na lista de contas recorrentes.
+                </p>
+              </>
+            )}
+          </div>
         )}
 
         <Field label="Observações" htmlFor="transaction-description">

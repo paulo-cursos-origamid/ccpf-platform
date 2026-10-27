@@ -37,3 +37,21 @@
     }
   }
 }
+
+
+.recurringOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+
+  input {
+    accent-color: #047857;
+  }
+}

@@ -25,7 +25,10 @@ import { CreateTransactionUseCase } from '../application/create-transaction.use-
 import { CreateTransferUseCase } from '../application/create-transfer.use-case';
 import { ListTransfersUseCase } from '../application/list-transfers.use-case';
 import { ListTransactionsUseCase } from '../application/list-transactions.use-case';
+import { ListFinancialHistoryUseCase } from '../application/list-financial-history.use-case';
 import { GetTransactionUseCase } from '../application/get-transaction.use-case';
+import { ReverseTransactionUseCase } from '../application/reverse-transaction.use-case';
+import { ReverseTransferUseCase } from '../application/reverse-transfer.use-case';
 import { CreateTransactionDto } from './create-transaction.dto';
 import { CreateTransferDto } from './create-transfer.dto';
 
@@ -44,7 +47,10 @@ export class TransactionsController {
     private readonly createTransfer: CreateTransferUseCase,
     private readonly listTransfers: ListTransfersUseCase,
     private readonly listTransactions: ListTransactionsUseCase,
+    private readonly listFinancialHistory: ListFinancialHistoryUseCase,
     private readonly getTransaction: GetTransactionUseCase,
+    private readonly reverseTransaction: ReverseTransactionUseCase,
+    private readonly reverseTransfer: ReverseTransferUseCase,
   ) {}
 
   @Post()
@@ -139,6 +145,40 @@ export class TransactionsController {
     type?: TransactionType,
   ) {
     return this.listTransactions.execute(tenant.tenantId, tenant.userId, type);
+  }
+
+  @Post('transfers/:id/reverse')
+  @ApiOperation({ summary: 'Estornar transferência financeira' })
+  reverseTransferOperation(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ) {
+    return this.reverseTransfer.execute({
+      id,
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+    });
+  }
+
+  @Post(':id/reverse')
+  @ApiOperation({ summary: 'Estornar receita ou despesa' })
+  reverseTransactionOperation(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ) {
+    return this.reverseTransaction.execute({
+      id,
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+    });
+  }
+
+  @Get('history')
+  @ApiOperation({
+    summary: 'Consultar histórico financeiro do Espaço ativo',
+  })
+  listHistory(@CurrentTenant() tenant: TenantContext) {
+    return this.listFinancialHistory.execute(tenant.tenantId, tenant.userId);
   }
 
   @Get(':id')

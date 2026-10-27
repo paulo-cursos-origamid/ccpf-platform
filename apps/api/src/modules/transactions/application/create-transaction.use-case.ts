@@ -1,3 +1,4 @@
+import { runSerializableTransaction } from './run-serializable-transaction';
 import {
   BadRequestException,
   ForbiddenException,
@@ -36,117 +37,121 @@ export class CreateTransactionUseCase {
       throw new BadRequestException('O valor deve ser maior que zero.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const account = await tx.account.findFirst({
-        where: {
-          id: input.accountId,
-          tenantId: input.tenantId,
-          archivedAt: null,
-        },
-      });
-
-      if (!account) {
-        throw new NotFoundException('Conta não encontrada neste Espaço.');
-      }
-
-      const membership = await tx.accountMember.findFirst({
-        where: {
-          accountId: account.id,
-          userId: input.userId,
-          status: 'ACTIVE',
-        },
-      });
-
-      if (!membership) {
-        throw new ForbiddenException('Você não tem acesso a esta conta.');
-      }
-
-      const category = await tx.category.findFirst({
-        where: {
-          id: input.categoryId,
-          tenantId: input.tenantId,
-          deletedAt: null,
-        },
-      });
-
-      if (!category) {
-        throw new NotFoundException('Categoria não encontrada neste Espaço.');
-      }
-
-      if (category.type !== input.type) {
-        throw new BadRequestException(
-          'O tipo da transação deve corresponder ao tipo da categoria.',
-        );
-      }
-
-      if (input.subCategoryId) {
-        const subCategory = await tx.subCategory.findFirst({
+    return runSerializableTransaction(
+      this.prisma,
+      async (tx) => {
+        const account = await tx.account.findFirst({
           where: {
-            id: input.subCategoryId,
-            categoryId: category.id,
+            id: input.accountId,
+            tenantId: input.tenantId,
+            archivedAt: null,
+          },
+        });
+
+        if (!account) {
+          throw new NotFoundException('Conta não encontrada neste Espaço.');
+        }
+
+        const membership = await tx.accountMember.findFirst({
+          where: {
+            accountId: account.id,
+            userId: input.userId,
+            status: 'ACTIVE',
+          },
+        });
+
+        if (!membership) {
+          throw new ForbiddenException('Você não tem acesso a esta conta.');
+        }
+
+        const category = await tx.category.findFirst({
+          where: {
+            id: input.categoryId,
+            tenantId: input.tenantId,
             deletedAt: null,
           },
         });
 
-        if (!subCategory) {
-          throw new NotFoundException(
-            'Subcategoria não encontrada nesta categoria.',
+        if (!category) {
+          throw new NotFoundException('Categoria não encontrada neste Espaço.');
+        }
+
+        if (category.type !== input.type) {
+          throw new BadRequestException(
+            'O tipo da transação deve corresponder ao tipo da categoria.',
           );
         }
-      }
 
-      const transaction = await tx.transaction.create({
-        data: {
-          tenantId: input.tenantId,
-          userId: input.userId,
-          accountId: account.id,
-          categoryId: category.id,
-          subCategoryId: input.subCategoryId ?? null,
-          title: input.title.trim(),
-          amount,
-          type: input.type,
-          date: new Date(input.date),
-          description: input.description?.trim() || null,
-        },
-      });
+        if (input.subCategoryId) {
+          const subCategory = await tx.subCategory.findFirst({
+            where: {
+              id: input.subCategoryId,
+              categoryId: category.id,
+              deletedAt: null,
+            },
+          });
 
-      const ledgerType =
-        input.type === TransactionType.INCOME
-          ? LedgerEntryType.CREDIT
-          : LedgerEntryType.DEBIT;
+          if (!subCategory) {
+            throw new NotFoundException(
+              'Subcategoria não encontrada nesta categoria.',
+            );
+          }
+        }
 
-      await tx.ledgerEntry.create({
-        data: {
-          tenantId: input.tenantId,
-          userId: input.userId,
-          accountId: account.id,
-          type: ledgerType,
-          amount,
-          description: input.description?.trim() || input.title.trim(),
-          referenceId: transaction.id,
-          referenceType: LedgerReferenceType.TRANSACTION,
-        },
-      });
+        const transaction = await tx.transaction.create({
+          data: {
+            tenantId: input.tenantId,
+            userId: input.userId,
+            accountId: account.id,
+            categoryId: category.id,
+            subCategoryId: input.subCategoryId ?? null,
+            title: input.title.trim(),
+            amount,
+            type: input.type,
+            date: new Date(input.date),
+            description: input.description?.trim() || null,
+          },
+        });
 
-      const updated = await tx.account.updateMany({
-        where: {
-          id: account.id,
-          tenantId: input.tenantId,
-          archivedAt: null,
-        },
-        data: {
-          balance:
-            input.type === TransactionType.INCOME
-              ? { increment: amount }
-              : { decrement: amount },
-        },
-      });
+        const ledgerType =
+          input.type === TransactionType.INCOME
+            ? LedgerEntryType.CREDIT
+            : LedgerEntryType.DEBIT;
 
-      if (updated.count !== 1) {
-        throw new NotFoundException('A conta não está mais disponível.');
-      }
+        await tx.ledgerEntry.create({
+          data: {
+            tenantId: input.tenantId,
+            userId: input.userId,
+            accountId: account.id,
+            type: ledgerType,
+            amount,
+            description: input.description?.trim() || input.title.trim(),
+            referenceId: transaction.id,
+            referenceType: LedgerReferenceType.TRANSACTION,
+          },
+        });
 
-      return transaction;
-    });
+        const updated = await tx.account.updateMany({
+          where: {
+            id: account.id,
+            tenantId: input.tenantId,
+            archivedAt: null,
+          },
+          data: {
+            balance:
+              input.type === TransactionType.INCOME
+                ? { increment: amount }
+                : { decrement: amount },
+          },
+        });
+
+        if (updated.count !== 1) {
+          throw new NotFoundException('A conta não está mais disponível.');
+        }
+
+        return transaction;
+      },
+      'Conflito de concorrência ao registrar a transação. Tente novamente.',
+    );
   }
 }
