@@ -30,17 +30,29 @@ async function main() {
     );
   }
 
+  // Garante a conta de cobrança do proprietário.
+  const billingAccount = await prisma.billingAccount.upsert({
+    where: { ownerUserId: admin.id },
+    update: { name: 'CCPF - Sistema' },
+    create: {
+      name: 'CCPF - Sistema',
+      ownerUserId: admin.id,
+    },
+  });
+
   // Cria ou reutiliza o Tenant inicial do administrador.
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'ccpf-system-owner' },
     update: {
       name: 'CCPF - Sistema',
       status: 'ACTIVE',
+      billingAccountId: billingAccount.id,
     },
     create: {
       name: 'CCPF - Sistema',
       slug: 'ccpf-system-owner',
       status: 'ACTIVE',
+      billingAccountId: billingAccount.id,
     },
   });
 
@@ -75,6 +87,7 @@ async function main() {
 
   const subscriptionData = {
     planId: plan.id,
+    billingAccountId: billingAccount.id,
     planPriceId: null,
     pendingPlanId: null,
     pendingPlanPriceId: null,
@@ -110,6 +123,7 @@ async function main() {
   console.log(`Administrador: ${admin.email}`);
   console.log(`Tenant: ${tenant.name}`);
   console.log(`Tenant ID: ${tenant.id}`);
+  console.log(`BillingAccount ID: ${billingAccount.id}`);
   console.log(`Plano: ${plan.code}`);
   console.log('Assinatura: ACTIVE');
 }

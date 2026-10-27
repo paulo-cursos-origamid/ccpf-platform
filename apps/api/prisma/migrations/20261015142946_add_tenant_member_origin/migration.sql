@@ -1,3 +1,0 @@
-CREATE TYPE "TenantMemberOrigin" AS ENUM ('EXISTING_USER', 'TENANT_CREATED');
-ALTER TABLE "TenantMember"
-ADD COLUMN "origin" "TenantMemberOrigin" NOT NULL DEFAULT 'EXISTING_USER';

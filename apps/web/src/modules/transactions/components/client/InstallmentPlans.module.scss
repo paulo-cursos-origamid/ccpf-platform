@@ -1,0 +1,359 @@
+.section {
+  display: grid;
+  gap: var(--spacing-4);
+  margin: var(--spacing-6) 0;
+  padding: var(--spacing-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--surface-primary);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+}
+
+.description,
+.note,
+.helper {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.description {
+  margin: var(--spacing-2) 0 0;
+  max-width: 680px;
+}
+
+.summary {
+  display: grid;
+  gap: var(--spacing-1);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-secondary);
+}
+
+.summary span,
+.summary small {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.summary strong {
+  color: var(--accent-primary, #047857);
+  font-size: var(--text-xl);
+}
+
+.planList {
+  display: grid;
+  gap: var(--spacing-3);
+}
+
+.planCard {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+
+.planToggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.planToggle:hover {
+  background: var(--surface-secondary);
+}
+
+.planInfo,
+.planAmounts {
+  display: grid;
+  gap: var(--spacing-1);
+}
+
+.planInfo small,
+.planAmounts small {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.planAmounts {
+  text-align: right;
+}
+
+.planAmounts > strong {
+  font-size: var(--text-lg);
+}
+
+.installments {
+  overflow-x: auto;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.installmentHeader,
+.installmentRow {
+  display: grid;
+  grid-template-columns: 0.7fr 1.2fr 1fr 1fr 1fr;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 540px;
+  padding: var(--spacing-3) var(--spacing-4);
+  font-size: var(--text-sm);
+}
+
+.installmentHeader {
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.installmentRow + .installmentRow {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.status {
+  font-weight: 600;
+}
+
+.pending {
+  color: var(--text-secondary);
+}
+
+.paid {
+  color: var(--accent-primary, #047857);
+}
+
+.overdue {
+  color: var(--color-danger, #b91c1c);
+}
+
+.canceled {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.message,
+.empty {
+  padding: var(--spacing-4);
+  color: var(--text-secondary);
+}
+
+.empty h3 {
+  margin: 0 0 var(--spacing-2);
+  color: var(--text-primary);
+}
+
+.empty p {
+  margin: 0;
+}
+
+.note,
+.helper {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.form {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger, #b91c1c);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: var(--spacing-3);
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .planToggle {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .planAmounts {
+    text-align: left;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+}
+
+
+.paymentSummary {
+  display: grid;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  strong:last-child {
+    color: var(--accent-primary, #047857);
+    font-size: var(--text-lg);
+  }
+}
+
+
+/* ==========================================================
+   TABELA DE COMPRAS PARCELADAS
+   ========================================================== */
+
+.planTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+
+.planTable,
+.installmentTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+
+  th,
+  td {
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: var(--text-sm);
+  }
+
+  th {
+    background: var(--surface-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  td {
+    color: var(--text-primary);
+  }
+
+  tbody tr:hover {
+    background: var(--surface-secondary);
+  }
+}
+
+.planTable {
+  min-width: 1050px;
+
+  tfoot {
+    background: var(--surface-secondary);
+
+    td {
+      border-bottom: 0;
+    }
+  }
+}
+
+.moneyCell {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.expandButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--accent-primary, #047857);
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--accent-primary, #047857);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(4 120 87 / 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary, #047857);
+    outline-offset: 2px;
+  }
+}
+
+.detailsRow {
+  background: var(--surface-secondary);
+
+  > td {
+    padding: 0 !important;
+  }
+}
+
+.details {
+  padding: var(--spacing-4);
+  border-left: 3px solid var(--accent-primary, #047857);
+
+  h3 {
+    margin: 0 0 var(--spacing-3);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+  }
+}
+
+.installmentTable {
+  min-width: 650px;
+  background: var(--surface-primary);
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .details {
+    padding: var(--spacing-3);
+  }
+}

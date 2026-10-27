@@ -103,6 +103,34 @@ LEFT JOIN "Plan" p ON p.id = s."planId"
 LEFT JOIN "BillingAccount" ba ON ba.id = t."billingAccountId"
 WHERE t.slug = 'ccpf-system-owner'
 ORDER BY s."createdAt" DESC NULLS LAST;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM "User" WHERE email = 'paulo@test.com'
+  ) THEN
+    RAISE EXCEPTION 'Seed incompleto: administrador paulo@test.com ausente.';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM "Tenant" t
+    JOIN "TenantMember" tm ON tm."tenantId" = t.id
+    JOIN "User" u ON u.id = tm."userId"
+    JOIN "BillingAccount" ba ON ba.id = t."billingAccountId"
+    JOIN "Subscription" s ON s."tenantId" = t.id
+    JOIN "Plan" p ON p.id = s."planId"
+    WHERE t.slug = 'ccpf-system-owner'
+      AND u.email = 'paulo@test.com'
+      AND tm.role = 'OWNER'
+      AND ba."ownerUserId" = u.id
+      AND s."billingAccountId" = ba.id
+      AND p.code = 'SYSTEM_OWNER'
+      AND s.status = 'ACTIVE'
+  ) THEN
+    RAISE EXCEPTION 'Seed incompleto: SYSTEM_OWNER, proprietário ou BillingAccount inválidos.';
+  END IF;
+END $$;
 SQL
 
 echo

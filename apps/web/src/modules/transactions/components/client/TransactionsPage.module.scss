@@ -1,0 +1,770 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.description {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  min-height: var(--control-height-md);
+  padding: 0 var(--spacing-md);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover {
+    background: var(--accent-primary-hover);
+    border-color: var(--accent-primary-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.15);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-width: 0;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-xl);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+
+  input,
+  select {
+    min-height: var(--control-height-md);
+    padding: 0 var(--spacing-md);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--font-sm);
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+
+    &:focus-visible {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.12);
+    }
+  }
+
+  input {
+    flex: 1;
+    min-width: min(100%, 220px);
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+
+  select {
+    min-width: 160px;
+  }
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+
+  th,
+  td {
+    padding: var(--spacing-md);
+    white-space: nowrap;
+  }
+
+  th {
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+
+  td {
+    border-bottom: 1px solid var(--border-secondary);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+  }
+
+  tbody tr {
+    transition: background-color var(--transition-fast);
+
+    &:hover {
+      background: var(--surface-hover);
+    }
+
+    &:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  td small {
+    display: block;
+    max-width: 18rem;
+    overflow: hidden;
+    color: var(--text-secondary);
+    text-overflow: ellipsis;
+  }
+}
+
+.amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.income {
+  color: var(--text-success) !important;
+}
+
+.expense {
+  color: var(--danger) !important;
+}
+
+.message,
+.error,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+  text-align: center;
+}
+
+.message {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.empty {
+  gap: var(--spacing-sm);
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.count {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .addButton {
+    width: 100%;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  .tableWrapper {
+    border-radius: var(--radius-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .filters {
+    flex-direction: column;
+
+    input,
+    select {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+}
+
+.choicesTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.choiceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.choiceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  min-height: 108px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+
+  strong {
+    font-size: var(--font-md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+
+  &:hover {
+    border-color: var(--accent-primary);
+    background: var(--surface-hover);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.12);
+  }
+}
+
+@media (max-width: 900px) {
+  .choiceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .choiceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.reverseButton {
+  border: 1px solid #b91c1c;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  color: #b91c1c;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.reverseButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.transferHistory {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  margin-top: var(--spacing-lg);
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+}
+
+.transferList {
+  display: grid;
+  gap: 10px;
+}
+
+.transferItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+}
+
+.transferItem p,
+.transferItem small {
+  display: block;
+  margin: 4px 0 0;
+}
+
+@media (max-width: 640px) {
+  .transferItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* Contas recorrentes integradas à tabela de transações */
+
+.recurringRow {
+  background: var(--surface-secondary);
+}
+
+.expandButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+
+  span {
+    color: var(--accent-primary);
+    font-size: 11px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 3px;
+  }
+}
+
+.recurringBadge {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  background: rgb(4 120 87 / 0.1);
+  color: #047857;
+  font-size: var(--font-sxs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.expandAction {
+  padding: 6px 10px;
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--accent-primary);
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+}
+
+.recurringDetailsRow > td {
+  padding: 0 !important;
+  white-space: normal !important;
+  background: var(--surface-primary);
+}
+
+.recurringDetails {
+  display: grid;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.recurringDetailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.recurringTableScroll {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.recurringInnerTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-secondary);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #047857;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+}
+
+.recurringError {
+  margin: 0;
+  color: var(--danger);
+}
+
+
+/* Seção independente de contas recorrentes */
+
+.recurringSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  margin-top: var(--spacing-lg);
+}
+
+.recurringSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  p {
+    margin: var(--spacing-xs) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+
+/* Modal de pagamento das contas recorrentes */
+
+.recurringPaymentForm {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.recurringPaymentSummary {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+  }
+
+  strong:last-child {
+    color: var(--accent-primary, #047857);
+    font-size: var(--text-lg);
+  }
+}
+
+.recurringPaymentActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+
+.recurringPaymentError {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 640px) {
+  .recurringPaymentActions {
+    flex-direction: column-reverse;
+  }
+}
+
+
+/* Organização das seções financeiras */
+
+.contentSection,
+.commitments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  min-width: 0;
+}
+
+.contentSection {
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+}
+
+.commitments {
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-primary);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  p {
+    margin: var(--spacing-xs) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.sectionCount {
+  flex-shrink: 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 768px) {
+  .contentSection {
+    padding: var(--spacing-md);
+  }
+
+  .sectionHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* =========================================================
+   COMPROMISSOS FINANCEIROS — ABAS
+   ========================================================= */
+
+.commitmentTabs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-primary);
+  overflow-x: auto;
+}
+
+.commitmentTab,
+.commitmentTabActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 var(--spacing-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+}
+
+.commitmentTabActive {
+  border-color: var(--accent-primary);
+  background: rgb(4 120 87 / 0.08);
+  color: var(--accent-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.commitments [role="tabpanel"] {
+  min-width: 0;
+}
+
+.commitments [role="tabpanel"][hidden] {
+  display: none;
+}
+
+/* =========================================================
+   TRANSFERÊNCIAS
+   ========================================================= */
+
+.transferHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+  }
+
+  p {
+    margin: var(--spacing-xs) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+@media (max-width: 768px) {
+  .commitmentTabs {
+    width: 100%;
+  }
+
+  .commitmentTab,
+  .commitmentTabActive {
+    flex: 1;
+    padding: 0 var(--spacing-md);
+  }
+
+  .transferHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .transferHeading .addButton {
+    width: 100%;
+  }
+}

@@ -25,11 +25,7 @@ const permissions = [
     'Consultar usuários',
     'Permite consultar usuários da plataforma.',
   ],
-  [
-    'USERS_CREATE',
-    'Criar usuários',
-    'Permite criar usuários da plataforma.',
-  ],
+  ['USERS_CREATE', 'Criar usuários', 'Permite criar usuários da plataforma.'],
   [
     'USERS_UPDATE',
     'Atualizar usuários',
@@ -45,31 +41,11 @@ const permissions = [
     'Consultar Tenants',
     'Permite consultar Tenants da plataforma.',
   ],
-  [
-    'TENANTS_CREATE',
-    'Criar Tenants',
-    'Permite criar Tenants.',
-  ],
-  [
-    'TENANTS_UPDATE',
-    'Atualizar Tenants',
-    'Permite atualizar Tenants.',
-  ],
-  [
-    'PLANS_READ',
-    'Consultar planos',
-    'Permite consultar planos comerciais.',
-  ],
-  [
-    'PLANS_CREATE',
-    'Criar planos',
-    'Permite criar planos comerciais.',
-  ],
-  [
-    'PLANS_UPDATE',
-    'Atualizar planos',
-    'Permite atualizar planos comerciais.',
-  ],
+  ['TENANTS_CREATE', 'Criar Tenants', 'Permite criar Tenants.'],
+  ['TENANTS_UPDATE', 'Atualizar Tenants', 'Permite atualizar Tenants.'],
+  ['PLANS_READ', 'Consultar planos', 'Permite consultar planos comerciais.'],
+  ['PLANS_CREATE', 'Criar planos', 'Permite criar planos comerciais.'],
+  ['PLANS_UPDATE', 'Atualizar planos', 'Permite atualizar planos comerciais.'],
   [
     'SUBSCRIPTIONS_READ',
     'Consultar assinaturas',
@@ -85,10 +61,11 @@ const permissions = [
     'Consultar cobrança',
     'Permite consultar informações de cobrança.',
   ],
+  ['BILLING_MANAGE', 'Gerenciar cobrança', 'Permite administrar cobranças.'],
   [
-    'BILLING_MANAGE',
-    'Gerenciar cobrança',
-    'Permite administrar cobranças.',
+    'FINANCIAL_REVERSALS_MANAGE',
+    'Gerenciar estornos financeiros',
+    'Permite estornar transações e transferências pela administração da plataforma.',
   ],
   [
     'DASHBOARD_READ',
@@ -120,11 +97,7 @@ const roles = [
     code: 'PLATFORM_SUPPORT',
     name: 'Suporte da Plataforma',
     description: 'Responsável pelo atendimento e suporte aos usuários.',
-    permissions: [
-      'USERS_READ',
-      'TENANTS_READ',
-      'DASHBOARD_READ',
-    ],
+    permissions: ['USERS_READ', 'TENANTS_READ', 'DASHBOARD_READ'],
   },
   {
     code: 'PLATFORM_BILLING',
@@ -187,10 +160,7 @@ const plans = [
       { interval: 'YEARLY', amount: '238.80', currency: 'BRL' },
       { interval: 'LIFETIME', amount: '716.40', currency: 'BRL' },
     ],
-    features: [
-      PlanFeatureCode.DOMESTIC,
-      PlanFeatureCode.BASIC_REPORTS,
-    ],
+    features: [PlanFeatureCode.DOMESTIC, PlanFeatureCode.BASIC_REPORTS],
   },
   {
     name: 'Plano Pro',

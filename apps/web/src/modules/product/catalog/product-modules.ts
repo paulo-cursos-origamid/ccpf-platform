@@ -37,6 +37,7 @@ export type ProductModuleCode =
   | "ACCOUNTS"
   | "CATEGORIES"
   | "TRANSACTIONS"
+  | "HISTORY"
   | "REPORTS"
   | "VEHICLES"
   | "HEALTH"
@@ -141,7 +142,18 @@ export const productModules: ProductModule[] = [
     icon: ArrowLeftRight,
     href: "/dashboard/transactions",
     feature: "DOMESTIC",
-    implemented: false,
+    implemented: true,
+    tenantRequired: true,
+  },
+
+  {
+    code: "HISTORY",
+    label: "Histórico",
+    section: "Financeiro",
+    icon: Receipt,
+    href: "/dashboard/history",
+    feature: "DOMESTIC",
+    implemented: true,
     tenantRequired: true,
   },
 
