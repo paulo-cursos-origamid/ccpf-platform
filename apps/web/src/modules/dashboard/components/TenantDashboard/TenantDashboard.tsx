@@ -1,69 +1,43 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, CreditCard } from "lucide-react";
 
-import {
-  Archive,
-  ArrowRight,
-  ArrowUpRight,
-  CreditCard,
-  Wallet,
-} from "lucide-react";
+import { useFinancialDashboard } from "../../hooks/useFinancialDashboard";
 
-import { ApiError } from "@/lib/http/fetcher";
-
-import { useAccounts } from "@/modules/accounts/hooks/client/useAccounts";
-import { AccountStatus } from "@/modules/accounts/types";
+import { FinancialSummary } from "../FinancialSummary/FinancialSummary";
+import { CashFlowChart } from "../CashFlowChart/CashFlowChart";
+import { RecentTransactions } from "../RecentTransactions/RecentTransactions";
+import { ExpensesByCategory } from "../ExpensesByCategory/ExpensesByCategory";
+import { UpcomingPayments } from "../UpcomingPayments/UpcomingPayments";
+import { AccountsOverview } from "../AccountsOverview/AccountsOverview";
 
 import styles from "./TenantDashboard.module.scss";
 
-function formatCurrency(value: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency,
-    }).format(value);
-  } catch {
-    return `${currency} ${value.toFixed(2)}`;
-  }
-}
-
-function getAccountTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    CASH: "Dinheiro",
-    CHECKING: "Conta corrente",
-    SAVINGS: "Poupança",
-    DIGITAL: "Conta digital",
-    INVESTMENT: "Investimentos",
-    OTHER: "Outra",
-  };
-
-  return labels[type] ?? type;
-}
-
+/**
+ * Componente principal do Dashboard financeiro.
+ *
+ * Organiza os indicadores financeiros, gráficos, movimentações,
+ * pagamentos futuros e contas do Espaço ativo.
+ *
+ * Os dados são fornecidos pelo hook useFinancialDashboard,
+ * mantendo a apresentação separada das regras de negócio.
+ */
 export function TenantDashboard() {
-  const { accounts, loading, error, loadAccounts } = useAccounts();
-
-  const isSubscriptionBlocked =
-    error instanceof ApiError &&
-    error.statusCode === 403 &&
-    /assinatura/i.test(error.message);
-
-  const activeAccounts = accounts.filter(
-    (account) => account.status === AccountStatus.ACTIVE,
-  );
-
-  const archivedAccounts = accounts.filter(
-    (account) => account.status === AccountStatus.ARCHIVED,
-  );
-
-  const totalBalance = activeAccounts.reduce(
-    (total, account) =>
-      account.currency === "BRL"
-        ? total + account.balance
-        : total,
-    0,
-  );
+  const {
+    accounts,
+    loading,
+    error,
+    loadAccounts,
+    isSubscriptionBlocked,
+    totalBalance,
+    financial,
+    financialLoading,
+    transactionsError,
+    categoryExpenses,
+    categoryColors,
+    upcomingPayments,
+  } = useFinancialDashboard();
 
   return (
     <main className={styles.page}>
@@ -72,8 +46,7 @@ export function TenantDashboard() {
           <span className={styles.eyebrow}>Minhas finanças</span>
           <h1 className={styles.title}>Dashboard</h1>
           <p className={styles.description}>
-            Acompanhe suas contas e o saldo financeiro do seu
-            ambiente.
+            Acompanhe suas contas e o saldo financeiro do seu ambiente.
           </p>
         </div>
       </header>
@@ -100,9 +73,7 @@ export function TenantDashboard() {
 
             <strong
               className={
-                isSubscriptionBlocked
-                  ? styles.subscriptionTitle
-                  : undefined
+                isSubscriptionBlocked ? styles.subscriptionTitle : undefined
               }
             >
               {isSubscriptionBlocked
@@ -137,194 +108,47 @@ export function TenantDashboard() {
         </section>
       ) : null}
 
-      <section
-        className={styles.metrics}
-        aria-label="Resumo financeiro"
-      >
-        <article className={styles.metricCard}>
-          <div className={styles.metricIcon}>
-            <Wallet
-              size={20}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-          </div>
+      <FinancialSummary
+        loading={loading}
+        totalBalance={totalBalance}
+        financialLoading={financialLoading}
+        transactionsError={transactionsError}
+        financial={financial}
+      />
 
-          <div className={styles.metricContent}>
-            <span className={styles.metricLabel}>
-              Saldo total
-            </span>
-
-            <strong className={styles.metricValue}>
-              {loading
-                ? "..."
-                : formatCurrency(totalBalance, "BRL")}
-            </strong>
-
-            <span className={styles.metricDescription}>
-              Soma das contas ativas em BRL.
-            </span>
-          </div>
-        </article>
-
-        <article className={styles.metricCard}>
-          <div className={styles.metricIcon}>
-            <Wallet
-              size={20}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-          </div>
-
-          <div className={styles.metricContent}>
-            <span className={styles.metricLabel}>
-              Contas
-            </span>
-
-            <strong className={styles.metricValue}>
-              {loading ? "..." : accounts.length}
-            </strong>
-
-            <span className={styles.metricDescription}>
-              Contas vinculadas ao seu acesso.
-            </span>
-          </div>
-        </article>
-
-        <article className={styles.metricCard}>
-          <div className={styles.metricIcon}>
-            <ArrowUpRight
-              size={20}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-          </div>
-
-          <div className={styles.metricContent}>
-            <span className={styles.metricLabel}>
-              Contas ativas
-            </span>
-
-            <strong className={styles.metricValue}>
-              {loading ? "..." : activeAccounts.length}
-            </strong>
-
-            <span className={styles.metricDescription}>
-              Contas disponíveis para movimentação.
-            </span>
-          </div>
-        </article>
-
-        <article className={styles.metricCard}>
-          <div className={styles.metricIcon}>
-            <Archive
-              size={20}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-          </div>
-
-          <div className={styles.metricContent}>
-            <span className={styles.metricLabel}>
-              Arquivadas
-            </span>
-
-            <strong className={styles.metricValue}>
-              {loading ? "..." : archivedAccounts.length}
-            </strong>
-
-            <span className={styles.metricDescription}>
-              Contas arquivadas no ambiente.
-            </span>
-          </div>
-        </article>
-      </section>
-
-      <section className={styles.accountsSection}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <span className={styles.sectionEyebrow}>
-              Patrimônio
-            </span>
-            <h2 className={styles.sectionTitle}>
-              Minhas contas
-            </h2>
-          </div>
-
-          <span className={styles.accountCount}>
-            {loading ? "..." : `${accounts.length} contas`}
-          </span>
+      {transactionsError && (
+        <div className={styles.dashboardNotice} role="alert">
+          Não foi possível carregar as movimentações financeiras. Os indicadores
+          e gráficos dependentes delas estão indisponíveis.
         </div>
+      )}
 
-        {loading ? (
-          <div className={styles.emptyState}>
-            <p>Carregando suas contas...</p>
-          </div>
-        ) : accounts.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Wallet
-              size={24}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-            <strong>Nenhuma conta encontrada</strong>
-            <p>
-              Suas contas financeiras aparecerão aqui.
-            </p>
-          </div>
-        ) : (
-          <div className={styles.accountsList}>
-            {accounts.map((account) => (
-              <article
-                key={account.id}
-                className={styles.accountCard}
-              >
-                <div className={styles.accountIdentity}>
-                  <div className={styles.accountIcon}>
-                    <Wallet
-                      size={19}
-                      strokeWidth={1.8}
-                      aria-hidden="true"
-                    />
-                  </div>
+      <div className={styles.dashboardFinancialGrid}>
+        <CashFlowChart
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          financial={financial}
+        />
 
-                  <div>
-                    <h3 className={styles.accountName}>
-                      {account.name}
-                    </h3>
+        <RecentTransactions
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          financial={financial}
+        />
+      </div>
 
-                    <p className={styles.accountType}>
-                      {getAccountTypeLabel(account.type)}
-                    </p>
-                  </div>
-                </div>
+      <div className={styles.dashboardCategoryGrid}>
+        <ExpensesByCategory
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          categoryExpenses={categoryExpenses}
+          categoryColors={categoryColors}
+        />
 
-                <div className={styles.accountBalance}>
-                  <span>Saldo</span>
-                  <strong>
-                    {formatCurrency(
-                      account.balance,
-                      account.currency,
-                    )}
-                  </strong>
-                </div>
+        <UpcomingPayments upcomingPayments={upcomingPayments} />
+      </div>
 
-                <span
-                  className={`${styles.accountStatus} ${
-                    account.status === AccountStatus.ACTIVE
-                      ? styles.accountStatusActive
-                      : styles.accountStatusArchived
-                  }`}
-                >
-                  {account.status === AccountStatus.ACTIVE
-                    ? "Ativa"
-                    : "Arquivada"}
-                </span>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <AccountsOverview accounts={accounts} loading={loading} />
     </main>
   );
 }
