@@ -137,12 +137,6 @@ export function Sidebar() {
       }`}
     >
       <div className={styles.header}>
-        <div className={styles.headerContent}>
-          <span className={styles.logo}>
-            CCPF
-          </span>
-        </div>
-
         <button
           type="button"
           className={styles.toggleButton}

@@ -130,3 +130,18 @@
 
   --accent-primary-hover: #036b4f;
 }
+
+// BEGIN CCPF DESIGN TOKENS
+// CCPF DESIGN SYSTEM — LIGHT
+:root[data-theme="light"] {
+  --ccpf-color-background: #f8fafc;
+  --ccpf-color-surface: #ffffff;
+  --ccpf-color-surface-raised: #f1f5f9;
+
+  --ccpf-color-text-primary: #0f172a;
+  --ccpf-color-text-secondary: #475569;
+  --ccpf-color-text-muted: #64748b;
+
+  --ccpf-color-border: #cbd5e1;
+}
+// END CCPF DESIGN TOKENS

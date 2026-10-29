@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CircleDollarSign, CreditCard, ArrowLeftRight } from "@/components/icons";
 import { useTenantStore } from "@/modules/tenant/stores";
 import { transactionsService } from "../../services/transactions.service";
 import type { FinancialHistoryItem } from "../../types/financial-history";
@@ -114,15 +115,30 @@ export function FinancialHistoryPage() {
 
       <div className={styles.summary}>
         <article className={styles.summaryCard}>
-          <span className={styles.summaryLabel}>Receitas concluídas</span>
+          <div className={styles.summaryCardHeader}>
+            <span className={`${styles.summaryIcon} ${styles.incomeIcon}`} aria-hidden="true">
+              <CircleDollarSign size={20} />
+            </span>
+            <span className={styles.summaryLabel}>Receitas concluídas</span>
+          </div>
           <strong className={styles.income}>{MONEY.format(summary.income)}</strong>
         </article>
         <article className={styles.summaryCard}>
-          <span className={styles.summaryLabel}>Despesas concluídas</span>
+          <div className={styles.summaryCardHeader}>
+            <span className={`${styles.summaryIcon} ${styles.expenseIcon}`} aria-hidden="true">
+              <CreditCard size={20} />
+            </span>
+            <span className={styles.summaryLabel}>Despesas concluídas</span>
+          </div>
           <strong className={styles.expense}>{MONEY.format(summary.expense)}</strong>
         </article>
         <article className={styles.summaryCard}>
-          <span className={styles.summaryLabel}>Transferências concluídas</span>
+          <div className={styles.summaryCardHeader}>
+            <span className={`${styles.summaryIcon} ${styles.resultIcon}`} aria-hidden="true">
+              <ArrowLeftRight size={20} />
+            </span>
+            <span className={styles.summaryLabel}>Transferências concluídas</span>
+          </div>
           <strong>{MONEY.format(summary.transfers)}</strong>
         </article>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole } from "@/components/icons";
 import { useState } from "react";
 
 import { Input } from "../Input";

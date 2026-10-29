@@ -1,3 +1,4 @@
+import { BrandIcon } from "@/components/shared/BrandIcon";
 import styles from "./AuthHeader.module.scss";
 
 interface AuthHeaderProps {
@@ -8,7 +9,10 @@ interface AuthHeaderProps {
 export function AuthHeader({ title, subtitle }: AuthHeaderProps) {
   return (
     <header className={styles.header}>
-      <div className={styles.logo}>CCPF</div>
+      <div className={styles.logo}>
+      <BrandIcon size={32} aria-hidden="true" />
+      <span>CCPF</span>
+    </div>
 
       <h1 className={styles.title}>{title}</h1>
 
