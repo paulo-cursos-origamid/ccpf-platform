@@ -9,7 +9,7 @@ import {
   FileText,
   Receipt,
   XCircle,
-} from "lucide-react";
+} from "@/components/icons";
 
 import { InvoicePayment } from "../InvoicePayment";
 import { InvoiceStatusBadge } from "../InvoiceStatusBadge/InvoiceStatusBadge";

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Loader2, XCircle } from "@/components/icons";
 
 import { useAdminInvoice, useCancelPayment, useConfirmPayment } from "../../hooks/client";
 import type { InvoiceStatus } from "../../types";

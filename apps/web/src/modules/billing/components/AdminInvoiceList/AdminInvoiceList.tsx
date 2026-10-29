@@ -9,7 +9,7 @@ import {
   ChevronRight,
   Search,
   X,
-} from "lucide-react";
+} from "@/components/icons";
 import Link from "next/link";
 
 import { Button, SearchInput, Select } from "@/components/ui/forms";

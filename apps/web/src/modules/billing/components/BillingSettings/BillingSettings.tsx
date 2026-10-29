@@ -5,7 +5,7 @@ import {
   CheckCircle,
   CreditCard,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 import { useEffect, useMemo, useState } from "react";
 
 import {

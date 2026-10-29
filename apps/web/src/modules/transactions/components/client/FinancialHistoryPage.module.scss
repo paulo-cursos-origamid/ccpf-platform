@@ -104,6 +104,42 @@
   }
 }
 
+.summaryCardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+
+  > span:last-child {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.summaryIcon {
+  display: inline-flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
+
+.incomeIcon {
+  background: rgb(4 120 87 / 0.12);
+  color: #047857;
+}
+
+.expenseIcon {
+  background: rgb(220 38 38 / 0.10);
+  color: var(--danger);
+}
+
+.resultIcon {
+  background: rgb(251 183 85 / 0.18);
+  color: #b7791f;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

@@ -5,7 +5,7 @@ import {
   CreditCard,
   Receipt,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 
 import { useAdminDashboardSummary } from "../../hooks";
 import { AdminMetricCard } from "./AdminMetricCard";

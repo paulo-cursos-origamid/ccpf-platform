@@ -8,6 +8,7 @@ import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
 import { useIdentityStore } from "@/modules/identity/stores/identity.store";
 import { TenantSelector } from "@/modules/tenant";
 
+import { BrandIcon } from "@/components/shared/BrandIcon";
 import styles from "./Header.module.scss";
 
 // Componente responsável pelo cabeçalho principal da aplicação.
@@ -38,7 +39,10 @@ export function Header() {
       {" "}
       <div className={styles.left}>
         {" "}
-        <span className={styles.logo}>CCPF</span>
+        <span className={styles.logo}>
+          <BrandIcon size={30} aria-hidden="true" />
+          <span>CCPF</span>
+        </span>
         <TenantSelector />
       </div>
       <div className={styles.right}>

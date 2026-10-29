@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandIcon } from "@/components/shared/BrandIcon";
+
 import Link from "next/link";
 
 import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
@@ -24,7 +26,7 @@ export function LandingHeader() {
     <header className={styles.header}>
       <div className={styles.container}>
         <Link href="/" className={styles.logo}>
-          <span className={styles.logoMark}>C</span>
+          <BrandIcon className={styles.logoMark} size={34} aria-hidden="true" />
           <span>CCPF</span>
         </Link>
 

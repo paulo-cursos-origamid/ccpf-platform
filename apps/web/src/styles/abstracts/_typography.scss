@@ -91,3 +91,30 @@ $tracking-wide: 0.04em;
   --tracking-normal: #{$tracking-normal};
   --tracking-wide: #{$tracking-wide};
 }
+
+// BEGIN CCPF DESIGN TOKENS
+// CCPF DESIGN SYSTEM — TIPOGRAFIA
+$ccpf-font-size-2xs: 0.625rem;
+$ccpf-font-size-xs: 0.75rem;
+$ccpf-font-size-sm: 0.875rem;
+$ccpf-font-size-base: 1rem;
+$ccpf-font-size-lg: 1.125rem;
+$ccpf-font-size-xl: 1.25rem;
+$ccpf-font-size-2xl: 1.5rem;
+$ccpf-font-size-3xl: 1.875rem;
+$ccpf-font-size-4xl: 2.25rem;
+$ccpf-font-size-5xl: 3rem;
+
+$ccpf-font-weight-regular: 400;
+$ccpf-font-weight-medium: 500;
+$ccpf-font-weight-semibold: 600;
+$ccpf-font-weight-bold: 700;
+$ccpf-font-weight-extrabold: 800;
+
+$ccpf-line-height-tight: 1.13;
+$ccpf-line-height-normal: 1.5;
+$ccpf-line-height-relaxed: 1.75;
+
+$ccpf-font-size-hero: clamp(3rem, 3.65vw, 4.5rem);
+$ccpf-letter-spacing-hero: -0.045em;
+// END CCPF DESIGN TOKENS

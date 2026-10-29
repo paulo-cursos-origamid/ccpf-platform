@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { CircleDollarSign, CreditCard, Coins } from "@/components/icons";
 import { useAccounts } from "@/modules/accounts/hooks";
 import { useCategories } from "@/modules/categories/hooks";
 import { useTransactions } from "../../hooks/client/useTransactions";
@@ -131,15 +132,30 @@ export function TransactionsPage() {
 
         <div className={styles.summary}>
           <article className={styles.summaryCard}>
-            <span>Total de receitas</span>
+            <div className={styles.summaryCardHeader}>
+              <span className={`${styles.summaryIcon} ${styles.incomeIcon}`} aria-hidden="true">
+                <CircleDollarSign size={20} />
+              </span>
+              <span>Total de receitas</span>
+            </div>
             <strong className={styles.income}>{MONEY.format(totals.income)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span>Total de despesas</span>
+            <div className={styles.summaryCardHeader}>
+              <span className={`${styles.summaryIcon} ${styles.expenseIcon}`} aria-hidden="true">
+                <CreditCard size={20} />
+              </span>
+              <span>Total de despesas</span>
+            </div>
             <strong className={styles.expense}>{MONEY.format(totals.expense)}</strong>
           </article>
           <article className={styles.summaryCard}>
-            <span>Resultado das movimentações</span>
+            <div className={styles.summaryCardHeader}>
+              <span className={`${styles.summaryIcon} ${styles.resultIcon}`} aria-hidden="true">
+                <Coins size={20} />
+              </span>
+              <span>Resultado das movimentações</span>
+            </div>
             <strong>{MONEY.format(totals.income - totals.expense)}</strong>
           </article>
         </div>

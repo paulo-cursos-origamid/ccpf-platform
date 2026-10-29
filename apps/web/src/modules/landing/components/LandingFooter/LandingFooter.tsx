@@ -1,3 +1,4 @@
+import { BrandIcon } from "@/components/shared/BrandIcon";
 import Link from "next/link";
 
 import styles from "./LandingFooter.module.scss";
@@ -11,6 +12,7 @@ export function LandingFooter() {
       <div className={styles.container}>
         <div className={styles.brand}>
           <Link href="/" className={styles.logo}>
+            <BrandIcon size={30} aria-hidden="true" />
             <span>CCPF</span>
           </Link>
 

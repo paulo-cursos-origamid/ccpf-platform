@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { DashboardFinancial } from "../TenantDashboard/dashboard.types";
 import styles from "../TenantDashboard/TenantDashboard.module.scss";
@@ -62,8 +61,8 @@ export function ExpensesByCategory({
                   data={categoryExpenses}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={68}
-                  outerRadius={100}
+                  innerRadius="62%"
+                  outerRadius="90%"
                   paddingAngle={3}
                 >
                   {categoryExpenses.map((item, index) => (
@@ -77,24 +76,52 @@ export function ExpensesByCategory({
                   formatter={(value) =>
                     formatCurrency(Number(value ?? 0), "BRL")
                   }
+                  contentStyle={{
+                    backgroundColor: "var(--surface-primary)",
+                    border: "1px solid var(--border-primary)",
+                    borderRadius: "12px",
+                    boxShadow: "var(--shadow-sm)",
+                    color: "var(--text-primary)",
+                    padding: "10px 12px",
+                  }}
+                  labelStyle={{
+                    color: "var(--text-secondary)",
+                    fontWeight: 600,
+                    marginBottom: "4px",
+                  }}
+                  itemStyle={{
+                    color: "var(--text-primary)",
+                    fontWeight: 700,
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           <div className={styles.categoryLegend}>
-            {categoryExpenses.map((item, index) => (
-              <div key={item.name}>
-                <span
-                  className={styles.categoryDot}
-                  style={{
-                    background: categoryColors[index % categoryColors.length],
-                  }}
-                />
-                <span>{item.name}</span>
-                <strong>{formatCurrency(item.value, "BRL")}</strong>
-              </div>
-            ))}
+            {categoryExpenses.map((item, index) => {
+              const total = categoryExpenses.reduce(
+                (sum, category) => sum + category.value,
+                0,
+              );
+              const percentage = total > 0
+                ? Math.round((item.value / total) * 100)
+                : 0;
+
+              return (
+                <div className={styles.categoryLegendItem} key={item.name}>
+                  <span
+                    className={styles.categoryDot}
+                    style={{
+                      background: categoryColors[index % categoryColors.length],
+                    }}
+                  />
+                  <span className={styles.categoryName}>{item.name}</span>
+                  <span className={styles.categoryPercentage}>{percentage}%</span>
+                  <strong>{formatCurrency(item.value, "BRL")}</strong>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

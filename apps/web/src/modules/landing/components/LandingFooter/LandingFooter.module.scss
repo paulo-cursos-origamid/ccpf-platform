@@ -17,6 +17,9 @@
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   color: var(--text-primary);
   font-size: 1.2rem;
   font-weight: 800;

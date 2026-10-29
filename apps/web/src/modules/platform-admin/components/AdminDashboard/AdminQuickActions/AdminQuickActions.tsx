@@ -3,7 +3,7 @@ import {
   FileText,
   Receipt,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 import Link from "next/link";
 
 import styles from "./AdminQuickActions.module.scss";

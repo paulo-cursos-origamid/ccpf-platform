@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CreditCard } from "lucide-react";
+import { ArrowRight, CreditCard } from "@/components/icons";
 
 import { useFinancialDashboard } from "../../hooks/useFinancialDashboard";
 
@@ -42,13 +42,20 @@ export function TenantDashboard() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>Minhas finanças</span>
-          <h1 className={styles.title}>Dashboard</h1>
+        <div className={styles.headerIntro}>
+          <span className={styles.eyebrow}>VISÃO GERAL FINANCEIRA</span>
+          <h1 className={styles.title}>Seu dinheiro, em perspectiva.</h1>
           <p className={styles.description}>
-            Acompanhe suas contas e o saldo financeiro do seu ambiente.
+            Acompanhe seu saldo, entenda suas movimentações e mantenha suas
+            finanças sob controle.
           </p>
         </div>
+
+        <Link href="/dashboard/transactions" className={styles.primaryAction}>
+          <CreditCard size={18} strokeWidth={1.8} aria-hidden="true" />
+          <span>Ver movimentações</span>
+          <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
+        </Link>
       </header>
 
       {error ? (
@@ -123,30 +130,44 @@ export function TenantDashboard() {
         </div>
       )}
 
-      <div className={styles.dashboardFinancialGrid}>
-        <CashFlowChart
-          financialLoading={financialLoading}
-          transactionsError={transactionsError}
-          financial={financial}
-        />
+      <section className={styles.analyticsSection} aria-label="Análises financeiras">
+        <div className={styles.sectionHeading}>
+          <span className={styles.eyebrow}>ANÁLISE FINANCEIRA</span>
+          <h2>Visão das suas finanças</h2>
+        </div>
 
-        <RecentTransactions
-          financialLoading={financialLoading}
-          transactionsError={transactionsError}
-          financial={financial}
-        />
-      </div>
+        <div className={styles.dashboardFinancialGrid}>
+          <CashFlowChart
+            financialLoading={financialLoading}
+            transactionsError={transactionsError}
+            financial={financial}
+          />
 
-      <div className={styles.dashboardCategoryGrid}>
-        <ExpensesByCategory
-          financialLoading={financialLoading}
-          transactionsError={transactionsError}
-          categoryExpenses={categoryExpenses}
-          categoryColors={categoryColors}
-        />
+          <ExpensesByCategory
+            financialLoading={financialLoading}
+            transactionsError={transactionsError}
+            categoryExpenses={categoryExpenses}
+            categoryColors={categoryColors}
+          />
+        </div>
+      </section>
 
-        <UpcomingPayments upcomingPayments={upcomingPayments} />
-      </div>
+      <section className={styles.lowerSection} aria-label="Atividade financeira">
+        <div className={styles.sectionHeading}>
+          <span className={styles.eyebrow}>ACOMPANHAMENTO</span>
+          <h2>Movimentações e compromissos</h2>
+        </div>
+
+        <div className={styles.dashboardCategoryGrid}>
+          <RecentTransactions
+            financialLoading={financialLoading}
+            transactionsError={transactionsError}
+            financial={financial}
+          />
+
+          <UpcomingPayments upcomingPayments={upcomingPayments} />
+        </div>
+      </section>
 
       <AccountsOverview accounts={accounts} loading={loading} />
     </main>

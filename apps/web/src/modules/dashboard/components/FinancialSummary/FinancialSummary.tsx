@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Wallet, CircleDollarSign, CreditCard, Coins } from "@/components/icons";
 import type { DashboardFinancial } from "../TenantDashboard/dashboard.types";
 import styles from "../TenantDashboard/TenantDashboard.module.scss";
 
@@ -32,7 +32,8 @@ export function FinancialSummary({ loading, totalBalance, financialLoading, tran
   return (
 <section className={styles.dashboardMetrics} aria-label="Indicadores financeiros">
         <article className={styles.dashboardMetric}>
-          <span>Saldo total</span>
+          <div className={`${styles.metricIcon} ${styles.metricBalance}`} aria-hidden="true"><Wallet size={20} /></div>
+          <span className={styles.metricLabel}>Saldo total</span>
           <strong>
             {loading ? "..." : formatCurrency(totalBalance, "BRL")}
           </strong>
@@ -40,7 +41,8 @@ export function FinancialSummary({ loading, totalBalance, financialLoading, tran
         </article>
 
         <article className={styles.dashboardMetric}>
-          <span>Receitas do mês</span>
+          <div className={`${styles.metricIcon} ${styles.metricIncome}`} aria-hidden="true"><CircleDollarSign size={20} /></div>
+          <span className={styles.metricLabel}>Receitas do mês</span>
           <strong className={styles.positive}>
             {financialLoading || transactionsError
               ? "—"
@@ -50,7 +52,8 @@ export function FinancialSummary({ loading, totalBalance, financialLoading, tran
         </article>
 
         <article className={styles.dashboardMetric}>
-          <span>Despesas do mês</span>
+          <div className={`${styles.metricIcon} ${styles.metricExpense}`} aria-hidden="true"><CreditCard size={20} /></div>
+          <span className={styles.metricLabel}>Despesas do mês</span>
           <strong className={styles.negative}>
             {financialLoading || transactionsError
               ? "—"
@@ -60,7 +63,8 @@ export function FinancialSummary({ loading, totalBalance, financialLoading, tran
         </article>
 
         <article className={styles.dashboardMetric}>
-          <span>Resultado do mês</span>
+          <div className={`${styles.metricIcon} ${styles.metricResult}`} aria-hidden="true"><Coins size={20} /></div>
+          <span className={styles.metricLabel}>Resultado do mês</span>
           <strong>
             {financialLoading || transactionsError
               ? "—"

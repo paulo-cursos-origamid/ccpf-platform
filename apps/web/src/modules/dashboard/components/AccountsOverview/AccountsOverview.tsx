@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wallet } from "lucide-react";
+import { Wallet } from "@/components/icons";
 import { AccountStatus } from "@/modules/accounts/types";
 import type { Account } from "@/modules/accounts/types";
 import styles from "../TenantDashboard/TenantDashboard.module.scss";
