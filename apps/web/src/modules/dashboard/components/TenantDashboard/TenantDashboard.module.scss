@@ -928,8 +928,8 @@
 
 .dashboardMetric {
   border-color: var(--border-primary);
-  background: #0d1929;
-  box-shadow: none;
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .dashboardPanel {
