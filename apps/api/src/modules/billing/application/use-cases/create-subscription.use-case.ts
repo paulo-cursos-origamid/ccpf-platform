@@ -168,20 +168,16 @@ export class CreateSubscriptionUseCase {
       return createdSubscription;
     });
 
-    try {
-      await this.createNotificationsForPermissionUseCase.execute({
-        permissionCode: 'USERS_READ',
-        type: NotificationType.SUBSCRIPTION_CREATED,
-        severity: NotificationSeverity.INFO,
-        title: 'Nova assinatura criada',
-        message: `Uma nova assinatura do plano ${plan.name} foi criada.`,
-        resourceType: 'SUBSCRIPTION',
-        resourceId: persisted.id,
-        deduplicationKey: `SUBSCRIPTION_CREATED:${persisted.id}`,
-      });
-    } catch {
-      // Notificações não podem invalidar a operação financeira concluída.
-    }
+    await this.createNotificationsForPermissionUseCase.execute({
+      permissionCode: 'USERS_READ',
+      type: NotificationType.SUBSCRIPTION_CREATED,
+      severity: NotificationSeverity.INFO,
+      title: 'Nova assinatura criada',
+      message: `Uma nova assinatura do plano ${plan.name} foi criada.`,
+      resourceType: 'SUBSCRIPTION',
+      resourceId: persisted.id,
+      deduplicationKey: `SUBSCRIPTION_CREATED:${persisted.id}`,
+    });
 
     return persisted;
   }
