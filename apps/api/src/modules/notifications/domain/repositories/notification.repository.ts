@@ -33,7 +33,7 @@ export abstract class NotificationRepository {
     userId: string,
   ): Promise<NotificationEntity | null>;
 
-  abstract save(notification: NotificationEntity): Promise<NotificationEntity>;
+  abstract save(notification: NotificationEntity, userId: string): Promise<NotificationEntity>;
 
   abstract markAllAsRead(userId: string, readAt: Date): Promise<number>;
 

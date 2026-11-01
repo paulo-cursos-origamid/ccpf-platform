@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { useHasPermission } from "@/modules/identity/hooks/useHasPermission";
 import { PLATFORM_PERMISSIONS } from "@/modules/identity/utils";
+import { useTenantStore } from "@/modules/tenant/stores";
 
 import styles from "./NotificationAccessGuard.module.scss";
 
@@ -11,19 +12,26 @@ interface NotificationAccessGuardProps {
   children: ReactNode;
 }
 
-/**
- * Protege a Central de Avisos administrativa no frontend.
- *
- * A permissão utilizada é DASHBOARD_READ, já existente na arquitetura
- * de plataforma. O backend continua sendo a autoridade definitiva
- * sobre autorização e acesso aos dados.
- */
 export function NotificationAccessGuard({
   children,
 }: NotificationAccessGuardProps) {
-  const canAccessNotifications = useHasPermission(
+  const canAccessDashboard = useHasPermission(
     PLATFORM_PERMISSIONS.DASHBOARD_READ,
   );
+
+  const activeTenantRole = useTenantStore((state) => {
+    const activeTenant = state.tenants.find(
+      (tenant) => tenant.id === state.activeTenantId,
+    );
+
+    return activeTenant?.role ?? null;
+  });
+
+  const isTenantAdmin =
+    activeTenantRole === "OWNER" || activeTenantRole === "ADMIN";
+
+  const canAccessNotifications =
+    canAccessDashboard || isTenantAdmin;
 
   if (!canAccessNotifications) {
     return (

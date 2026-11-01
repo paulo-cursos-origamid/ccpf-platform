@@ -1,17 +1,11 @@
 /**
  * Resolve o destino frontend de uma notificação.
- *
- * O backend informa apenas resourceType/resourceId.
- * Este módulo mantém o conhecimento das rotas frontend
- * concentrado dentro do domínio de notificações.
  */
 export function getNotificationNavigationPath(
   resourceType: string | null,
   resourceId: string | null,
 ): string | null {
-  if (!resourceType) {
-    return null;
-  }
+  if (!resourceType) return null;
 
   if (resourceType === "INVOICE" && resourceId) {
     return `/admin/billing/invoices/${resourceId}`;
@@ -27,6 +21,14 @@ export function getNotificationNavigationPath(
 
   if (resourceType === "TENANT") {
     return "/dashboard";
+  }
+
+  if (resourceType === "INSTALLMENT" && resourceId) {
+    return `/dashboard/transactions?paymentType=INSTALLMENT&paymentResourceId=${encodeURIComponent(resourceId)}`;
+  }
+
+  if (resourceType === "RECURRING_BILL_OCCURRENCE" && resourceId) {
+    return `/dashboard/transactions?paymentType=RECURRING&paymentResourceId=${encodeURIComponent(resourceId)}`;
   }
 
   return null;

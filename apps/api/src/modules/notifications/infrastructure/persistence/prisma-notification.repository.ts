@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
@@ -98,16 +98,35 @@ export class PrismaNotificationRepository implements NotificationRepository {
     return record ? this.toDomain(record) : null;
   }
 
-  async save(notification: NotificationEntity): Promise<NotificationEntity> {
-    const record = await this.prisma.notification.update({
+  async save(
+    notification: NotificationEntity,
+    userId: string,
+  ): Promise<NotificationEntity> {
+    const result = await this.prisma.notification.updateMany({
       where: {
         id: notification.id,
+        userId,
       },
       data: {
         readAt: notification.readAt,
         updatedAt: notification.updatedAt,
       },
     });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Notificação não encontrada.');
+    }
+
+    const record = await this.prisma.notification.findFirst({
+      where: {
+        id: notification.id,
+        userId,
+      },
+    });
+
+    if (!record) {
+      throw new NotFoundException('Notificação não encontrada.');
+    }
 
     return this.toDomain(record);
   }
