@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Patch,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -27,6 +28,8 @@ import { GenerateRecurringBillOccurrencesUseCase } from '../application/generate
 import { CreateRecurringBillDto } from './create-recurring-bill.dto';
 import { PayRecurringBillDto } from './pay-recurring-bill.dto';
 import { PayRecurringBillUseCase } from '../application/pay-recurring-bill.use-case';
+import { UpdateRecurringBillUseCase } from '../application/update-recurring-bill.use-case';
+import { UpdateRecurringBillDto } from './update-recurring-bill.dto';
 
 @ApiTags('Recurring Bills')
 @ApiBearerAuth('access-token')
@@ -43,6 +46,7 @@ export class RecurringBillsController {
     private readonly listBills: ListRecurringBillsUseCase,
     private readonly generateOccurrences: GenerateRecurringBillOccurrencesUseCase,
     private readonly payBill: PayRecurringBillUseCase,
+    private readonly updateBill: UpdateRecurringBillUseCase,
   ) {}
 
   @Post()
@@ -68,6 +72,25 @@ export class RecurringBillsController {
   })
   list(@CurrentTenant() tenant: TenantContext) {
     return this.listBills.execute(tenant.tenantId, tenant.userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Corrigir dia de vencimento da conta recorrente',
+    description:
+      'Atualiza o cadastro e vencimentos pendentes futuros. Contas com vencimento pendente atrasado não podem ser editadas.',
+  })
+  update(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: UpdateRecurringBillDto,
+  ) {
+    return this.updateBill.execute({
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+      recurringBillId: id,
+      dueDay: dto.dueDay,
+    });
   }
 
   @Post(':id/generate')

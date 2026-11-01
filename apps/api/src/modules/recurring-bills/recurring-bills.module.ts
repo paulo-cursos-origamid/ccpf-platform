@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PayRecurringBillUseCase } from './application/pay-recurring-bill.use-case';
+import { UpdateRecurringBillUseCase } from './application/update-recurring-bill.use-case';
 
 import { PrismaModule } from '../../infrastructure/database/prisma.module';
 import { IdentityModule } from '../identity/identity.module';
@@ -24,6 +25,7 @@ import { RecurringBillsController } from './presentation/recurring-bills.control
     ListRecurringBillsUseCase,
     GenerateRecurringBillOccurrencesUseCase,
     PayRecurringBillUseCase,
+    UpdateRecurringBillUseCase,
   ],
 })
 export class RecurringBillsModule {}
