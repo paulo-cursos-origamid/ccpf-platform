@@ -11,6 +11,7 @@ import { RecentTransactions } from "../RecentTransactions/RecentTransactions";
 import { ExpensesByCategory } from "../ExpensesByCategory/ExpensesByCategory";
 import { UpcomingPayments } from "../UpcomingPayments/UpcomingPayments";
 import { AccountsOverview } from "../AccountsOverview/AccountsOverview";
+import { FinancialProjectionChart } from "../FinancialProjectionChart/FinancialProjectionChart";
 
 import styles from "./TenantDashboard.module.scss";
 
@@ -150,6 +151,8 @@ export function TenantDashboard() {
             categoryColors={categoryColors}
           />
         </div>
+
+        <FinancialProjectionChart />
       </section>
 
       <section className={styles.lowerSection} aria-label="Atividade financeira">
