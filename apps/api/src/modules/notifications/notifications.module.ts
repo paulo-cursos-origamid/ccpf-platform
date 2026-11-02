@@ -3,6 +3,8 @@ import { PassportModule } from '@nestjs/passport';
 
 import { PrismaModule } from '../../infrastructure/database/prisma.module';
 
+import { ProcessDueDateNotificationsUseCase } from './application/use-cases/process-due-date-notifications.use-case';
+import { DueDateNotificationScheduler } from './application/use-cases/due-date-notification.scheduler';
 import { CountUnreadNotificationsUseCase } from './application/use-cases/count-unread-notifications.use-case';
 import { DeleteNotificationsUseCase } from './application/use-cases/delete-notifications.use-case';
 import { CreateNotificationUseCase } from './application/use-cases/create-notification.use-case';
@@ -26,6 +28,8 @@ import { NotificationsController } from './presentation/controllers/notification
   controllers: [NotificationsController],
   providers: [
     CreateNotificationUseCase,
+    ProcessDueDateNotificationsUseCase,
+    DueDateNotificationScheduler,
     CreateNotificationsForPermissionUseCase,
     ListNotificationsUseCase,
     CountUnreadNotificationsUseCase,

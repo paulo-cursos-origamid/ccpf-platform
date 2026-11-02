@@ -73,6 +73,11 @@ export class GenerateRecurringBillOccurrencesUseCase {
     const endDate = bill.endDate;
 
     const occurrences: Prisma.RecurringBillOccurrenceCreateManyInput[] = [];
+    const startDateKey = Date.UTC(
+      bill.startDate.getUTCFullYear(),
+      bill.startDate.getUTCMonth(),
+      bill.startDate.getUTCDate(),
+    );
 
     for (let index = 0; index < 240; index++) {
       const referenceMonth = new Date(
@@ -100,7 +105,9 @@ export class GenerateRecurringBillOccurrencesUseCase {
         Date.UTC(year, month, day, 12),
       );
 
-      if (dueDate < bill.startDate) {
+      const dueDateKey = Date.UTC(year, month, day);
+
+      if (dueDateKey < startDateKey) {
         continue;
       }
 

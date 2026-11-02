@@ -68,6 +68,11 @@ class AdminDashboardBillingDto {
   @ApiProperty({
     type: AdminDashboardBillingMetricDto,
   })
+  received!: AdminDashboardBillingMetricDto;
+
+  @ApiProperty({
+    type: AdminDashboardBillingMetricDto,
+  })
   pending!: AdminDashboardBillingMetricDto;
 
   @ApiProperty({

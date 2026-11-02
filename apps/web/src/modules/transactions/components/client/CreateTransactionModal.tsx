@@ -102,7 +102,7 @@ export function CreateTransactionModal({
           categoryId,
           frequency: "MONTHLY",
           dueDay,
-          startDate: new Date(`${date}T12:00:00`).toISOString(),
+          startDate: date,
           ...(description.trim() ? { description: description.trim() } : {}),
         });
 

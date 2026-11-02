@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 
 import { PrismaModule } from './infrastructure/database/prisma.module';
@@ -16,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),

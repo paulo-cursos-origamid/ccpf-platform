@@ -351,7 +351,32 @@
     border-bottom: 0;
   }
 }
+/* ==========================================================
+   COLUNA DE AÇÕES SEMPRE VISÍVEL
+   ========================================================== */
 
+.planTable {
+  thead th:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    background: var(--surface-secondary);
+    box-shadow: -4px 0 8px rgb(0 0 0 / 0.06);
+  }
+
+  tbody > tr:not(.detailsRow) > td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    min-width: 150px;
+    background: var(--surface-primary);
+    box-shadow: -4px 0 8px rgb(0 0 0 / 0.06);
+  }
+
+  tbody > tr:not(.detailsRow):hover > td:last-child {
+    background: var(--surface-secondary);
+  }
+}
 @media (max-width: 768px) {
   .details {
     padding: var(--spacing-3);

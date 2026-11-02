@@ -14,13 +14,20 @@ import { ReverseTransferUseCase } from './application/reverse-transfer.use-case'
 import { TransactionsController } from './presentation/transactions.controller';
 import { FinancialReversalsController } from './presentation/financial-reversals.controller';
 import { InstallmentPlansController } from './presentation/installment-plans.controller';
+import { FinancialProjectionController } from './presentation/financial-projection.controller';
 import { CreateInstallmentPlanUseCase } from './application/installments/create-installment-plan.use-case';
 import { ListInstallmentPlansUseCase } from './application/installments/list-installment-plans.use-case';
 import { PayInstallmentUseCase } from './application/installments/pay-installment.use-case';
+import { GetFinancialProjectionUseCase } from './application/get-financial-projection.use-case';
 
 @Module({
   imports: [PrismaModule, IdentityModule, TenantModule, BillingModule],
-  controllers: [TransactionsController, FinancialReversalsController, InstallmentPlansController],
+  controllers: [
+    FinancialProjectionController,
+    TransactionsController,
+    FinancialReversalsController,
+    InstallmentPlansController,
+  ],
   providers: [
     CreateTransactionUseCase,
     CreateTransferUseCase,
@@ -33,6 +40,7 @@ import { PayInstallmentUseCase } from './application/installments/pay-installmen
     CreateInstallmentPlanUseCase,
     ListInstallmentPlansUseCase,
     PayInstallmentUseCase,
+    GetFinancialProjectionUseCase,
   ],
 })
 export class TransactionsModule {}

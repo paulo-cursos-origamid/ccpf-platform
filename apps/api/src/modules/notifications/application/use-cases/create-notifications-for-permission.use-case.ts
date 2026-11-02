@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import {
   CreateNotificationInput,
@@ -14,14 +14,18 @@ export interface CreateNotificationsForPermissionInput extends Omit<
 }
 
 /**
- * Publica uma notificação para todos os usuários que possuem
- * determinada permissão de plataforma.
+ * Publica notificações para usuários que possuem determinada
+ * permissão de plataforma.
  *
- * Isso evita que eventos administrativos sejam enviados para todos
- * os usuários indistintamente.
+ * Falhas na publicação não devem invalidar operações já concluídas
+ * nos módulos consumidores.
  */
 @Injectable()
 export class CreateNotificationsForPermissionUseCase {
+  private readonly logger = new Logger(
+    CreateNotificationsForPermissionUseCase.name,
+  );
+
   constructor(
     private readonly notificationRecipientRepository: NotificationRecipientRepository,
     private readonly createNotificationUseCase: CreateNotificationUseCase,
@@ -30,12 +34,23 @@ export class CreateNotificationsForPermissionUseCase {
   async execute(
     input: CreateNotificationsForPermissionInput,
   ): Promise<{ recipients: number }> {
-    const userIds =
-      await this.notificationRecipientRepository.findUserIdsByPermission(
-        input.permissionCode,
+    let userIds: string[];
+
+    try {
+      userIds =
+        await this.notificationRecipientRepository.findUserIdsByPermission(
+          input.permissionCode,
+        );
+    } catch (error) {
+      this.logger.error(
+        `Falha ao buscar destinatários da permissão ${input.permissionCode}.`,
+        error instanceof Error ? error.stack : undefined,
       );
 
-    await Promise.all(
+      return { recipients: 0 };
+    }
+
+    const results = await Promise.allSettled(
       userIds.map((userId) =>
         this.createNotificationUseCase.execute({
           userId,
@@ -49,6 +64,17 @@ export class CreateNotificationsForPermissionUseCase {
         }),
       ),
     );
+
+    const failures = results.filter(
+      (result) => result.status === 'rejected',
+    ).length;
+
+    if (failures > 0) {
+      this.logger.error(
+        `${failures} de ${userIds.length} notificações falharam ` +
+          `para a permissão ${input.permissionCode}.`,
+      );
+    }
 
     return {
       recipients: userIds.length,

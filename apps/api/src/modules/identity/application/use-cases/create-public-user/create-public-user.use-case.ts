@@ -265,23 +265,16 @@ export class CreatePublicUserUseCase {
       throw error;
     }
 
-    try {
-      await this.createNotificationsForPermissionUseCase.execute({
-        permissionCode: 'USERS_READ',
-        type: NotificationType.ACCOUNT_CREATED,
-        severity: NotificationSeverity.INFO,
-        title: 'Nova conta criada',
-        message: `A conta de ${result.user.name} (${result.user.email}) foi criada com sucesso.`,
-        resourceType: 'TENANT',
-        resourceId: result.tenant.id,
-        deduplicationKey: `ACCOUNT_CREATED:${result.user.id}`,
-      });
-    } catch (error) {
-      this.logger.error(
-        `Não foi possível criar a notificação de nova conta para o usuário ${result.user.id}.`,
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
+    await this.createNotificationsForPermissionUseCase.execute({
+      permissionCode: 'USERS_READ',
+      type: NotificationType.ACCOUNT_CREATED,
+      severity: NotificationSeverity.INFO,
+      title: 'Nova conta criada',
+      message: `A conta de ${result.user.name} (${result.user.email}) foi criada com sucesso.`,
+      resourceType: 'TENANT',
+      resourceId: result.tenant.id,
+      deduplicationKey: `ACCOUNT_CREATED:${result.user.id}`,
+    });
 
     await this.emailVerificationNotifier.sendVerificationEmail({
       email: result.user.email,

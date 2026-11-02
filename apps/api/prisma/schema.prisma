@@ -10,6 +10,8 @@ enum NotificationType {
   USER_REMOVED
   SYSTEM
   PAYMENT_CANCELLED
+  DUE_DATE_REMINDER
+  DUE_DATE_OVERDUE
 }
 
 enum NotificationSeverity {

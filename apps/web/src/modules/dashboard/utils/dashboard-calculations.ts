@@ -80,7 +80,11 @@ export function calculateCategoryExpenses(
   transactions: Transaction[],
   categoryNames: Record<string, string>,
 ): Array<{ name: string; value: number }> {
-    const month = new Date().toISOString().slice(0, 7);
+    const now = new Date();
+    const month = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+    ].join("-");
     const totals = new Map<string, number>();
 
     for (const transaction of transactions) {

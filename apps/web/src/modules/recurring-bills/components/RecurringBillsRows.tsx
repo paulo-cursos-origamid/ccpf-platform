@@ -226,6 +226,108 @@ function RecurringPaymentModal({
   );
 }
 
+function EditRecurringBillModal({
+  bill,
+  onClose,
+  onSaved,
+}: {
+  bill: RecurringBill | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [dueDay, setDueDay] = useState("1");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  useEffect(() => {
+    if (!bill) return;
+    setDueDay(String(bill.dueDay));
+    setEditError("");
+  }, [bill]);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!bill || saving) return;
+
+    const day = Number(dueDay);
+
+    if (!Number.isInteger(day) || day < 1 || day > 31) {
+      setEditError("Informe um dia entre 1 e 31.");
+      return;
+    }
+
+    setSaving(true);
+    setEditError("");
+
+    try {
+      await recurringBillsService.updateDueDay(bill.id, day);
+      onSaved();
+      onClose();
+    } catch (error) {
+      setEditError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível atualizar o vencimento.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={bill !== null}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      title="Editar conta recorrente"
+    >
+      {bill && (
+        <form className={styles.recurringPaymentForm} onSubmit={submit}>
+          <div className={styles.recurringPaymentSummary}>
+            <strong>{bill.title}</strong>
+            <span>Conta: {bill.account.name}</span>
+            <span>Dia atual: {bill.dueDay}</span>
+          </div>
+
+          <Field label="Novo dia de vencimento" htmlFor="recurring-due-day" required>
+            <Input
+              id="recurring-due-day"
+              type="number"
+              min={1}
+              max={31}
+              value={dueDay}
+              onChange={(event) => setDueDay(event.target.value)}
+              disabled={saving}
+              required
+            />
+          </Field>
+
+          {editError && (
+            <p className={styles.recurringPaymentError} role="alert">
+              {editError}
+            </p>
+          )}
+
+          <div className={styles.recurringPaymentActions}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={onClose}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar vencimento"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
 export function RecurringBillsRows({ search, onPayment }: Props) {
   const tenantId = useTenantStore((state) => state.activeTenantId);
   const [bills, setBills] = useState<RecurringBill[]>([]);
@@ -233,6 +335,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [paymentSelection, setPaymentSelection] = useState<PaymentSelection | null>(null);
+  const [editSelection, setEditSelection] = useState<RecurringBill | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId) {
@@ -379,6 +482,32 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                     <div className={styles.recurringDetailsHeader}>
                       <strong>Vencimentos — {bill.title}</strong>
 
+                      <div>
+                        <button
+                          type="button"
+                          className={styles.expandAction}
+                          disabled={
+                            busyId !== null ||
+                            bill.occurrences.some(
+                              (occurrence) =>
+                                occurrence.status === "PENDING" &&
+                                isOverdue(occurrence.dueDate),
+                            )
+                          }
+                          title={
+                            bill.occurrences.some(
+                              (occurrence) =>
+                                occurrence.status === "PENDING" &&
+                                isOverdue(occurrence.dueDate),
+                            )
+                              ? "Não é possível editar enquanto houver vencimento atrasado."
+                              : "Corrigir dia de vencimento"
+                          }
+                          onClick={() => setEditSelection(bill)}
+                        >
+                          Editar vencimento
+                        </button>
+
                       <button
                         type="button"
                         className={styles.expandAction}
@@ -389,6 +518,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                           ? "Gerando..."
                           : "Gerar vencimentos"}
                       </button>
+                      </div>
                     </div>
 
                     {bill.occurrences.length === 0 ? (
@@ -480,6 +610,14 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
           </Fragment>
         );
       })}
+      <EditRecurringBillModal
+        bill={editSelection}
+        onClose={() => setEditSelection(null)}
+        onSaved={() => {
+          void load();
+          window.dispatchEvent(new Event("ccpf:financial-data-changed"));
+        }}
+      />
       <RecurringPaymentModal
         selection={paymentSelection}
         onClose={() => setPaymentSelection(null)}

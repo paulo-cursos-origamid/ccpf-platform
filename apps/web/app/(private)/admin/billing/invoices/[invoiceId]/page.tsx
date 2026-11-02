@@ -1,4 +1,6 @@
 import { AdminInvoiceDetail } from "@/modules/billing/components";
+import { PlatformPermissionAccessGuard } from "@/modules/identity/components/client/PlatformPermissionAccessGuard";
+import { PLATFORM_PERMISSIONS } from "@/modules/identity/utils";
 
 interface AdminInvoiceDetailPageProps {
   params: Promise<{
@@ -11,5 +13,11 @@ export default async function AdminInvoiceDetailPage({
 }: AdminInvoiceDetailPageProps) {
   const { invoiceId } = await params;
 
-  return <AdminInvoiceDetail invoiceId={invoiceId} />;
+  return (
+    <PlatformPermissionAccessGuard
+      permission={PLATFORM_PERMISSIONS.BILLING_MANAGE}
+    >
+      <AdminInvoiceDetail invoiceId={invoiceId} />
+    </PlatformPermissionAccessGuard>
+  );
 }

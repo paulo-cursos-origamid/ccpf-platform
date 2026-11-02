@@ -23,6 +23,6 @@ export class MarkNotificationAsReadUseCase {
 
     notification.markAsRead();
 
-    return this.notificationRepository.save(notification);
+    return this.notificationRepository.save(notification, userId);
   }
 }
