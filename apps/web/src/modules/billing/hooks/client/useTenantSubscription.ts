@@ -176,7 +176,42 @@ export function useTenantSubscription(): TenantSubscriptionState {
     };
   }, [loadSubscription]);
 
+
+
   const status = subscription?.status ?? null;
+
+  useEffect(() => {
+    if (!activeTenantId || status !== "PENDING") {
+      return;
+    }
+
+    let checking = false;
+
+    const interval = window.setInterval(async () => {
+      if (checking) {
+        return;
+      }
+
+      checking = true;
+
+      try {
+        const currentSubscription =
+          await billingService.getCurrentSubscription();
+
+        if (currentSubscription?.status !== "PENDING") {
+          window.location.reload();
+        }
+      } catch {
+        // Mantém a verificação ativa em caso de falha temporária.
+      } finally {
+        checking = false;
+      }
+    }, 10_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [activeTenantId, status]);
 
   const isTrial = status === "TRIALING";
   const isActive = status === "ACTIVE";
