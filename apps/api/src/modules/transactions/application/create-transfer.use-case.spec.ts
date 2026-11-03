@@ -46,6 +46,9 @@ describe('CreateTransferUseCase', () => {
             { accountId: 'account-2' },
           ]),
       },
+      financialGoal: {
+        findFirst: jest.fn(),
+      },
       transfer: {
         create: jest.fn().mockResolvedValue({
           id: 'transfer-1',
@@ -174,4 +177,54 @@ describe('CreateTransferUseCase', () => {
     await expect(useCase.execute(input)).rejects.toThrow(NotFoundException);
     expect(tx.account.updateMany).toHaveBeenCalledTimes(2);
   });
+
+  it('vincula a transferência à meta quando informada', async () => {
+    tx.financialGoal.findFirst.mockResolvedValue({
+      id: 'goal-1',
+      tenantId: 'tenant-1',
+      status: 'ACTIVE',
+      deletedAt: null,
+      linkedAccountId: null,
+    });
+
+    await useCase.execute({ ...input, financialGoalId: 'goal-1' });
+
+    expect(tx.financialGoal.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'goal-1',
+        tenantId: 'tenant-1',
+        deletedAt: null,
+        status: 'ACTIVE',
+      },
+    });
+
+    expect(tx.transfer.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ financialGoalId: 'goal-1' }),
+    });
+  });
+
+  it('rejeita meta inexistente ou indisponível', async () => {
+    tx.financialGoal.findFirst.mockResolvedValue(null);
+
+    await expect(
+      useCase.execute({ ...input, financialGoalId: 'goal-1' }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(tx.transfer.create).not.toHaveBeenCalled();
+  });
+
+  it('exige que o destino corresponda à conta vinculada à meta', async () => {
+    tx.financialGoal.findFirst.mockResolvedValue({
+      id: 'goal-1',
+      linkedAccountId: 'another-account',
+    });
+
+    await expect(
+      useCase.execute({ ...input, financialGoalId: 'goal-1' }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(tx.transfer.create).not.toHaveBeenCalled();
+  });
+
+
 });

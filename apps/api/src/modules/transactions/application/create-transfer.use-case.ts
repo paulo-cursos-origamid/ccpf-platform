@@ -13,6 +13,7 @@ export interface CreateTransferInput {
   userId: string;
   fromAccountId: string;
   toAccountId: string;
+  financialGoalId?: string;
   amount: string;
   description?: string;
 }
@@ -87,12 +88,36 @@ export class CreateTransferUseCase {
           );
         }
 
+        if (input.financialGoalId) {
+          const goal = await tx.financialGoal.findFirst({
+            where: {
+              id: input.financialGoalId,
+              tenantId: input.tenantId,
+              deletedAt: null,
+              status: 'ACTIVE',
+            },
+          });
+
+          if (!goal) {
+            throw new NotFoundException(
+              'Meta financeira não encontrada ou indisponível neste Espaço.',
+            );
+          }
+
+          if (goal.linkedAccountId && goal.linkedAccountId !== toAccount.id) {
+            throw new BadRequestException(
+              'A conta de destino deve ser a conta vinculada à meta.',
+            );
+          }
+        }
+
         const transfer = await tx.transfer.create({
           data: {
             tenantId: input.tenantId,
             userId: input.userId,
             fromAccountId: fromAccount.id,
             toAccountId: toAccount.id,
+            financialGoalId: input.financialGoalId ?? null,
             amount,
             description: input.description?.trim() || null,
           },

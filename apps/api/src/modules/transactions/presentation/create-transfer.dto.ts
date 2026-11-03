@@ -10,6 +10,14 @@ export class CreateTransferDto {
   @IsString()
   toAccountId!: string;
 
+  @ApiPropertyOptional({
+    description: 'Identificador opcional da meta financeira vinculada.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  financialGoalId?: string;
+
   @ApiProperty({
     example: '125.50',
     description: 'Valor positivo com até duas casas decimais.',
