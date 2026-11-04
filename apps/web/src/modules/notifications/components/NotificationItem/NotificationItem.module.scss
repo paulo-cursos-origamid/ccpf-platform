@@ -1,3 +1,4 @@
+/* Estilos de cada notificação, prioridade, seleção e leitura. */
 .item {
   display: flex;
   gap: var(--spacing-sm);
@@ -50,7 +51,7 @@
 }
 
 .item[data-severity="error"] .icon {
-  color: var(--status-error, #dc2626);
+  color: var(--danger);
 }
 
 .content {
@@ -69,7 +70,7 @@
   align-self: center;
   width: 16px;
   height: 16px;
-  accent-color: #047857;
+  accent-color: var(--accent-primary);
   cursor: pointer;
 }
 

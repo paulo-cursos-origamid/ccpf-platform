@@ -1,3 +1,4 @@
+/* Estilos dos detalhes da fatura, histórico e estados de pagamento. */
 .container {
   display: flex;
   width: 100%;
@@ -709,7 +710,6 @@
   }
 }
 
-
 /* ==================================================
    HISTÓRICO DE PAGAMENTOS
 ================================================== */
@@ -781,17 +781,17 @@
 }
 
 .paymentStatus_PAID {
-  color: var(--color-success, #047857) !important;
+  color: var(--success) !important;
 }
 
 .paymentStatus_FAILED,
 .paymentStatus_CANCELLED {
-  color: var(--color-danger, #b91c1c) !important;
+  color: var(--danger) !important;
 }
 
 .paymentStatus_PENDING,
 .paymentStatus_PROCESSING {
-  color: var(--color-warning, #92400e) !important;
+  color: var(--warning) !important;
 }
 
 @media (max-width: 640px) {

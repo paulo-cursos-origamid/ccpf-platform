@@ -9,6 +9,7 @@ describe('ProcessDueDateNotificationsUseCase', () => {
   let prisma: {
     installment: { findMany: jest.Mock };
     recurringBillOccurrence: { findMany: jest.Mock };
+    financialObligation: { findMany: jest.Mock };
   };
   let createNotification: { execute: jest.Mock };
 
@@ -19,6 +20,7 @@ describe('ProcessDueDateNotificationsUseCase', () => {
     prisma = {
       installment: { findMany: jest.fn() },
       recurringBillOccurrence: { findMany: jest.fn() },
+      financialObligation: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     createNotification = {
@@ -130,9 +132,37 @@ describe('ProcessDueDateNotificationsUseCase', () => {
     );
   });
 
+  it('cria notificação para compromisso financeiro pendente', async () => {
+    prisma.installment.findMany.mockResolvedValue([]);
+    prisma.recurringBillOccurrence.findMany.mockResolvedValue([]);
+    prisma.financialObligation.findMany.mockResolvedValue([
+      {
+        id: 'obligation-today',
+        userId: 'user-3',
+        type: 'RECEIVABLE',
+        title: 'Pagamento de cliente',
+        dueDate: new Date('2026-10-30T12:00:00.000Z'),
+      },
+    ]);
+
+    await useCase.execute();
+
+    expect(createNotification.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-3',
+        type: NotificationType.DUE_DATE_REMINDER,
+        severity: NotificationSeverity.WARNING,
+        resourceType: 'FINANCIAL_OBLIGATION',
+        resourceId: 'obligation-today',
+        deduplicationKey: 'FINANCIAL_OBLIGATION_DUE_TODAY:obligation-today',
+      }),
+    );
+  });
+
   it('não cria notificações quando não existem vencimentos próximos ou atrasados', async () => {
     prisma.installment.findMany.mockResolvedValue([]);
     prisma.recurringBillOccurrence.findMany.mockResolvedValue([]);
+    prisma.financialObligation.findMany.mockResolvedValue([]);
 
     await useCase.execute();
 

@@ -1,5 +1,11 @@
-import { Wallet, CircleDollarSign, CreditCard, Coins } from "@/components/icons";
+import {
+  Wallet,
+  CircleDollarSign,
+  CreditCard,
+  Coins,
+} from "@/components/icons";
 import type { DashboardFinancial } from "../TenantDashboard/dashboard.types";
+import { DashboardMetricCard } from "../DashboardMetricCard/DashboardMetricCard";
 import styles from "../TenantDashboard/TenantDashboard.module.scss";
 
 /**
@@ -22,7 +28,13 @@ function formatCurrency(value: number, currency: string): string {
  * Exibe saldo consolidado, receitas e despesas,
  * respeitando os estados de carregamento e erro.
  */
-export function FinancialSummary({ loading, totalBalance, financialLoading, transactionsError, financial }: {
+export function FinancialSummary({
+  loading,
+  totalBalance,
+  financialLoading,
+  transactionsError,
+  financial,
+}: {
   loading: boolean;
   totalBalance: number;
   financialLoading: boolean;
@@ -30,51 +42,80 @@ export function FinancialSummary({ loading, totalBalance, financialLoading, tran
   financial: DashboardFinancial;
 }) {
   return (
-<section className={styles.dashboardMetrics} aria-label="Indicadores financeiros">
-        <article className={styles.dashboardMetric}>
-          <div className={`${styles.metricIcon} ${styles.metricBalance}`} aria-hidden="true"><Wallet size={20} /></div>
-          <span className={styles.metricLabel}>Saldo total</span>
-          <strong>
-            {loading ? "..." : formatCurrency(totalBalance, "BRL")}
-          </strong>
-          <small>Contas ativas em reais</small>
-        </article>
-
-        <article className={styles.dashboardMetric}>
-          <div className={`${styles.metricIcon} ${styles.metricIncome}`} aria-hidden="true"><CircleDollarSign size={20} /></div>
-          <span className={styles.metricLabel}>Receitas do mês</span>
-          <strong className={styles.positive}>
-            {financialLoading || transactionsError
-              ? "—"
-              : formatCurrency(financial.income, "BRL")}
-          </strong>
-          <small>Entradas registradas</small>
-        </article>
-
-        <article className={styles.dashboardMetric}>
-          <div className={`${styles.metricIcon} ${styles.metricExpense}`} aria-hidden="true"><CreditCard size={20} /></div>
-          <span className={styles.metricLabel}>Despesas do mês</span>
-          <strong className={styles.negative}>
-            {financialLoading || transactionsError
-              ? "—"
-              : formatCurrency(financial.expense, "BRL")}
-          </strong>
-          <small>Saídas registradas</small>
-        </article>
-
-        <article className={styles.dashboardMetric}>
-          <div className={`${styles.metricIcon} ${styles.metricResult}`} aria-hidden="true"><Coins size={20} /></div>
-          <span className={styles.metricLabel}>Resultado do mês</span>
-          <strong>
-            {financialLoading || transactionsError
-              ? "—"
-              : formatCurrency(
-                  financial.income - financial.expense,
-                  "BRL",
-                )}
-          </strong>
-          <small>Receitas menos despesas</small>
-        </article>
-      </section>
+    <section
+      className={styles.dashboardMetrics}
+      aria-label="Indicadores financeiros"
+    >
+      <DashboardMetricCard
+        icon={<Wallet size={20} />}
+        iconClassName={styles.metricBalance}
+        label="Saldo total"
+        value={loading ? "..." : formatCurrency(totalBalance, "BRL")}
+        description="Contas ativas em reais"
+        trendUnavailableText="Sem histórico mensal de saldo"
+      />
+      <DashboardMetricCard
+        icon={<CircleDollarSign size={20} />}
+        iconClassName={styles.metricIncome}
+        label="Receitas do mês"
+        value={
+          financialLoading || transactionsError
+            ? "—"
+            : formatCurrency(financial.income, "BRL")
+        }
+        description="Entradas registradas"
+        trend={
+          financialLoading || transactionsError
+            ? undefined
+            : {
+                current: financial.income,
+                previous: financial.previousIncome,
+                increaseIsPositive: true,
+              }
+        }
+        valueTone="positive"
+      />
+      <DashboardMetricCard
+        icon={<CreditCard size={20} />}
+        iconClassName={styles.metricExpense}
+        label="Despesas do mês"
+        value={
+          financialLoading || transactionsError
+            ? "—"
+            : formatCurrency(financial.expense, "BRL")
+        }
+        description="Saídas registradas"
+        trend={
+          financialLoading || transactionsError
+            ? undefined
+            : {
+                current: financial.expense,
+                previous: financial.previousExpense,
+                increaseIsPositive: false,
+              }
+        }
+        valueTone="negative"
+      />
+      <DashboardMetricCard
+        icon={<Coins size={20} />}
+        iconClassName={styles.metricResult}
+        label="Resultado do mês"
+        value={
+          financialLoading || transactionsError
+            ? "—"
+            : formatCurrency(financial.income - financial.expense, "BRL")
+        }
+        description="Receitas menos despesas"
+        trend={
+          financialLoading || transactionsError
+            ? undefined
+            : {
+                current: financial.income - financial.expense,
+                previous: financial.previousIncome - financial.previousExpense,
+                increaseIsPositive: true,
+              }
+        }
+      />
+    </section>
   );
 }

@@ -1,0 +1,85 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Seed dashboard test data",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"--workdir",
+				"/app",
+				"-e",
+				"SEED_TEST_TENANT_ID=c0b83b0b-1a0d-47a0-9b55-94745d75cbec",
+				"-e",
+				"SEED_TEST_ACCOUNT_ID=d4763762-064e-4709-9384-7bf54e8d85d1",
+				"-e",
+				"SEED_TEST_USER_EMAIL=contatodevelopersbrazildna@gmail.com",
+				"ccpf-api",
+				"npm",
+				"run",
+				"seed:dashboard-test-data"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build web styles validation",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"apps/web",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check web container runtime",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"ccpf-web",
+				"node",
+				"--version"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build web in container",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"--workdir",
+				"/app",
+				"ccpf-web",
+				"npm",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Final Next production build",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"--workdir",
+				"/app",
+				"ccpf-web",
+				"npm",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

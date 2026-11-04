@@ -49,6 +49,6 @@ import { UnblockAccountMemberUseCase } from './application/use-cases/unblock-acc
     },
   ],
 
-  exports: [CreateAccountUseCase],
+  exports: [CreateAccountUseCase, AccountRepository, AccountMemberRepository],
 })
 export class AccountsModule {}

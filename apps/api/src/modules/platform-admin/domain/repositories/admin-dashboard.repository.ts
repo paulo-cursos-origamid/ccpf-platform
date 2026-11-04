@@ -57,11 +57,31 @@ export interface AdminDashboardBillingSummary {
   overdue: AdminDashboardBillingMetric;
 }
 
+export interface AdminDashboardMonthlyComparison {
+  users?: {
+    current: number;
+    previous: number;
+  };
+  tenants?: {
+    current: number;
+    previous: number;
+  };
+  subscriptions?: {
+    current: number;
+    previous: number;
+  };
+  received?: {
+    current: AdminDashboardBillingMetric;
+    previous: AdminDashboardBillingMetric;
+  };
+}
+
 export interface AdminDashboardSummary {
   users?: AdminDashboardUsersSummary;
   tenants?: AdminDashboardTenantsSummary;
   subscriptions?: AdminDashboardSubscriptionsSummary;
   billing?: AdminDashboardBillingSummary;
+  monthOverMonth?: AdminDashboardMonthlyComparison;
 }
 
 export abstract class AdminDashboardRepository {

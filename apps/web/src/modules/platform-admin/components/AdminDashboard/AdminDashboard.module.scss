@@ -10,11 +10,11 @@
 
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 16px;
   width: 100%;
   max-width: 1540px;
   margin: 0 auto;
-  padding: 28px;
+  padding: 20px 24px 24px;
   color: var(--admin-text);
 }
 
@@ -40,9 +40,9 @@
 .title {
   margin: 0;
   color: var(--admin-text);
-  font-size: clamp(28px, 3vw, 36px);
+  font-size: 30px;
   font-weight: 750;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   line-height: 1.15;
 }
 
@@ -78,24 +78,22 @@
 .metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .metricCard {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 148px;
+  min-height: 124px;
   flex-direction: column;
   justify-content: space-between;
-  gap: 15px;
-  padding: 21px;
+  gap: 4px;
+  padding: 12px;
   overflow: hidden;
   border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 100% 0%, #17304b35, transparent 48%),
-    var(--admin-card);
+  border-radius: 10px;
+  background: var(--admin-card);
   color: inherit;
   text-decoration: none;
   transition:
@@ -125,20 +123,20 @@
 
 .metricIcon {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid;
-  border-radius: 13px;
+  border-radius: 11px;
 }
 
 .metricValue {
   min-height: 34px;
   color: #f8fafc;
-  font-size: clamp(23px, 2vw, 29px);
+  font-size: 25px;
   font-weight: 750;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
@@ -146,25 +144,36 @@
 .metricDescription {
   margin: 0;
   color: #8393a8;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
-.skeleton {
-  display: inline-block;
-  width: 76px;
-  height: 25px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #17263b, #253852, #17263b);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+.metricIndicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: #10b981;
+  font-size: 10px;
+  line-height: 1.3;
+
+  strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  span {
+    overflow: hidden;
+    color: #94a3b8;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
-.section,
-.actionsSection {
+.indicatorsSection {
   display: flex;
   flex-direction: column;
-  gap: 17px;
+  gap: 12px;
 }
 
 .sectionHeading {
@@ -175,9 +184,13 @@
 }
 
 .sectionEyebrow {
+  display: block;
   margin-bottom: 5px;
   color: #10b981;
   font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .sectionTitle {
@@ -185,7 +198,6 @@
   color: var(--admin-text);
   font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.02em;
 }
 
 .sectionDescription {
@@ -198,24 +210,23 @@
 .chartsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
+}
+
+.chartWide {
+  grid-column: span 2;
 }
 
 .chartPanel {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 20px;
-  padding: 22px;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  background:
-    linear-gradient(145deg, #101d31 0%, #0b1729 55%, #0a1526 100%);
+  border-radius: 10px;
+  background: var(--admin-card);
   box-shadow: 0 8px 28px #00000012;
-}
-
-.chartWide {
-  grid-column: span 2;
 }
 
 .chartHeader {
@@ -247,7 +258,7 @@
 
 .chart {
   width: 100%;
-  height: 260px;
+  height: 150px;
   min-width: 0;
 
   :global(.recharts-cartesian-grid-horizontal line) {
@@ -265,7 +276,7 @@
 
 .chartEmpty {
   display: flex;
-  min-height: 240px;
+  min-height: 180px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -289,17 +300,17 @@
 
 .subscriptionContent {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.2fr);
   align-items: center;
   gap: 28px;
-  min-height: 240px;
+  min-height: 170px;
 }
 
 .donutChart {
   position: relative;
   width: 100%;
-  max-width: 260px;
-  height: 230px;
+  max-width: 210px;
+  height: 175px;
   justify-self: center;
 }
 
@@ -314,7 +325,7 @@
 
   strong {
     color: #f8fafc;
-    font-size: 27px;
+    font-size: 24px;
     font-weight: 750;
   }
 
@@ -336,7 +347,7 @@
 .legendList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 17px 24px;
+  gap: 12px 18px;
 }
 
 .legendItem {
@@ -379,9 +390,9 @@
     display: flex;
     flex-direction: column;
     gap: 7px;
-    padding: 13px 15px;
+    padding: 10px 12px;
     border: 1px solid #1b2c45;
-    border-radius: 12px;
+    border-radius: 8px;
     background: #0b172a;
   }
 }
@@ -392,7 +403,7 @@
 }
 
 .financeHighlights strong {
-  font-size: clamp(15px, 2vw, 20px);
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
@@ -458,13 +469,6 @@
   }
 }
 
-.actionsSection {
-  padding: 22px;
-  border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  background: linear-gradient(145deg, #101d31, #0b1729);
-}
-
 @keyframes shimmer {
   to {
     background-position: -200% 0;
@@ -477,7 +481,7 @@
   }
 
   .subscriptionContent {
-    grid-template-columns: minmax(160px, 0.7fr) minmax(0, 1.3fr);
+    grid-template-columns: minmax(140px, 0.7fr) minmax(0, 1.3fr);
     gap: 15px;
   }
 
@@ -488,8 +492,16 @@
 
 @media (max-width: 760px) {
   .page {
-    gap: 23px;
+    gap: 14px;
     padding: 20px 16px;
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartWide {
+    grid-column: auto;
   }
 
   .header {
@@ -499,14 +511,6 @@
 
   .headerStatus {
     align-self: flex-start;
-  }
-
-  .chartsGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .chartWide {
-    grid-column: auto;
   }
 
   .subscriptionContent {
@@ -532,13 +536,12 @@
     min-height: 130px;
   }
 
-  .chartPanel,
-  .actionsSection {
+  .chartPanel {
     padding: 16px;
   }
 
   .chart {
-    height: 230px;
+    height: 205px;
   }
 
   .legendList {

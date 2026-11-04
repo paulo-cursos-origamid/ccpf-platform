@@ -431,7 +431,6 @@
   }
 }
 
-
 /* Dashboard financeiro */
 
 .dashboardMetrics {
@@ -543,7 +542,9 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   background: var(--surface-secondary);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover {
     background: var(--surface-hover);
@@ -615,7 +616,6 @@
   }
 }
 
-
 /* Distribuição por categoria e próximos pagamentos */
 
 .dashboardCategoryGrid {
@@ -676,7 +676,6 @@
   }
 }
 
-
 /* Dashboard financeiro — hierarquia visual e responsividade */
 .header {
   align-items: center;
@@ -718,7 +717,8 @@
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color var(--transition-normal),
+  transition:
+    background-color var(--transition-normal),
     border-color var(--transition-normal),
     transform var(--transition-normal);
 }
@@ -870,7 +870,6 @@
   }
 }
 
-
 /* Ajuste fino do gráfico de categorias em telas intermediárias */
 @media (min-width: 651px) and (max-width: 900px) {
   .categoryChartLayout {
@@ -888,7 +887,6 @@
     overflow-wrap: anywhere;
   }
 }
-
 
 /* Organização analítica do dashboard */
 .analyticsSection,
@@ -967,12 +965,11 @@
   }
 }
 
-
 /* Identidade visual dos indicadores financeiros */
 .dashboardMetric {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto;
   align-content: start;
   align-items: center;
   column-gap: var(--spacing-3);
@@ -1019,6 +1016,30 @@
   line-height: 1.5;
 }
 
+.metricTrend {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  grid-row: 4;
+  align-items: center;
+  gap: var(--spacing-1);
+  min-width: 0;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.metricTrendPositive {
+  color: #34d399;
+}
+
+.metricTrendNegative {
+  color: #fb7185;
+}
+
+.metricTrendNeutral {
+  color: #8190a5;
+}
+
 .dashboardMetric .metricBalance {
   color: #34d399;
   background: rgba(16, 185, 129, 0.14);
@@ -1058,7 +1079,6 @@
     height: 36px;
   }
 }
-
 
 /* Legenda de despesas: nome, percentual e valor */
 .categoryLegend .categoryLegendItem {
@@ -1104,7 +1124,6 @@
     font-size: var(--font-xs);
   }
 }
-
 
 /* Legenda de despesas: nome e percentual na primeira linha,
    valor monetário alinhado abaixo do nome. */
@@ -1184,6 +1203,19 @@
   min-width: 0;
 }
 
+.dashboardOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: stretch;
+  gap: var(--spacing-5);
+  min-width: 0;
+}
+
+.dashboardOverviewGrid > * {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 650px) {
   .categoryChartLayout {
     grid-template-columns: minmax(0, 1fr);
@@ -1191,5 +1223,211 @@
 
   .categoryChart {
     width: 100%;
+  }
+}
+
+/* Layout compacto inspirado no painel administrativo de referência. */
+.page {
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+}
+
+.header {
+  align-items: center;
+  padding: 0;
+}
+
+.title {
+  font-size: 24px;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.description {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-sm);
+}
+
+.eyebrow {
+  margin-bottom: var(--spacing-1);
+  letter-spacing: 0.06em;
+}
+
+.dashboardMetrics {
+  gap: var(--spacing-3);
+}
+
+.dashboardMetric {
+  grid-template-columns: minmax(0, 1fr) 40px;
+  grid-template-rows: auto auto auto;
+  column-gap: var(--spacing-2);
+  row-gap: var(--spacing-1);
+  padding: var(--spacing-4);
+  border-left: 2px solid #22d3ee;
+  border-radius: 8px;
+  background: var(--surface-primary);
+}
+
+.dashboardMetric:nth-child(2) {
+  border-left-color: #f59e0b;
+}
+
+.dashboardMetric:nth-child(3) {
+  border-left-color: #ef4444;
+}
+
+.dashboardMetric:nth-child(4) {
+  border-left-color: #3b82f6;
+}
+
+.dashboardMetric .metricIcon {
+  grid-column: 2;
+  grid-row: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.dashboardMetric .metricLabel {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+}
+
+.dashboardMetric > strong {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: var(--spacing-1);
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.dashboardMetric > small {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  line-height: 1.35;
+}
+
+.dashboardFinancialGrid {
+  grid-template-columns: minmax(210px, 0.75fr) minmax(0, 2fr);
+  gap: var(--spacing-3);
+}
+
+.dashboardInsightsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.45fr);
+  align-items: stretch;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.dashboardOverviewGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-3);
+}
+
+.dashboardPanel,
+.dashboardInsightsGrid > * {
+  min-width: 0;
+  padding: var(--spacing-4);
+  border-radius: 8px;
+  background: var(--surface-primary);
+}
+
+.dashboardPanelHeading {
+  margin-bottom: var(--spacing-2);
+}
+
+.dashboardPanelHeading h2 {
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.dashboardPanelHeading p {
+  margin-top: 2px;
+  font-size: var(--font-xs);
+}
+
+.dashboardChart {
+  height: 230px;
+  min-height: 210px;
+}
+
+.quickActionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+.quickAction {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  min-height: 42px;
+  padding: var(--spacing-2);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-xs);
+  text-decoration: none;
+  transition:
+    border-color var(--transition-normal),
+    background-color var(--transition-normal);
+}
+
+.quickAction > svg:first-child {
+  color: var(--accent-primary);
+}
+
+.quickAction > svg:last-child {
+  color: var(--text-muted);
+}
+
+.quickAction span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quickAction:hover {
+  border-color: var(--accent-primary);
+  background: var(--surface-hover);
+}
+
+@media (max-width: 900px) {
+  .dashboardFinancialGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboardInsightsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: var(--spacing-4);
+  }
+
+  .dashboardOverviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboardMetrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header {
+    align-items: stretch;
+  }
+
+  .primaryAction {
+    align-self: flex-start;
   }
 }

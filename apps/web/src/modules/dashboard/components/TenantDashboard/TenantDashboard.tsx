@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CreditCard } from "@/components/icons";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  CreditCard,
+  Plus,
+  Tags,
+  WalletCards,
+} from "@/components/icons";
+import { useIdentityStore } from "@/modules/identity/stores/identity.store";
 
 import { useFinancialDashboard } from "../../hooks/useFinancialDashboard";
 
@@ -10,8 +18,7 @@ import { CashFlowChart } from "../CashFlowChart/CashFlowChart";
 import { RecentTransactions } from "../RecentTransactions/RecentTransactions";
 import { ExpensesByCategory } from "../ExpensesByCategory/ExpensesByCategory";
 import { UpcomingPayments } from "../UpcomingPayments/UpcomingPayments";
-import { AccountsOverview } from "../AccountsOverview/AccountsOverview";
-import { FinancialProjectionChart } from "../FinancialProjectionChart/FinancialProjectionChart";
+import { FinancialGoalsOverview } from "../FinancialGoalsOverview/FinancialGoalsOverview";
 
 import styles from "./TenantDashboard.module.scss";
 
@@ -25,8 +32,9 @@ import styles from "./TenantDashboard.module.scss";
  * mantendo a apresentação separada das regras de negócio.
  */
 export function TenantDashboard() {
+  const user = useIdentityStore((state) => state.user);
+  const firstName = user?.name?.trim().split(/\s+/)[0];
   const {
-    accounts,
     loading,
     error,
     loadAccounts,
@@ -44,11 +52,11 @@ export function TenantDashboard() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerIntro}>
-          <span className={styles.eyebrow}>VISÃO GERAL FINANCEIRA</span>
-          <h1 className={styles.title}>Seu dinheiro, em perspectiva.</h1>
+          <span className={styles.eyebrow}>Visão geral</span>
+          <h1 className={styles.title}>Dashboard financeiro</h1>
           <p className={styles.description}>
-            Acompanhe seu saldo, entenda suas movimentações e mantenha suas
-            finanças sob controle.
+            Olá{firstName ? `, ${firstName}` : ""}. Acompanhe suas contas e
+            movimentações.
           </p>
         </div>
 
@@ -131,48 +139,75 @@ export function TenantDashboard() {
         </div>
       )}
 
-      <section className={styles.analyticsSection} aria-label="Análises financeiras">
-        <div className={styles.sectionHeading}>
-          <span className={styles.eyebrow}>ANÁLISE FINANCEIRA</span>
-          <h2>Visão das suas finanças</h2>
-        </div>
+      <section
+        className={styles.dashboardFinancialGrid}
+        aria-label="Análises financeiras"
+      >
+        <section className={styles.dashboardPanel} aria-label="Ações rápidas">
+          <div className={styles.dashboardPanelHeading}>
+            <div>
+              <h2>Ações rápidas</h2>
+              <p>Acesse suas principais áreas financeiras</p>
+            </div>
+          </div>
+          <div className={styles.quickActionsGrid}>
+            <Link href="/dashboard/accounts" className={styles.quickAction}>
+              <WalletCards size={17} aria-hidden="true" />
+              <span>Contas</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href="/dashboard/transactions" className={styles.quickAction}>
+              <ArrowLeftRight size={17} aria-hidden="true" />
+              <span>Transações</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href="/dashboard/categories" className={styles.quickAction}>
+              <Tags size={17} aria-hidden="true" />
+              <span>Categorias</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/dashboard/financial-goals"
+              className={styles.quickAction}
+            >
+              <Plus size={17} aria-hidden="true" />
+              <span>Metas financeiras</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
 
-        <div className={styles.dashboardFinancialGrid}>
-          <CashFlowChart
-            financialLoading={financialLoading}
-            transactionsError={transactionsError}
-            financial={financial}
-          />
-
-          <ExpensesByCategory
-            financialLoading={financialLoading}
-            transactionsError={transactionsError}
-            categoryExpenses={categoryExpenses}
-            categoryColors={categoryColors}
-          />
-        </div>
-
-        <FinancialProjectionChart />
+        <CashFlowChart
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          financial={financial}
+        />
       </section>
 
-      <section className={styles.lowerSection} aria-label="Atividade financeira">
-        <div className={styles.sectionHeading}>
-          <span className={styles.eyebrow}>ACOMPANHAMENTO</span>
-          <h2>Movimentações e compromissos</h2>
-        </div>
-
-        <div className={styles.dashboardCategoryGrid}>
-          <RecentTransactions
-            financialLoading={financialLoading}
-            transactionsError={transactionsError}
-            financial={financial}
-          />
-
-          <UpcomingPayments upcomingPayments={upcomingPayments} />
-        </div>
+      <section
+        className={styles.dashboardInsightsGrid}
+        aria-label="Análises e planejamento"
+      >
+        <ExpensesByCategory
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          categoryExpenses={categoryExpenses}
+          categoryColors={categoryColors}
+        />
+        <FinancialGoalsOverview />
       </section>
 
-      <AccountsOverview accounts={accounts} loading={loading} />
+      <section
+        className={styles.dashboardOverviewGrid}
+        aria-label="Movimentações e pagamentos"
+      >
+        <RecentTransactions
+          financialLoading={financialLoading}
+          transactionsError={transactionsError}
+          financial={financial}
+        />
+        <UpcomingPayments upcomingPayments={upcomingPayments} />
+      </section>
     </main>
   );
 }

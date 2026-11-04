@@ -1,3 +1,5 @@
+/* Estilos do formulário para adicionar um membro ao Espaço. */
+/* Estilos do formulário de associação de membro ao Espaço. */
 .form {
   display: flex;
   flex-direction: column;
@@ -22,7 +24,7 @@
 }
 
 .localInput:focus {
-  outline: 2px solid var(--border-focus, var(--border-primary));
+  outline: 2px solid var(--accent-primary);
   outline-offset: 1px;
 }
 

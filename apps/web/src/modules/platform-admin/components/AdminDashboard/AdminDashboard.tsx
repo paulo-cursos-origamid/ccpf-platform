@@ -17,8 +17,9 @@ import {
 
 import {
   Building2,
+  CircleDollarSign,
   CreditCard,
-  Receipt,
+  Percent,
   Users,
 } from "@/components/icons";
 
@@ -84,6 +85,14 @@ function formatMetricCurrency(value: number): string {
   }).format(value);
 }
 
+function percentageOf(part?: number, total?: number): number | undefined {
+  if (part === undefined || total === undefined) {
+    return undefined;
+  }
+
+  return total > 0 ? Math.round((part / total) * 100) : 0;
+}
+
 const CHART_COLORS = {
   primary: "#047857",
   secondary: "#10b981",
@@ -116,6 +125,8 @@ interface MetricCardProps {
   color: string;
   href?: string;
   loading: boolean;
+  indicatorPercent?: number;
+  indicatorLabel?: string;
 }
 
 function MetricCard({
@@ -126,6 +137,8 @@ function MetricCard({
   color,
   href,
   loading,
+  indicatorPercent,
+  indicatorLabel,
 }: MetricCardProps) {
   const content = (
     <>
@@ -146,6 +159,14 @@ function MetricCard({
       <div className={styles.metricValue}>
         {loading ? <span className={styles.skeleton} /> : value}
       </div>
+
+      {indicatorPercent !== undefined ? (
+        <div className={styles.metricIndicator}>
+          <Percent size={13} aria-hidden="true" />
+          <strong>{indicatorPercent}%</strong>
+          <span>{indicatorLabel}</span>
+        </div>
+      ) : null}
 
       <p className={styles.metricDescription}>{description}</p>
     </>
@@ -179,6 +200,8 @@ export function AdminDashboard() {
       color: CHART_COLORS.secondary,
       href: "/dashboard/users",
       loading,
+      indicatorPercent: percentageOf(users?.active, users?.total),
+      indicatorLabel: "ativos do total",
     },
     {
       label: "Espaços",
@@ -189,6 +212,8 @@ export function AdminDashboard() {
       icon: Building2,
       color: CHART_COLORS.blue,
       loading,
+      indicatorPercent: percentageOf(tenants?.active, tenants?.total),
+      indicatorLabel: "ativos do total",
     },
     {
       label: "Assinaturas ativas",
@@ -204,6 +229,11 @@ export function AdminDashboard() {
       color: CHART_COLORS.purple,
       href: "/admin/billing/invoices",
       loading,
+      indicatorPercent: percentageOf(
+        subscriptions?.active,
+        subscriptions?.total,
+      ),
+      indicatorLabel: "da carteira",
     },
     {
       label: "Recebido",
@@ -215,10 +245,19 @@ export function AdminDashboard() {
       description: billing
         ? `${billing.received.count} pagamentos confirmados`
         : "Pagamentos confirmados na plataforma.",
-      icon: Receipt,
+      icon: CircleDollarSign,
       color: CHART_COLORS.gold,
       href: "/admin/billing/invoices",
       loading,
+      indicatorPercent: percentageOf(
+        billing?.received.amount,
+        billing
+          ? billing.received.amount +
+              billing.pending.amount +
+              billing.overdue.amount
+          : undefined,
+      ),
+      indicatorLabel: "do financeiro monitorado",
     },
   ];
 
@@ -239,12 +278,36 @@ export function AdminDashboard() {
 
   const subscriptionChartData = subscriptions
     ? [
-        { name: "Ativas", value: subscriptions.active, color: CHART_COLORS.primary },
-        { name: "Trial", value: subscriptions.trialing, color: CHART_COLORS.gold },
-        { name: "Pendentes", value: subscriptions.pending, color: CHART_COLORS.blue },
-        { name: "Em atraso", value: subscriptions.pastDue, color: CHART_COLORS.red },
-        { name: "Suspensas", value: subscriptions.suspended, color: CHART_COLORS.purple },
-        { name: "Canceladas", value: subscriptions.cancelled, color: CHART_COLORS.muted },
+        {
+          name: "Ativas",
+          value: subscriptions.active,
+          color: CHART_COLORS.primary,
+        },
+        {
+          name: "Trial",
+          value: subscriptions.trialing,
+          color: CHART_COLORS.gold,
+        },
+        {
+          name: "Pendentes",
+          value: subscriptions.pending,
+          color: CHART_COLORS.blue,
+        },
+        {
+          name: "Em atraso",
+          value: subscriptions.pastDue,
+          color: CHART_COLORS.red,
+        },
+        {
+          name: "Suspensas",
+          value: subscriptions.suspended,
+          color: CHART_COLORS.purple,
+        },
+        {
+          name: "Canceladas",
+          value: subscriptions.cancelled,
+          color: CHART_COLORS.muted,
+        },
         { name: "Expiradas", value: subscriptions.expired, color: "#475569" },
       ]
     : [];
@@ -256,9 +319,21 @@ export function AdminDashboard() {
 
   const billingChartData = billing
     ? [
-        { name: "Recebido", valor: billing.received.amount, color: CHART_COLORS.secondary },
-        { name: "Pendente", valor: billing.pending.amount, color: CHART_COLORS.gold },
-        { name: "Vencido", valor: billing.overdue.amount, color: CHART_COLORS.red },
+        {
+          name: "Recebido",
+          valor: billing.received.amount,
+          color: CHART_COLORS.secondary,
+        },
+        {
+          name: "Pendente",
+          valor: billing.pending.amount,
+          color: CHART_COLORS.gold,
+        },
+        {
+          name: "Vencido",
+          valor: billing.overdue.amount,
+          color: CHART_COLORS.red,
+        },
       ]
     : [];
 
@@ -267,9 +342,9 @@ export function AdminDashboard() {
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>Platform Admin</span>
-          <h1 className={styles.title}>Dashboard</h1>
+          <h1 className={styles.title}>Dashboard Administrativo</h1>
           <p className={styles.description}>
-            Olá! Aqui está um resumo da operação e do desempenho da plataforma.
+            Visão geral da operação e do desempenho da plataforma.
           </p>
         </div>
         <span className={styles.headerStatus}>
@@ -300,7 +375,7 @@ export function AdminDashboard() {
         ))}
       </section>
 
-      <section className={styles.section}>
+      <section className={styles.indicatorsSection}>
         <div className={styles.sectionHeading}>
           <div>
             <span className={styles.sectionEyebrow}>Indicadores</span>
@@ -314,7 +389,7 @@ export function AdminDashboard() {
         <div className={styles.chartsGrid}>
           <ChartPanel
             title="Usuários"
-            description="Distribuição entre usuários ativos e inativos."
+            description="Ativos e inativos na plataforma."
           >
             {users ? (
               <div className={styles.chart}>
@@ -357,7 +432,7 @@ export function AdminDashboard() {
 
           <ChartPanel
             title="Espaços"
-            description="Situação dos Espaços cadastrados na plataforma."
+            description="Situação dos espaços cadastrados."
           >
             {tenants ? (
               <div className={styles.chart}>
@@ -392,11 +467,13 @@ export function AdminDashboard() {
                       {tenantChartData.map((item, index) => (
                         <Cell
                           key={item.name}
-                          fill={[
-                            CHART_COLORS.primary,
-                            CHART_COLORS.gold,
-                            CHART_COLORS.red,
-                          ][index]}
+                          fill={
+                            [
+                              CHART_COLORS.primary,
+                              CHART_COLORS.gold,
+                              CHART_COLORS.red,
+                            ][index]
+                          }
                         />
                       ))}
                     </Bar>
@@ -421,7 +498,9 @@ export function AdminDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={subscriptionChartData.filter((item) => item.value > 0)}
+                          data={subscriptionChartData.filter(
+                            (item) => item.value > 0,
+                          )}
                           dataKey="value"
                           nameKey="name"
                           innerRadius="65%"
@@ -539,18 +618,7 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      <section className={styles.actionsSection}>
-        <div className={styles.sectionHeading}>
-          <div>
-            <span className={styles.sectionEyebrow}>Operação</span>
-            <h2 className={styles.sectionTitle}>Ações rápidas</h2>
-            <p className={styles.sectionDescription}>
-              Acesse rapidamente as principais áreas administrativas.
-            </p>
-          </div>
-        </div>
-        <AdminQuickActions />
-      </section>
+      <AdminQuickActions />
     </main>
   );
 }
