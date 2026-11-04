@@ -15,16 +15,13 @@ export class ProcessDueDateNotificationsUseCase {
   ) {}
 
   async execute(): Promise<void> {
-    const todayKey = this.dateKeyInTimeZone(
-      new Date(),
-      'America/Sao_Paulo',
-    );
+    const todayKey = this.dateKeyInTimeZone(new Date(), 'America/Sao_Paulo');
     const tomorrow = new Date(`${todayKey}T00:00:00.000Z`);
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const tomorrowKey = this.dateKey(tomorrow);
     const endOfTomorrow = new Date(`${tomorrowKey}T23:59:59.999Z`);
 
-    const [installments, occurrences] = await Promise.all([
+    const [installments, occurrences, obligations] = await Promise.all([
       this.prisma.installment.findMany({
         where: {
           status: { in: ['PENDING', 'OVERDUE'] },
@@ -49,6 +46,19 @@ export class ProcessDueDateNotificationsUseCase {
           },
         },
       }),
+      this.prisma.financialObligation.findMany({
+        where: {
+          status: 'PENDING',
+          dueDate: { lte: endOfTomorrow },
+        },
+        select: {
+          id: true,
+          userId: true,
+          type: true,
+          title: true,
+          dueDate: true,
+        },
+      }),
     ]);
 
     this.logger.log(
@@ -56,7 +66,9 @@ export class ProcessDueDateNotificationsUseCase {
         installments.length +
         ' parcelas e ' +
         occurrences.length +
-        ' contas recorrentes.',
+        ' contas recorrentes e ' +
+        obligations.length +
+        ' compromissos financeiros.',
     );
 
     const notifications = [
@@ -94,6 +106,25 @@ export class ProcessDueDateNotificationsUseCase {
           resourceType: 'RECURRING_BILL_OCCURRENCE',
           resourceId: item.id,
           deduplicationKey: `RECURRING_BILL_${state.key}:${item.id}`,
+        };
+      }),
+      ...obligations.map((item) => {
+        const dueDate = this.dateKey(item.dueDate);
+        const state = this.classify(dueDate, todayKey, tomorrowKey);
+        if (!state) return null;
+
+        const direction = item.type === 'PAYABLE' ? 'a pagar' : 'a receber';
+        return {
+          userId: item.userId,
+          type: state.overdue
+            ? NotificationType.DUE_DATE_OVERDUE
+            : NotificationType.DUE_DATE_REMINDER,
+          severity: state.severity,
+          title: state.title,
+          message: `O compromisso ${direction} "${item.title}" ${state.message}.`,
+          resourceType: 'FINANCIAL_OBLIGATION',
+          resourceId: item.id,
+          deduplicationKey: `FINANCIAL_OBLIGATION_${state.key}:${item.id}`,
         };
       }),
     ].filter((item): item is NonNullable<typeof item> => item !== null);

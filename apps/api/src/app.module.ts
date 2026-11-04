@@ -15,6 +15,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FinancialGoalsModule } from './modules/financial-goals/financial-goals.module';
+import { AccountsPayableReceivableModule } from './modules/accounts-payable-receivable/accounts-payable-receivable.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { FinancialGoalsModule } from './modules/financial-goals/financial-goals.
     PlatformAdminModule,
     NotificationsModule,
     FinancialGoalsModule,
+    AccountsPayableReceivableModule,
   ],
   controllers: [],
   providers: [],
