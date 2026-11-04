@@ -9,6 +9,8 @@ import type { Transaction } from "@/modules/transactions/types/transaction";
 export interface DashboardFinancial {
   income: number;
   expense: number;
+  previousIncome: number;
+  previousExpense: number;
   chart: Array<{
     month: string;
     receitas: number;

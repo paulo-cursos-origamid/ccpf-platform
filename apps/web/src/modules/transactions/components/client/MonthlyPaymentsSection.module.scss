@@ -1,3 +1,4 @@
+/* Estilos do resumo mensal de pagamentos e seus estados. */
 .section {
   display: flex;
   flex-direction: column;
@@ -91,7 +92,7 @@
 }
 
 .paid {
-  color: #047857 !important;
+  color: var(--success) !important;
 }
 
 .pending {
@@ -156,17 +157,17 @@
 }
 
 .badge.paid {
-  color: #047857;
+  color: var(--success);
   background: rgb(4 120 87 / 0.1);
 }
 
 .badge.pending {
-  color: #92400e;
+  color: var(--warning);
   background: rgb(251 191 85 / 0.2);
 }
 
 .badge.overdue {
-  color: #b91c1c;
+  color: var(--danger);
   background: rgb(185 28 28 / 0.1);
 }
 

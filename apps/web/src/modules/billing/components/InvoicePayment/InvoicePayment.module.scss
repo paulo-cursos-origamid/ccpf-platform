@@ -137,6 +137,7 @@
   line-height: 1.5;
 }
 
+/* Estilos do pagamento de faturas, QR code e ações de cobrança. */
 .primaryButton,
 .secondaryButton {
   min-height: 2.75rem;
@@ -155,7 +156,7 @@
 .primaryButton {
   border: 1px solid var(--accent-primary);
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--text-on-accent);
 
   &:hover:not(:disabled) {
     opacity: 0.9;
@@ -325,7 +326,7 @@
   padding: 1rem;
   border: 1px solid var(--border-primary);
   border-radius: 0.75rem;
-  background: #fff;
+  background: var(--surface-secondary);
 }
 
 .copyField {

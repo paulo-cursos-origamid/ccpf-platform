@@ -1,0 +1,442 @@
+/* Estilos da listagem de metas financeiras, filtros e estados. */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtitle {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.addButton,
+.contributionButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  min-height: var(--control-height-md);
+  padding: 0 var(--spacing-md);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--text-on-accent);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover {
+    background: var(--accent-primary-hover);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-xl);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.goalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.goalCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-width: 0;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+}
+
+.cardHeader,
+.goalIdentity,
+.cardFooter,
+.remaining {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.goalIdentity {
+  justify-content: flex-start;
+
+  h2 {
+    margin: 0 0 var(--spacing-xs);
+    color: var(--text-primary);
+    font-size: var(--font-md);
+  }
+}
+
+.goalIcon,
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  color: var(--accent-primary);
+}
+
+.status {
+  display: inline-flex;
+  padding: 3px var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sxs);
+  font-weight: var(--font-weight-medium);
+}
+
+.active {
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  color: var(--accent-primary);
+}
+.completed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.archived {
+  background: rgba(var(--text-secondary-rgb), 0.1);
+  color: var(--text-secondary);
+}
+
+.iconButton,
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+}
+
+.description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.progressSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md) 0;
+}
+
+.donut {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+}
+
+.donutCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--surface-secondary);
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-xl);
+  }
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+}
+
+.amounts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.amountLabel {
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+}
+.accumulated {
+  color: var(--text-primary);
+  font-size: var(--font-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  overflow: hidden;
+  height: 7px;
+  margin: var(--spacing-xs) 0;
+  border-radius: 99px;
+  background: var(--border-primary);
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent-primary);
+  }
+}
+
+.remaining {
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+
+  strong {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cardFooter {
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-secondary);
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+}
+
+.contributionButton {
+  min-height: 32px;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-sxs);
+}
+
+.empty,
+.feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  min-height: 260px;
+  padding: var(--spacing-xl);
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-secondary);
+  text-align: center;
+
+  h2 {
+    margin: var(--spacing-sm) 0 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+  }
+  p {
+    margin: 0 0 var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.emptyIcon {
+  width: 54px;
+  height: 54px;
+}
+
+.secondaryButton {
+  border-color: var(--border-primary);
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+}
+
+.formError {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--font-sm);
+}
+
+.modalBackdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: min(100%, 480px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--surface-primary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-medium);
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    min-height: 42px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: normal;
+
+    &:focus {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 1px;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+  }
+  p {
+    margin: var(--spacing-xs) 0 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.closeButton {
+  flex: 0 0 auto;
+  font-size: 24px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+@media (max-width: 900px) {
+  .goalGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+  }
+  .summary {
+    grid-template-columns: 1fr;
+  }
+  .progressSection {
+    gap: var(--spacing-md);
+  }
+  .donut {
+    width: 96px;
+    height: 96px;
+  }
+  .donutCenter {
+    width: 74px;
+    height: 74px;
+  }
+  .cardFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .contributionButton {
+    align-self: flex-start;
+  }
+}

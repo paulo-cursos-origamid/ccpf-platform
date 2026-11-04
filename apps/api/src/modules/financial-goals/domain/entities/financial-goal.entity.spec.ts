@@ -3,7 +3,9 @@ import { FinancialGoalStatus } from '../enums/financial-goal-status.enum';
 
 describe('FinancialGoalEntity', () => {
   const createGoal = (
-    overrides: Partial<ConstructorParameters<typeof FinancialGoalEntity>[0]> = {},
+    overrides: Partial<
+      ConstructorParameters<typeof FinancialGoalEntity>[0]
+    > = {},
   ) =>
     new FinancialGoalEntity({
       tenantId: 'tenant-1',
@@ -41,8 +43,8 @@ describe('FinancialGoalEntity', () => {
   });
 
   it('deve rejeitar data inválida', () => {
-    expect(
-      () => createGoal({ targetDate: new Date('data-inválida') }),
+    expect(() =>
+      createGoal({ targetDate: new Date('data-inválida') }),
     ).toThrow();
   });
 
@@ -79,6 +81,20 @@ describe('FinancialGoalEntity', () => {
     goal.archive();
 
     expect(() => goal.archive()).toThrow();
+  });
+
+  it('deve restaurar uma meta arquivada', () => {
+    const goal = createGoal({ status: FinancialGoalStatus.ARCHIVED });
+
+    goal.restore();
+
+    expect(goal.status).toBe(FinancialGoalStatus.ACTIVE);
+  });
+
+  it('não deve permitir restaurar uma meta não arquivada', () => {
+    const goal = createGoal();
+
+    expect(() => goal.restore()).toThrow();
   });
 
   it('não deve permitir atualizar uma meta arquivada', () => {

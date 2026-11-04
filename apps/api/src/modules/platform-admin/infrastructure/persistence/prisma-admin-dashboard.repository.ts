@@ -35,6 +35,17 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
   constructor(private readonly prisma: PrismaService) {}
 
   async getSummary(scope: AdminDashboardScope): Promise<AdminDashboardSummary> {
+    const now = new Date();
+    const currentMonthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const previousMonthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+    );
+    const nextMonthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    );
+
     const usersPromise = scope.users
       ? Promise.all([
           this.prisma.user.count({
@@ -56,25 +67,61 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
               isActive: false,
             },
           }),
+          this.prisma.user.count({
+            where: {
+              deletedAt: null,
+              createdAt: { gte: currentMonthStart, lt: nextMonthStart },
+            },
+          }),
+          this.prisma.user.count({
+            where: {
+              deletedAt: null,
+              createdAt: { gte: previousMonthStart, lt: currentMonthStart },
+            },
+          }),
         ])
       : null;
 
     const tenantsPromise = scope.tenants
-      ? this.prisma.tenant.groupBy({
-          by: ['status'],
-          _count: {
-            _all: true,
-          },
-        })
+      ? Promise.all([
+          this.prisma.tenant.groupBy({
+            by: ['status'],
+            _count: {
+              _all: true,
+            },
+          }),
+          this.prisma.tenant.count({
+            where: {
+              createdAt: { gte: currentMonthStart, lt: nextMonthStart },
+            },
+          }),
+          this.prisma.tenant.count({
+            where: {
+              createdAt: { gte: previousMonthStart, lt: currentMonthStart },
+            },
+          }),
+        ])
       : null;
 
     const subscriptionsPromise = scope.subscriptions
-      ? this.prisma.subscription.groupBy({
-          by: ['status'],
-          _count: {
-            _all: true,
-          },
-        })
+      ? Promise.all([
+          this.prisma.subscription.groupBy({
+            by: ['status'],
+            _count: {
+              _all: true,
+            },
+          }),
+          this.prisma.subscription.count({
+            where: {
+              createdAt: { gte: currentMonthStart, lt: nextMonthStart },
+            },
+          }),
+          this.prisma.subscription.count({
+            where: {
+              createdAt: { gte: previousMonthStart, lt: currentMonthStart },
+            },
+          }),
+        ])
       : null;
 
     const billingPromise = scope.billing
@@ -111,6 +158,22 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
               amount: true,
             },
           }),
+          this.prisma.payment.aggregate({
+            where: {
+              status: PaymentStatus.PAID,
+              paidAt: { gte: currentMonthStart, lt: nextMonthStart },
+            },
+            _count: { _all: true },
+            _sum: { amount: true },
+          }),
+          this.prisma.payment.aggregate({
+            where: {
+              status: PaymentStatus.PAID,
+              paidAt: { gte: previousMonthStart, lt: currentMonthStart },
+            },
+            _count: { _all: true },
+            _sum: { amount: true },
+          }),
 
           // Saldo em aberto/vencido é calculado por parcela, não por tentativa.
           this.prisma.invoiceInstallment.groupBy({
@@ -133,7 +196,7 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
         ])
       : null;
 
-    const [usersResult, tenantGroups, subscriptionGroups, billingResult] =
+    const [usersResult, tenantsResult, subscriptionsResult, billingResult] =
       await Promise.all([
         usersPromise,
         tenantsPromise,
@@ -141,19 +204,40 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
         billingPromise,
       ]);
 
-    const [invoiceGroups, receivedAggregate, installmentGroups] =
-      billingResult ?? [null, null, null];
+    const [tenantGroups, tenantsCurrent, tenantsPrevious] = tenantsResult ?? [
+      null,
+      null,
+      null,
+    ];
+    const [subscriptionGroups, subscriptionsCurrent, subscriptionsPrevious] =
+      subscriptionsResult ?? [null, null, null];
+    const [
+      invoiceGroups,
+      receivedAggregate,
+      receivedCurrent,
+      receivedPrevious,
+      installmentGroups,
+    ] = billingResult ?? [null, null, null, null, null];
 
     const summary: AdminDashboardSummary = {};
+    const monthOverMonth: NonNullable<AdminDashboardSummary['monthOverMonth']> =
+      {};
 
     if (usersResult) {
-      const [usersTotal, usersActive, usersInactive] = usersResult;
+      const [
+        usersTotal,
+        usersActive,
+        usersInactive,
+        usersCurrent,
+        usersPrevious,
+      ] = usersResult;
 
       summary.users = {
         total: usersTotal,
         active: usersActive,
         inactive: usersInactive,
       };
+      monthOverMonth.users = { current: usersCurrent, previous: usersPrevious };
     }
 
     if (tenantGroups) {
@@ -165,6 +249,10 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
         active: tenantCounts.active,
         suspended: tenantCounts.suspended,
         cancelled: tenantCounts.cancelled,
+      };
+      monthOverMonth.tenants = {
+        current: tenantsCurrent ?? 0,
+        previous: tenantsPrevious ?? 0,
       };
     }
 
@@ -187,6 +275,10 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
         suspended: subscriptionCounts.suspended,
         cancelled: subscriptionCounts.cancelled,
         expired: subscriptionCounts.expired,
+      };
+      monthOverMonth.subscriptions = {
+        current: subscriptionsCurrent ?? 0,
+        previous: subscriptionsPrevious ?? 0,
       };
     }
 
@@ -218,6 +310,14 @@ export class PrismaAdminDashboardRepository implements AdminDashboardRepository 
         pending,
         overdue,
       };
+      monthOverMonth.received = {
+        current: this.toBillingMetric(receivedCurrent),
+        previous: this.toBillingMetric(receivedPrevious),
+      };
+    }
+
+    if (Object.keys(monthOverMonth).length > 0) {
+      summary.monthOverMonth = monthOverMonth;
     }
 
     return summary;

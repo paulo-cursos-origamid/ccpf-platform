@@ -81,6 +81,36 @@ class AdminDashboardBillingDto {
   overdue!: AdminDashboardBillingMetricDto;
 }
 
+class AdminDashboardMonthlyCountDto {
+  @ApiProperty({ example: 18 })
+  current!: number;
+
+  @ApiProperty({ example: 14 })
+  previous!: number;
+}
+
+class AdminDashboardMonthlyReceivedDto {
+  @ApiProperty({ type: AdminDashboardBillingMetricDto })
+  current!: AdminDashboardBillingMetricDto;
+
+  @ApiProperty({ type: AdminDashboardBillingMetricDto })
+  previous!: AdminDashboardBillingMetricDto;
+}
+
+class AdminDashboardMonthlyComparisonDto {
+  @ApiPropertyOptional({ type: AdminDashboardMonthlyCountDto })
+  users?: AdminDashboardMonthlyCountDto;
+
+  @ApiPropertyOptional({ type: AdminDashboardMonthlyCountDto })
+  tenants?: AdminDashboardMonthlyCountDto;
+
+  @ApiPropertyOptional({ type: AdminDashboardMonthlyCountDto })
+  subscriptions?: AdminDashboardMonthlyCountDto;
+
+  @ApiPropertyOptional({ type: AdminDashboardMonthlyReceivedDto })
+  received?: AdminDashboardMonthlyReceivedDto;
+}
+
 export class AdminDashboardSummaryDto {
   @ApiPropertyOptional({
     type: AdminDashboardUsersDto,
@@ -101,4 +131,9 @@ export class AdminDashboardSummaryDto {
     type: AdminDashboardBillingDto,
   })
   billing?: AdminDashboardBillingDto;
+
+  @ApiPropertyOptional({
+    type: AdminDashboardMonthlyComparisonDto,
+  })
+  monthOverMonth?: AdminDashboardMonthlyComparisonDto;
 }

@@ -17,6 +17,7 @@ import { ListFinancialGoalsUseCase } from './application/use-cases/list-financia
 import { GetFinancialGoalUseCase } from './application/use-cases/get-financial-goal/get-financial-goal.use-case';
 import { UpdateFinancialGoalUseCase } from './application/use-cases/update-financial-goal/update-financial-goal.use-case';
 import { ArchiveFinancialGoalUseCase } from './application/use-cases/archive-financial-goal/archive-financial-goal.use-case';
+import { RestoreFinancialGoalUseCase } from './application/use-cases/restore-financial-goal/restore-financial-goal.use-case';
 import { AddFinancialGoalContributionUseCase } from './application/use-cases/add-financial-goal-contribution/add-financial-goal-contribution.use-case';
 import { ListFinancialGoalContributionsUseCase } from './application/use-cases/list-financial-goal-contributions/list-financial-goal-contributions.use-case';
 import { RemoveFinancialGoalContributionUseCase } from './application/use-cases/remove-financial-goal-contribution/remove-financial-goal-contribution.use-case';
@@ -32,6 +33,7 @@ import { FinancialGoalsController } from './presentation/controllers/financial-g
     GetFinancialGoalUseCase,
     UpdateFinancialGoalUseCase,
     ArchiveFinancialGoalUseCase,
+    RestoreFinancialGoalUseCase,
     AddFinancialGoalContributionUseCase,
     ListFinancialGoalContributionsUseCase,
     RemoveFinancialGoalContributionUseCase,

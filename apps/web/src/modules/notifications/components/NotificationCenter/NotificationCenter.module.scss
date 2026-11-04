@@ -1,3 +1,4 @@
+/* Estilos da central de notificações, seleção e ações em lote. */
 .container {
   width: 100%;
   min-height: calc(100vh - 64px);
@@ -164,7 +165,7 @@
 }
 
 .error {
-  color: var(--color-error, #dc2626);
+  color: var(--danger);
 }
 
 @keyframes spin {
@@ -215,7 +216,7 @@
   font-size: var(--font-sm);
 
   input {
-    accent-color: #047857;
+    accent-color: var(--accent-primary);
   }
 }
 
@@ -229,7 +230,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   background: var(--surface-primary);
-  color: var(--status-error, #dc2626);
+  color: var(--danger);
   font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;

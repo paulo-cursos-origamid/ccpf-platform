@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -30,6 +29,7 @@ import { ListFinancialGoalsUseCase } from '../../application/use-cases/list-fina
 import { GetFinancialGoalUseCase } from '../../application/use-cases/get-financial-goal/get-financial-goal.use-case';
 import { UpdateFinancialGoalUseCase } from '../../application/use-cases/update-financial-goal/update-financial-goal.use-case';
 import { ArchiveFinancialGoalUseCase } from '../../application/use-cases/archive-financial-goal/archive-financial-goal.use-case';
+import { RestoreFinancialGoalUseCase } from '../../application/use-cases/restore-financial-goal/restore-financial-goal.use-case';
 import { AddFinancialGoalContributionUseCase } from '../../application/use-cases/add-financial-goal-contribution/add-financial-goal-contribution.use-case';
 import { ListFinancialGoalContributionsUseCase } from '../../application/use-cases/list-financial-goal-contributions/list-financial-goal-contributions.use-case';
 import { RemoveFinancialGoalContributionUseCase } from '../../application/use-cases/remove-financial-goal-contribution/remove-financial-goal-contribution.use-case';
@@ -54,6 +54,7 @@ export class FinancialGoalsController {
     private readonly getGoal: GetFinancialGoalUseCase,
     private readonly updateGoal: UpdateFinancialGoalUseCase,
     private readonly archiveGoal: ArchiveFinancialGoalUseCase,
+    private readonly restoreGoal: RestoreFinancialGoalUseCase,
     private readonly addContributionUseCase: AddFinancialGoalContributionUseCase,
     private readonly listContributions: ListFinancialGoalContributionsUseCase,
     private readonly removeContribution: RemoveFinancialGoalContributionUseCase,
@@ -81,10 +82,7 @@ export class FinancialGoalsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Consultar meta financeira' })
-  get(
-    @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  get(@CurrentTenant() tenant: TenantContext, @Param('id') id: string) {
     return this.getGoal.execute({ id, tenantId: tenant.tenantId });
   }
 
@@ -92,7 +90,7 @@ export class FinancialGoalsController {
   @ApiOperation({ summary: 'Atualizar meta financeira' })
   update(
     @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateFinancialGoalDto,
   ) {
     return this.updateGoal.execute({
@@ -111,18 +109,21 @@ export class FinancialGoalsController {
 
   @Post(':id/archive')
   @ApiOperation({ summary: 'Arquivar meta financeira' })
-  archive(
-    @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  archive(@CurrentTenant() tenant: TenantContext, @Param('id') id: string) {
     return this.archiveGoal.execute({ id, tenantId: tenant.tenantId });
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({ summary: 'Desarquivar meta financeira' })
+  restore(@CurrentTenant() tenant: TenantContext, @Param('id') id: string) {
+    return this.restoreGoal.execute({ id, tenantId: tenant.tenantId });
   }
 
   @Post(':id/contributions')
   @ApiOperation({ summary: 'Registrar aporte manual na meta' })
   addContribution(
     @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) goalId: string,
+    @Param('id') goalId: string,
     @Body() dto: AddFinancialGoalContributionDto,
   ) {
     return this.addContributionUseCase.execute({
@@ -139,7 +140,7 @@ export class FinancialGoalsController {
   @ApiOperation({ summary: 'Listar aportes manuais da meta' })
   listGoalContributions(
     @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) goalId: string,
+    @Param('id') goalId: string,
   ) {
     return this.listContributions.execute({
       goalId,
@@ -151,8 +152,8 @@ export class FinancialGoalsController {
   @ApiOperation({ summary: 'Remover aporte manual da meta' })
   removeGoalContribution(
     @CurrentTenant() tenant: TenantContext,
-    @Param('id', ParseUUIDPipe) goalId: string,
-    @Param('contributionId', ParseUUIDPipe) contributionId: string,
+    @Param('id') goalId: string,
+    @Param('contributionId') contributionId: string,
   ) {
     return this.removeContribution.execute({
       contributionId,

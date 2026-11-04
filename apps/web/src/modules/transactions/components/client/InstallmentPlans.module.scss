@@ -1,10 +1,11 @@
+/* Estilos dos resumos de parcelamento, cronogramas e estados de pagamento. */
 .section {
   display: grid;
   gap: var(--spacing-4);
   margin: var(--spacing-6) 0;
   padding: var(--spacing-5);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
   background: var(--surface-primary);
 }
 
@@ -18,14 +19,14 @@
 .heading {
   margin: 0;
   color: var(--text-primary);
-  font-size: var(--text-lg);
+  font-size: var(--font-lg);
 }
 
 .description,
 .note,
 .helper {
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--font-sm);
 }
 
 .description {
@@ -37,19 +38,19 @@
   display: grid;
   gap: var(--spacing-1);
   padding: var(--spacing-4);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
   background: var(--surface-secondary);
 }
 
 .summary span,
 .summary small {
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--font-sm);
 }
 
 .summary strong {
-  color: var(--accent-primary, #047857);
-  font-size: var(--text-xl);
+  color: var(--accent-primary);
+  font-size: var(--font-xl);
 }
 
 .planList {
@@ -59,8 +60,8 @@
 
 .planCard {
   overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
 }
 
 .planToggle {
@@ -90,7 +91,7 @@
 .planInfo small,
 .planAmounts small {
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--font-sm);
 }
 
 .planAmounts {
@@ -98,12 +99,12 @@
 }
 
 .planAmounts > strong {
-  font-size: var(--text-lg);
+  font-size: var(--font-lg);
 }
 
 .installments {
   overflow-x: auto;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .installmentHeader,
@@ -114,7 +115,7 @@
   gap: var(--spacing-3);
   min-width: 540px;
   padding: var(--spacing-3) var(--spacing-4);
-  font-size: var(--text-sm);
+  font-size: var(--font-sm);
 }
 
 .installmentHeader {
@@ -124,7 +125,7 @@
 }
 
 .installmentRow + .installmentRow {
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .status {
@@ -136,11 +137,11 @@
 }
 
 .paid {
-  color: var(--accent-primary, #047857);
+  color: var(--accent-primary);
 }
 
 .overdue {
-  color: var(--color-danger, #b91c1c);
+  color: var(--danger);
 }
 
 .canceled {
@@ -188,8 +189,8 @@
 
 .error {
   margin: 0;
-  color: var(--color-danger, #b91c1c);
-  font-size: var(--text-sm);
+  color: var(--danger);
+  font-size: var(--font-sm);
 }
 
 @media (max-width: 768px) {
@@ -219,27 +220,25 @@
   }
 }
 
-
 .paymentSummary {
   display: grid;
   gap: var(--spacing-2);
   padding: var(--spacing-4);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
   background: var(--surface-secondary);
   color: var(--text-primary);
 
   span {
     color: var(--text-secondary);
-    font-size: var(--text-sm);
+    font-size: var(--font-sm);
   }
 
   strong:last-child {
-    color: var(--accent-primary, #047857);
-    font-size: var(--text-lg);
+    color: var(--accent-primary);
+    font-size: var(--font-lg);
   }
 }
-
 
 /* ==========================================================
    TABELA DE COMPRAS PARCELADAS
@@ -248,8 +247,8 @@
 .planTableWrapper {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
 }
 
 .planTable,
@@ -261,14 +260,14 @@
   th,
   td {
     padding: var(--spacing-3) var(--spacing-4);
-    border-bottom: 1px solid var(--border-subtle);
-    font-size: var(--text-sm);
+    border-bottom: 1px solid var(--border-secondary);
+    font-size: var(--font-sm);
   }
 
   th {
     background: var(--surface-secondary);
     color: var(--text-secondary);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     white-space: nowrap;
   }
 
@@ -304,22 +303,22 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--accent-primary, #047857);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--accent-primary, #047857);
+  color: var(--accent-primary);
   font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
   white-space: nowrap;
   cursor: pointer;
 
   &:hover {
-    background: rgb(4 120 87 / 0.08);
+    background: var(--accent-soft);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--accent-primary, #047857);
+    outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
   }
 }
@@ -334,12 +333,12 @@
 
 .details {
   padding: var(--spacing-4);
-  border-left: 3px solid var(--accent-primary, #047857);
+  border-left: 3px solid var(--accent-primary);
 
   h3 {
     margin: 0 0 var(--spacing-3);
     color: var(--text-primary);
-    font-size: var(--text-base);
+    font-size: var(--font-md);
   }
 }
 

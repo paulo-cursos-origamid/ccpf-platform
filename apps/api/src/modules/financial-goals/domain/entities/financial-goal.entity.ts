@@ -115,6 +115,15 @@ export class FinancialGoalEntity {
     this.touch();
   }
 
+  restore(): void {
+    if (this._status !== FinancialGoalStatus.ARCHIVED) {
+      throw new Error('Only archived financial goals can be restored');
+    }
+
+    this._status = FinancialGoalStatus.ACTIVE;
+    this.touch();
+  }
+
   ensureCanReceiveContributions(): void {
     this.ensureActive();
   }

@@ -1,3 +1,4 @@
+/* Estilos do formulário de criação e recorrência de transações. */
 .form {
   display: flex;
   flex-direction: column;
@@ -38,7 +39,6 @@
   }
 }
 
-
 .recurringOptions {
   display: flex;
   flex-direction: column;
@@ -52,6 +52,6 @@
   cursor: pointer;
 
   input {
-    accent-color: #047857;
+    accent-color: var(--accent-primary);
   }
 }

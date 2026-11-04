@@ -8,7 +8,20 @@ import {
 } from '../../../domain/repositories/financial-goal.repository';
 
 export interface FinancialGoalOutput {
-  goal: FinancialGoalEntity;
+  goal: {
+    id: string;
+    tenantId: string;
+    userId: string;
+    name: string;
+    description: string | null;
+    linkedAccountId: string | null;
+    targetAmount: number;
+    targetDate: Date | null;
+    status: FinancialGoalStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+  };
   progress: FinancialGoalProgress;
   effectiveStatus: FinancialGoalStatus;
 }
@@ -31,7 +44,20 @@ export class ListFinancialGoalsUseCase {
         );
 
         return {
-          goal,
+          goal: {
+            id: goal.id,
+            tenantId: goal.tenantId,
+            userId: goal.userId,
+            name: goal.name,
+            description: goal.description,
+            linkedAccountId: goal.linkedAccountId,
+            targetAmount: goal.targetAmount,
+            targetDate: goal.targetDate,
+            status: goal.status,
+            createdAt: goal.createdAt,
+            updatedAt: goal.updatedAt,
+            deletedAt: goal.deletedAt,
+          },
           progress,
           effectiveStatus: this.getEffectiveStatus(goal, progress),
         };

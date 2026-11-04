@@ -1,3 +1,4 @@
+/* Estilos do histórico financeiro, indicadores e filtros. */
 .container {
   display: flex;
   flex-direction: column;
@@ -75,11 +76,11 @@
 
 .operationIconIncome {
   background: rgb(4 120 87 / 0.12);
-  color: #047857;
+  color: var(--accent-primary);
 }
 
 .operationIconExpense {
-  background: rgb(220 38 38 / 0.10);
+  background: rgb(220 38 38 / 0.1);
   color: var(--danger);
 }
 
@@ -127,17 +128,17 @@
 
 .incomeIcon {
   background: rgb(4 120 87 / 0.12);
-  color: #047857;
+  color: var(--accent-primary);
 }
 
 .expenseIcon {
-  background: rgb(220 38 38 / 0.10);
+  background: rgb(220 38 38 / 0.1);
   color: var(--danger);
 }
 
 .resultIcon {
   background: rgb(251 183 85 / 0.18);
-  color: #b7791f;
+  color: var(--warning);
 }
 
 .filters {

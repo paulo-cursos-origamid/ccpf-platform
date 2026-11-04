@@ -201,13 +201,7 @@
 }
 
 .mono {
-  font-family:
-    ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    Monaco,
-    Consolas,
-    monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px !important;
 }
 
@@ -393,7 +387,9 @@
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 
   &:hover:not(:disabled) {
     opacity: 0.9;
@@ -422,7 +418,6 @@
   }
 }
 
-
 /* Ação administrativa para cancelar uma tentativa de pagamento. */
 .cancelButton {
   display: inline-flex;
@@ -439,7 +434,9 @@
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 160ms ease, opacity 160ms ease,
+  transition:
+    background 160ms ease,
+    opacity 160ms ease,
     transform 160ms ease;
 
   &:hover:not(:disabled) {
@@ -462,7 +459,6 @@
   color: var(--danger);
   font-size: 13px;
 }
-
 
 /* Organização responsiva do histórico financeiro. */
 .paymentActions {
@@ -509,9 +505,7 @@
   }
 }
 
-
-
-/* Diálogo de cancelamento de tentativa de pagamento */
+/* Estilos dos detalhes da fatura e do diálogo de cancelamento. */
 .cancelDialogOverlay {
   position: fixed;
   inset: 0;
@@ -519,59 +513,56 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: var(--spacing-4);
   background: rgb(15 23 42 / 55%);
 }
 
 .cancelDialog {
   width: 100%;
   max-width: 520px;
-  padding: 1.5rem;
-  background: var(--surface, #000);
-
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
-  box-sizing: border-box;
-
-  h2 {
-    margin: 0 0 0.75rem;
-    font-size: 1.25rem;
-    color: var(--text-primary, #111827);
-  }
+  padding: var(--spacing-6);
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
 
   p {
-    margin: 0 0 1rem;
-    color: var(--text-secondary, #4b5563);
-    line-height: 1.5;
+    margin: 0 0 var(--spacing-4);
+    color: var(--text-secondary);
+    line-height: var(--line-height-normal);
+  }
+
+  h2 {
+    margin: 0 0 var(--spacing-3);
+    color: var(--text-primary);
+    font-size: var(--font-xl);
   }
 
   label {
     display: block;
-    margin: 1rem 0 0.4rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary, #111827);
+    margin: var(--spacing-4) 0 var(--spacing-1);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-semibold);
   }
 
   textarea {
     display: block;
     width: 100%;
     min-height: 100px;
-    padding: 0.75rem;
+    padding: var(--spacing-3);
     resize: vertical;
     font: inherit;
-    border: 1px solid var(--border, #d1d5db);
-    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
     box-sizing: border-box;
-
   }
 
   small {
     display: block;
-    margin-top: 0.35rem;
+    margin-top: var(--spacing-1);
     text-align: right;
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-secondary);
   }
 }
 

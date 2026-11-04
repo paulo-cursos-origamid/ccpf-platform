@@ -1,7 +1,9 @@
 import {
-  Area,
-  AreaChart,
+  Bar,
   CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -55,19 +57,12 @@ export function CashFlowChart({
       ) : (
         <div className={styles.dashboardChart}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={financial.chart}>
-              <defs>
-                <linearGradient
-                  id="ccpfIncomeGradient"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop offset="0%" stopColor="#047857" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#047857" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <ComposedChart
+              data={financial.chart.map((item) => ({
+                ...item,
+                saldo: item.receitas - item.despesas,
+              }))}
+            >
               <CartesianGrid
                 stroke="var(--border-secondary)"
                 strokeDasharray="3 3"
@@ -94,23 +89,28 @@ export function CashFlowChart({
                   color: "var(--text-primary)",
                 }}
               />
-              <Area
-                type="monotone"
+              <Legend />
+              <Bar
                 dataKey="receitas"
                 name="Receitas"
-                stroke="#047857"
-                strokeWidth={3}
-                fill="url(#ccpfIncomeGradient)"
+                fill="#10b981"
+                radius={[3, 3, 0, 0]}
               />
-              <Area
-                type="monotone"
+              <Bar
                 dataKey="despesas"
                 name="Despesas"
-                stroke="#fbb755"
-                strokeWidth={3}
-                fill="transparent"
+                fill="#ef4444"
+                radius={[3, 3, 0, 0]}
               />
-            </AreaChart>
+              <Line
+                type="monotone"
+                dataKey="saldo"
+                name="Saldo"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ r: 3, fill: "#3b82f6" }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}

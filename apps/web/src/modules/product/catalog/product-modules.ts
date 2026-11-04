@@ -19,6 +19,7 @@ import {
   Bell,
   BusFront,
   Car,
+  CircleDollarSign,
   Ellipsis,
   FileChartColumn,
   HeartPulse,
@@ -35,6 +36,7 @@ import type { PlanFeatureCode } from "@/modules/billing";
 export type ProductModuleCode =
   | "DASHBOARD"
   | "ACCOUNTS"
+  | "FINANCIAL_GOALS"
   | "CATEGORIES"
   | "TRANSACTIONS"
   | "HISTORY"
@@ -120,6 +122,17 @@ export const productModules: ProductModule[] = [
     icon: Wallet,
     href: "/dashboard/accounts",
     feature: null,
+    implemented: true,
+    tenantRequired: true,
+  },
+
+  {
+    code: "FINANCIAL_GOALS",
+    label: "Metas financeiras",
+    section: "Financeiro",
+    icon: CircleDollarSign,
+    href: "/dashboard/financial-goals",
+    feature: "DOMESTIC",
     implemented: true,
     tenantRequired: true,
   },
