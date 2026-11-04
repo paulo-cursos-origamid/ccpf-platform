@@ -121,10 +121,43 @@ export class UpdateFinancialObligationDto {
 export class SettleFinancialObligationDto {
   @ApiProperty({
     example: '2026-11-15T12:00:00.000Z',
-    description: 'Instante em que o pagamento ou recebimento ocorreu.',
+    description: 'Data em que ocorreu esta liquidação.',
   })
   @IsDateString()
   settledAt!: string;
+
+  @ApiPropertyOptional({
+    example: '80.00',
+    description:
+      'Principal amortizado. Quando omitido, utiliza o saldo restante menos o desconto.',
+  })
+  @IsOptional()
+  @Matches(/^\d+(?:\.\d{1,2})?$/)
+  principalAmount?: string;
+
+  @ApiPropertyOptional({
+    example: '2.50',
+    description: 'Juros efetivamente pagos ou recebidos.',
+  })
+  @IsOptional()
+  @Matches(/^\d+(?:\.\d{1,2})?$/)
+  interestAmount?: string;
+
+  @ApiPropertyOptional({
+    example: '1.00',
+    description: 'Taxas ou multas efetivamente pagas ou recebidas.',
+  })
+  @IsOptional()
+  @Matches(/^\d+(?:\.\d{1,2})?$/)
+  feeAmount?: string;
+
+  @ApiPropertyOptional({
+    example: '5.00',
+    description: 'Desconto que reduz o saldo sem movimentar a conta.',
+  })
+  @IsOptional()
+  @Matches(/^\d+(?:\.\d{1,2})?$/)
+  discountAmount?: string;
 
   @ApiPropertyOptional({
     description:

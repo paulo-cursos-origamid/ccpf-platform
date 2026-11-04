@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "FinancialObligationSettlement_tenantId_obligationId_settledAt_i" RENAME TO "FinancialObligationSettlement_tenantId_obligationId_settled_idx";

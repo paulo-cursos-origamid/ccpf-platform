@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { FinancialObligationStatus } from '../enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../enums/financial-obligation-type.enum';
+import { FinancialObligationSettlementEntity } from './financial-obligation-settlement.entity';
 
 /** Propriedades públicas usadas para reconstruir e serializar um compromisso. */
 export interface FinancialObligationProps {
@@ -21,6 +22,7 @@ export interface FinancialObligationProps {
   description?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
+  settlements?: FinancialObligationSettlementEntity[];
 }
 
 /** Regras de estado e validações independentes de HTTP e persistência. */
@@ -42,6 +44,7 @@ export class FinancialObligationEntity {
   private _description: string | null;
   private readonly _createdAt: Date;
   private _updatedAt: Date;
+  private _settlements: FinancialObligationSettlementEntity[];
 
   constructor(props: FinancialObligationProps) {
     this._id = props.id ?? randomUUID();
@@ -61,6 +64,7 @@ export class FinancialObligationEntity {
     this._description = props.description?.trim() || null;
     this._createdAt = props.createdAt ?? new Date();
     this._updatedAt = props.updatedAt ?? new Date();
+    this._settlements = [...(props.settlements ?? [])];
   }
 
   get id(): string {
@@ -115,6 +119,46 @@ export class FinancialObligationEntity {
     return this._updatedAt;
   }
 
+  get settlements(): FinancialObligationSettlementEntity[] {
+    return [...this._settlements];
+  }
+
+  get settledPrincipalAmount(): string {
+    return this.formatCents(
+      this._settlements.reduce(
+        (total, settlement) => total + this.toCents(settlement.principalAmount),
+        0n,
+      ),
+    );
+  }
+
+  get discountAmount(): string {
+    return this.formatCents(
+      this._settlements.reduce(
+        (total, settlement) => total + this.toCents(settlement.discountAmount),
+        0n,
+      ),
+    );
+  }
+
+  get remainingAmount(): string {
+    const remaining =
+      this.toCents(this.amount) -
+      this.toCents(this.settledPrincipalAmount) -
+      this.toCents(this.discountAmount);
+
+    return this.formatCents(remaining > 0n ? remaining : 0n);
+  }
+
+  get totalSettledAmount(): string {
+    return this.formatCents(
+      this._settlements.reduce(
+        (total, settlement) => total + this.toCents(settlement.settledAmount),
+        0n,
+      ),
+    );
+  }
+
   /** Retorna o contrato público sem expor o armazenamento privado da entidade. */
   toJSON(): FinancialObligationProps {
     return {
@@ -135,6 +179,7 @@ export class FinancialObligationEntity {
       description: this.description,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
+      settlements: this.settlements,
     };
   }
 
@@ -159,6 +204,43 @@ export class FinancialObligationEntity {
     this._dueDate = this.validateDate(props.dueDate, 'Due date is invalid');
     this._counterparty = props.counterparty?.trim() || null;
     this._description = props.description?.trim() || null;
+    this.touch();
+  }
+
+  registerSettlement(settlement: FinancialObligationSettlementEntity): void {
+    if (
+      this._status !== FinancialObligationStatus.PENDING &&
+      this._status !== FinancialObligationStatus.PARTIALLY_SETTLED
+    ) {
+      throw new Error('Only open financial obligations can receive settlements');
+    }
+
+    if (
+      settlement.obligationId !== this.id ||
+      settlement.tenantId !== this.tenantId ||
+      settlement.userId !== this.userId
+    ) {
+      throw new Error('Settlement does not belong to this financial obligation');
+    }
+
+    const reduction =
+      this.toCents(settlement.principalAmount) +
+      this.toCents(settlement.discountAmount);
+
+    if (reduction > this.toCents(this.remainingAmount)) {
+      throw new Error('Settlement exceeds the outstanding obligation');
+    }
+
+    this._settlements.push(settlement);
+
+    if (this.toCents(this.remainingAmount) === 0n) {
+      this._status = FinancialObligationStatus.SETTLED;
+      this._settledAt = settlement.settledAt;
+    } else {
+      this._status = FinancialObligationStatus.PARTIALLY_SETTLED;
+      this._settledAt = null;
+    }
+
     this.touch();
   }
 
@@ -232,6 +314,15 @@ export class FinancialObligationEntity {
       throw new Error(message);
     }
     return date;
+  }
+
+  private toCents(value: string): bigint {
+    const [whole, fraction] = value.split('.');
+    return BigInt(whole) * 100n + BigInt(fraction ?? '00');
+  }
+
+  private formatCents(value: bigint): string {
+    return `${value / 100n}.${(value % 100n).toString().padStart(2, '0')}`;
   }
 
   private touch(): void {
