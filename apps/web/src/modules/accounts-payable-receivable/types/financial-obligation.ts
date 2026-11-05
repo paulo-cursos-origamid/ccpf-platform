@@ -1,6 +1,25 @@
-/** Contrato HTTP público de um compromisso financeiro. */
 export type FinancialObligationType = "PAYABLE" | "RECEIVABLE";
-export type FinancialObligationStatus = "PENDING" | "SETTLED" | "CANCELED";
+
+export type FinancialObligationStatus =
+  | "PENDING"
+  | "PARTIALLY_SETTLED"
+  | "SETTLED"
+  | "CANCELED";
+
+export interface FinancialObligationSettlement {
+  id: string;
+  obligationId: string;
+  tenantId: string;
+  userId: string;
+  transactionId: string | null;
+  principalAmount: string;
+  interestAmount: string;
+  feeAmount: string;
+  discountAmount: string;
+  settledAmount: string;
+  settledAt: string;
+  createdAt: string;
+}
 
 export interface FinancialObligation {
   id: string;
@@ -18,11 +37,11 @@ export interface FinancialObligation {
   dueDate: string;
   settledAt: string | null;
   description: string | null;
+  settlements?: FinancialObligationSettlement[];
   createdAt: string;
   updatedAt: string;
 }
 
-/** Campos aceitos pelo cadastro de compromisso. */
 export interface CreateFinancialObligationInput {
   type: FinancialObligationType;
   title: string;
@@ -35,20 +54,20 @@ export interface CreateFinancialObligationInput {
   description?: string;
 }
 
-/** Atualizações pendentes também aceitam null para limpar campos opcionais. */
 export type UpdateFinancialObligationInput = Partial<
-  Omit<
-    CreateFinancialObligationInput,
-    "subCategoryId" | "counterparty" | "description"
-  >
+  Omit<CreateFinancialObligationInput, "subCategoryId" | "counterparty" | "description">
 > & {
   subCategoryId?: string | null;
   counterparty?: string | null;
   description?: string | null;
 };
 
-/** Dados da efetivação, incluindo vínculo opcional a uma transação existente. */
 export interface SettleFinancialObligationInput {
   settledAt: string;
+  principalAmount?: string;
+  interestAmount?: string;
+  feeAmount?: string;
+  discountAmount?: string;
   transactionId?: string;
+  description?: string;
 }

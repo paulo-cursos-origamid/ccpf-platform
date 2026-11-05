@@ -1,20 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  InstallmentStatus,
-  LedgerEntryType,
-  LedgerReferenceType,
-  Prisma,
-  TransactionType,
-} from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
-import { runSerializableTransaction } from '../run-serializable-transaction';
+import { FinancialObligationEntity } from '../../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
+import { FinancialObligationStatus } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-status.enum';
+import { FinancialObligationSourceType } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
+import { FinancialObligationType } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-type.enum';
+import { FinancialObligationRepository } from '../../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
+import { SettleFinancialObligationUseCase } from '../../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
 
 export interface PayInstallmentInput {
   tenantId: string;
@@ -26,7 +24,11 @@ export interface PayInstallmentInput {
 
 @Injectable()
 export class PayInstallmentUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly obligations: FinancialObligationRepository,
+    private readonly settleObligation: SettleFinancialObligationUseCase,
+  ) {}
 
   async execute(input: PayInstallmentInput) {
     const paidAt = new Date(input.paidAt);
@@ -35,196 +37,197 @@ export class PayInstallmentUseCase {
       throw new BadRequestException('Data de pagamento inválida.');
     }
 
-    return runSerializableTransaction(
-      this.prisma,
-      async (tx) => {
-        const installment = await tx.installment.findFirst({
-          where: {
-            id: input.installmentId,
-            tenantId: input.tenantId,
-            installmentPlanId: input.installmentPlanId,
-          },
-          include: {
-            plan: true,
-          },
-        });
-
-        if (!installment || installment.plan.deletedAt) {
-          throw new NotFoundException('Parcela não encontrada.');
-        }
-
-        if (
-          installment.status !== InstallmentStatus.PENDING ||
-          installment.transactionId
-        ) {
-          throw new ConflictException(
-            'Esta parcela não está disponível para pagamento.',
-          );
-        }
-
-        const plan = installment.plan;
-
-        const account = await tx.account.findFirst({
-          where: {
-            id: plan.accountId,
-            tenantId: input.tenantId,
-            archivedAt: null,
-          },
-        });
-
-        if (!account) {
-          throw new NotFoundException('Conta financeira não encontrada.');
-        }
-
-        const membership = await tx.accountMember.findFirst({
-          where: {
-            accountId: account.id,
-            userId: input.userId,
-            status: 'ACTIVE',
-          },
-        });
-
-        if (!membership || membership.role === 'VIEWER') {
-          throw new ForbiddenException(
-            'Você não possui permissão para pagar esta parcela.',
-          );
-        }
-
-        const category = await tx.category.findFirst({
-          where: {
-            id: plan.categoryId,
-            tenantId: input.tenantId,
-            deletedAt: null,
-            type: 'EXPENSE',
-          },
-        });
-
-        if (!category) {
-          throw new BadRequestException(
-            'Categoria de despesa inválida.',
-          );
-        }
-
-        if (plan.subCategoryId) {
-          const subCategory = await tx.subCategory.findFirst({
-            where: {
-              id: plan.subCategoryId,
-              categoryId: category.id,
-              deletedAt: null,
-            },
-          });
-
-          if (!subCategory) {
-            throw new BadRequestException(
-              'Subcategoria inválida.',
-            );
-          }
-        }
-
-        const amount = new Prisma.Decimal(installment.amount);
-
-        if (!amount.isFinite() || amount.lte(0)) {
-          throw new BadRequestException(
-            'Valor da parcela inválido.',
-          );
-        }
-
-        const reserved = await tx.installment.updateMany({
-          where: {
-            id: installment.id,
-            tenantId: input.tenantId,
-            installmentPlanId: plan.id,
-            status: InstallmentStatus.PENDING,
-            transactionId: null,
-          },
-          data: {
-            status: InstallmentStatus.PAID,
-            paidAt,
-          },
-        });
-
-        if (reserved.count !== 1) {
-          throw new ConflictException(
-            'Esta parcela já está sendo paga.',
-          );
-        }
-
-        const transaction = await tx.transaction.create({
-          data: {
-            tenantId: input.tenantId,
-            userId: input.userId,
-            accountId: account.id,
-            categoryId: category.id,
-            subCategoryId: plan.subCategoryId,
-            title: `${plan.title} - Parcela ${installment.installmentNumber}/${plan.installmentCount}`,
-            amount,
-            type: TransactionType.EXPENSE,
-            date: paidAt,
-            description: plan.description,
-          },
-        });
-
-        await tx.ledgerEntry.create({
-          data: {
-            tenantId: input.tenantId,
-            userId: input.userId,
-            accountId: account.id,
-            type: LedgerEntryType.DEBIT,
-            amount,
-            description: `Pagamento da parcela ${installment.installmentNumber}/${plan.installmentCount}`,
-            referenceId: transaction.id,
-            referenceType: LedgerReferenceType.TRANSACTION,
-          },
-        });
-
-        const updatedAccount = await tx.account.updateMany({
-          where: {
-            id: account.id,
-            tenantId: input.tenantId,
-            archivedAt: null,
-          },
-          data: {
-            balance: {
-              decrement: amount,
-            },
-          },
-        });
-
-        if (updatedAccount.count !== 1) {
-          throw new ConflictException(
-            'Não foi possível atualizar o saldo.',
-          );
-        }
-
-        const linked = await tx.installment.updateMany({
-          where: {
-            id: installment.id,
-            tenantId: input.tenantId,
-            status: InstallmentStatus.PAID,
-            transactionId: null,
-          },
-          data: {
-            transactionId: transaction.id,
-          },
-        });
-
-        if (linked.count !== 1) {
-          throw new ConflictException(
-            'Não foi possível vincular o pagamento à parcela.',
-          );
-        }
-
-        return {
-          installmentId: installment.id,
-          installmentPlanId: plan.id,
-          transactionId: transaction.id,
-          installmentNumber: installment.installmentNumber,
-          status: InstallmentStatus.PAID,
-          amount: amount.toString(),
-          paidAt,
-        };
+    const installment = await this.prisma.installment.findFirst({
+      where: {
+        id: input.installmentId,
+        tenantId: input.tenantId,
+        installmentPlanId: input.installmentPlanId,
       },
-      'Conflito ao pagar a parcela. Tente novamente.',
+      include: { plan: true },
+    });
+
+    if (!installment || installment.plan.deletedAt) {
+      throw new NotFoundException('Parcela não encontrada.');
+    }
+
+    const plan = installment.plan;
+    const sourceType = FinancialObligationSourceType.INSTALLMENT;
+
+    let obligation = await this.obligations.findBySource(
+      input.tenantId,
+      input.userId,
+      sourceType,
+      installment.id,
     );
+
+    if (installment.status === 'PAID') {
+      if (obligation?.status === FinancialObligationStatus.SETTLED) {
+        return this.toResult(installment, obligation, paidAt);
+      }
+
+      throw new ConflictException(
+        'Esta parcela não está disponível para pagamento.',
+      );
+    }
+
+    if (installment.status !== 'PENDING' || installment.transactionId) {
+      throw new ConflictException(
+        'Esta parcela não está disponível para pagamento.',
+      );
+    }
+
+    if (!obligation) {
+      const amount = new Prisma.Decimal(installment.amount);
+
+      if (!amount.isFinite() || amount.lte(0)) {
+        throw new BadRequestException('Valor da parcela inválido.');
+      }
+
+      obligation = await this.obligations.createOrFindBySource(
+        new FinancialObligationEntity({
+          tenantId: input.tenantId,
+          userId: input.userId,
+          accountId: plan.accountId,
+          categoryId: plan.categoryId,
+          subCategoryId: plan.subCategoryId,
+          type: FinancialObligationType.PAYABLE,
+          title: `${plan.title} - Parcela ${installment.installmentNumber}/${plan.installmentCount}`,
+          amount: amount.toFixed(2),
+          dueDate: installment.dueDate,
+          description: plan.description,
+          sourceType,
+          sourceId: installment.id,
+        }),
+      );
+    }
+
+    if (obligation.status === FinancialObligationStatus.SETTLED) {
+      return this.markInstallmentPaid(input, installment, obligation, paidAt);
+    }
+
+    if (
+      obligation.status !== FinancialObligationStatus.PENDING &&
+      obligation.status !== FinancialObligationStatus.PARTIALLY_SETTLED
+    ) {
+      throw new ConflictException(
+        'A obrigação desta parcela não está disponível para liquidação.',
+      );
+    }
+
+    let settled: FinancialObligationEntity;
+
+    try {
+      settled = await this.settleObligation.execute({
+        id: obligation.id,
+        tenantId: input.tenantId,
+        userId: input.userId,
+        settledAt: paidAt,
+        principalAmount: obligation.remainingAmount,
+        interestAmount: '0.00',
+        feeAmount: '0.00',
+        discountAmount: '0.00',
+        description: plan.description?.trim() || undefined,
+      });
+    } catch (error) {
+      // Recupera o caso em que outra requisição concluiu a liquidação.
+      const latest = await this.obligations.findBySource(
+        input.tenantId,
+        input.userId,
+        sourceType,
+        installment.id,
+      );
+
+      if (latest?.status === FinancialObligationStatus.SETTLED) {
+        return this.markInstallmentPaid(input, installment, latest, paidAt);
+      }
+
+      throw error;
+    }
+
+    if (settled.status !== FinancialObligationStatus.SETTLED) {
+      throw new ConflictException(
+        'A liquidação não concluiu a obrigação desta parcela.',
+      );
+    }
+
+    return this.markInstallmentPaid(input, installment, settled, paidAt);
+  }
+
+  private async markInstallmentPaid(
+    input: PayInstallmentInput,
+    installment: any,
+    obligation: FinancialObligationEntity,
+    fallbackPaidAt: Date,
+  ) {
+    const result = this.toResult(installment, obligation, fallbackPaidAt);
+
+    const updated = await this.prisma.installment.updateMany({
+      where: {
+        id: installment.id,
+        tenantId: input.tenantId,
+        installmentPlanId: input.installmentPlanId,
+        status: 'PENDING',
+        transactionId: null,
+      },
+      data: {
+        status: 'PAID',
+        paidAt: result.paidAt,
+        transactionId: result.transactionId,
+      },
+    });
+
+    if (updated.count === 1) {
+      return {
+        ...result,
+        status: 'PAID',
+      };
+    }
+
+    // Outra requisição pode ter sincronizado a parcela simultaneamente.
+    const current = await this.prisma.installment.findFirst({
+      where: {
+        id: input.installmentId,
+        tenantId: input.tenantId,
+        installmentPlanId: input.installmentPlanId,
+      },
+      include: { plan: true },
+    });
+
+    if (
+      current?.status === 'PAID' &&
+      current.transactionId === result.transactionId
+    ) {
+      return this.toResult(current, obligation, fallbackPaidAt);
+    }
+
+    throw new ConflictException(
+      'A liquidação foi registrada, mas a parcela precisa ser sincronizada. Tente novamente.',
+    );
+  }
+
+  private toResult(
+    installment: any,
+    obligation: FinancialObligationEntity,
+    fallbackPaidAt: Date,
+  ) {
+    const settlements = [...obligation.settlements].sort(
+      (a, b) => a.settledAt.getTime() - b.settledAt.getTime(),
+    );
+    const lastSettlement = settlements[settlements.length - 1];
+
+    return {
+      installmentId: installment.id,
+      installmentPlanId: installment.installmentPlanId,
+      transactionId:
+        installment.transactionId ?? lastSettlement?.transactionId ?? null,
+      installmentNumber: installment.installmentNumber,
+      status: 'PAID',
+      amount: new Prisma.Decimal(obligation.totalSettledAmount).toFixed(2),
+      paidAt:
+        installment.paidAt ??
+        obligation.settledAt ??
+        lastSettlement?.settledAt ??
+        fallbackPaidAt,
+    };
   }
 }

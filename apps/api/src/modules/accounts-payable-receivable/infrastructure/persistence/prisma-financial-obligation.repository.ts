@@ -8,6 +8,7 @@ import {
 import {
   CategoryType,
   FinancialObligationStatus as PrismaFinancialObligationStatus,
+  FinancialObligationSourceType as PrismaFinancialObligationSourceType,
   FinancialObligationType as PrismaFinancialObligationType,
   LedgerEntryType,
   LedgerReferenceType,
@@ -16,12 +17,14 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { FinancialObligationEntity } from '../../domain/entities/financial-obligation.entity';
+import { FinancialObligationSettlementEntity } from '../../domain/entities/financial-obligation-settlement.entity';
 import {
   FinancialObligationRepository,
   SettleFinancialObligationOptions,
 } from '../../domain/repositories/financial-obligation.repository';
 import { FinancialObligationStatus } from '../../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../../domain/enums/financial-obligation-type.enum';
+import { FinancialObligationSourceType } from '../../domain/enums/financial-obligation-source-type.enum';
 
 @Injectable()
 export class PrismaFinancialObligationRepository implements FinancialObligationRepository {
@@ -30,24 +33,72 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
   async create(
     obligation: FinancialObligationEntity,
   ): Promise<FinancialObligationEntity> {
+    if (obligation.sourceType !== FinancialObligationSourceType.MANUAL) {
+      throw new BadRequestException(
+        'Compromissos com origem automática devem usar createOrFindBySource.',
+      );
+    }
+
     const created = await this.prisma.financialObligation.create({
-      data: {
-        id: obligation.id,
-        tenantId: obligation.tenantId,
-        userId: obligation.userId,
-        accountId: obligation.accountId,
-        categoryId: obligation.categoryId,
-        subCategoryId: obligation.subCategoryId,
-        type: obligation.type,
-        status: obligation.status,
-        title: obligation.title,
-        counterparty: obligation.counterparty,
-        amount: new Prisma.Decimal(obligation.amount),
-        dueDate: obligation.dueDate,
-        description: obligation.description,
-      },
+      data: this.toCreateData(obligation),
     });
+
     return this.toDomain(created);
+  }
+
+  async createOrFindBySource(
+    obligation: FinancialObligationEntity,
+  ): Promise<FinancialObligationEntity> {
+    const sourceId = obligation.sourceId;
+
+    if (
+      obligation.sourceType === FinancialObligationSourceType.MANUAL ||
+      !sourceId
+    ) {
+      throw new BadRequestException(
+        'A criação idempotente exige uma origem automática identificada.',
+      );
+    }
+
+    const where = {
+      tenantId: obligation.tenantId,
+      sourceType: obligation.sourceType as PrismaFinancialObligationSourceType,
+      sourceId,
+    };
+
+    const existing = await this.prisma.financialObligation.findFirst({
+      where,
+      include: { settlements: true },
+    });
+
+    if (existing) {
+      return this.toDomain(existing);
+    }
+
+    try {
+      const created = await this.prisma.financialObligation.create({
+        data: this.toCreateData(obligation),
+        include: { settlements: true },
+      });
+
+      return this.toDomain(created);
+    } catch (error) {
+      if (!this.isSourceUniqueConflict(error)) {
+        throw error;
+      }
+
+      // Outra requisição pode ter criado a mesma origem simultaneamente.
+      const concurrent = await this.prisma.financialObligation.findFirst({
+        where,
+        include: { settlements: true },
+      });
+
+      if (concurrent) {
+        return this.toDomain(concurrent);
+      }
+
+      throw error;
+    }
   }
 
   async findById(
@@ -63,7 +114,31 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           accountMembers: { some: { userId, status: 'ACTIVE' } },
         },
       },
+      include: { settlements: true },
     });
+    return obligation ? this.toDomain(obligation) : null;
+  }
+
+  async findBySource(
+    tenantId: string,
+    userId: string,
+    sourceType: FinancialObligationSourceType,
+    sourceId: string,
+  ): Promise<FinancialObligationEntity | null> {
+    const obligation = await this.prisma.financialObligation.findFirst({
+      where: {
+        tenantId,
+        sourceType: sourceType as PrismaFinancialObligationSourceType,
+        sourceId,
+        account: {
+          accountMembers: {
+            some: { userId, status: 'ACTIVE' },
+          },
+        },
+      },
+      include: { settlements: true },
+    });
+
     return obligation ? this.toDomain(obligation) : null;
   }
 
@@ -84,6 +159,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
         ...(filters.type ? { type: filters.type } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
+      include: { settlements: true },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     });
     return obligations.map((obligation) => this.toDomain(obligation));
@@ -131,6 +207,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
     obligation: FinancialObligationEntity,
     options: SettleFinancialObligationOptions,
   ): Promise<FinancialObligationEntity> {
+    const settlement = options.settlement;
+
     try {
       return await this.prisma.$transaction(
         async (tx) => {
@@ -138,35 +216,54 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
             where: {
               id: obligation.id,
               tenantId: obligation.tenantId,
-              status: PrismaFinancialObligationStatus.PENDING,
-              transactionId: null,
+              status: {
+                in: [
+                  PrismaFinancialObligationStatus.PENDING,
+                  PrismaFinancialObligationStatus.PARTIALLY_SETTLED,
+                ],
+              },
             },
+            include: { settlements: true },
           });
+
           if (!current) {
             throw new ConflictException(
-              'Este compromisso já foi liquidado ou cancelado.',
+              'Este compromisso não está mais disponível para liquidação.',
+            );
+          }
+
+          const currentObligation = this.toDomain(current);
+
+          try {
+            currentObligation.registerSettlement(settlement);
+          } catch (error) {
+            throw new BadRequestException(
+              error instanceof Error ? error.message : 'Liquidação inválida.',
             );
           }
 
           const account = await tx.account.findFirst({
             where: {
-              id: obligation.accountId,
-              tenantId: obligation.tenantId,
+              id: current.accountId,
+              tenantId: current.tenantId,
               archivedAt: null,
             },
           });
+
           if (!account) {
             throw new NotFoundException(
               'Conta financeira não encontrada neste Espaço.',
             );
           }
+
           const membership = await tx.accountMember.findFirst({
             where: {
               accountId: account.id,
-              userId: options.userId,
+              userId: settlement.userId,
               status: 'ACTIVE',
             },
           });
+
           if (!membership || membership.role === 'VIEWER') {
             throw new ForbiddenException(
               'Você não tem permissão para liquidar este compromisso.',
@@ -174,30 +271,34 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           }
 
           const expectedCategoryType =
-            obligation.type === FinancialObligationType.PAYABLE
+            current.type === PrismaFinancialObligationType.PAYABLE
               ? CategoryType.EXPENSE
               : CategoryType.INCOME;
+
           const category = await tx.category.findFirst({
             where: {
-              id: obligation.categoryId,
-              tenantId: obligation.tenantId,
+              id: current.categoryId,
+              tenantId: current.tenantId,
               deletedAt: null,
               type: expectedCategoryType,
             },
           });
+
           if (!category) {
             throw new BadRequestException(
               'A categoria não corresponde ao compromisso.',
             );
           }
-          if (obligation.subCategoryId) {
+
+          if (current.subCategoryId) {
             const subCategory = await tx.subCategory.findFirst({
               where: {
-                id: obligation.subCategoryId,
+                id: current.subCategoryId,
                 categoryId: category.id,
                 deletedAt: null,
               },
             });
+
             if (!subCategory) {
               throw new BadRequestException(
                 'A subcategoria não está disponível.',
@@ -205,140 +306,158 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
             }
           }
 
-          const amount = new Prisma.Decimal(obligation.amount);
+          const cashAmount = new Prisma.Decimal(settlement.settledAmount);
+          const hasCashMovement = cashAmount.greaterThan(0);
+
+          if (settlement.transactionId && !hasCashMovement) {
+            throw new BadRequestException(
+              'Uma liquidação sem movimentação financeira não pode vincular uma transação.',
+            );
+          }
+
           const transactionType =
-            obligation.type === FinancialObligationType.PAYABLE
+            current.type === PrismaFinancialObligationType.PAYABLE
               ? TransactionType.EXPENSE
               : TransactionType.INCOME;
-          if (options.transactionId) {
+
+          let transactionId: string | null = null;
+
+          if (hasCashMovement && settlement.transactionId) {
             const existing = await tx.transaction.findFirst({
               where: {
-                id: options.transactionId,
-                tenantId: obligation.tenantId,
+                id: settlement.transactionId,
+                tenantId: current.tenantId,
                 deletedAt: null,
               },
             });
+
             if (!existing) {
               throw new NotFoundException(
                 'Transação não encontrada neste Espaço.',
               );
             }
+
             if (
               existing.accountId !== account.id ||
               existing.categoryId !== category.id ||
-              existing.subCategoryId !== obligation.subCategoryId ||
+              existing.subCategoryId !== current.subCategoryId ||
               existing.type !== transactionType ||
-              !new Prisma.Decimal(existing.amount).equals(amount)
+              !new Prisma.Decimal(existing.amount).equals(cashAmount)
             ) {
               throw new BadRequestException(
-                'A transação não corresponde ao valor e à classificação do compromisso.',
+                'A transação não corresponde ao valor e à classificação desta liquidação.',
+              );
+            }
+
+            transactionId = existing.id;
+          }
+
+          if (hasCashMovement && !transactionId) {
+            const description =
+              options.description?.trim() ||
+              current.description ||
+              current.title;
+
+            const transaction = await tx.transaction.create({
+              data: {
+                tenantId: current.tenantId,
+                userId: settlement.userId,
+                accountId: account.id,
+                categoryId: category.id,
+                subCategoryId: current.subCategoryId,
+                title: current.title,
+                amount: cashAmount,
+                type: transactionType,
+                date: settlement.settledAt,
+                description,
+              },
+            });
+
+            transactionId = transaction.id;
+            settlement.linkTransaction(transaction.id);
+
+            await tx.ledgerEntry.create({
+              data: {
+                tenantId: current.tenantId,
+                userId: settlement.userId,
+                accountId: account.id,
+                type:
+                  transactionType === TransactionType.INCOME
+                    ? LedgerEntryType.CREDIT
+                    : LedgerEntryType.DEBIT,
+                amount: cashAmount,
+                description,
+                referenceId: transaction.id,
+                referenceType: LedgerReferenceType.TRANSACTION,
+              },
+            });
+
+            const updatedAccount = await tx.account.updateMany({
+              where: {
+                id: account.id,
+                tenantId: current.tenantId,
+                archivedAt: null,
+              },
+              data:
+                transactionType === TransactionType.INCOME
+                  ? { balance: { increment: cashAmount } }
+                  : { balance: { decrement: cashAmount } },
+            });
+
+            if (updatedAccount.count !== 1) {
+              throw new ConflictException(
+                'Não foi possível atualizar o saldo da conta.',
               );
             }
           }
 
-          const reserved = await tx.financialObligation.updateMany({
-            where: {
-              id: obligation.id,
-              tenantId: obligation.tenantId,
-              status: PrismaFinancialObligationStatus.PENDING,
-              transactionId: null,
-            },
-            data: {
-              status: PrismaFinancialObligationStatus.SETTLED,
-              settledAt: options.settledAt,
-              ...(options.transactionId
-                ? { transactionId: options.transactionId }
-                : {}),
-            },
-          });
-          if (reserved.count !== 1) {
-            throw new ConflictException(
-              'Este compromisso já está sendo liquidado.',
-            );
-          }
-
-          if (options.transactionId) {
-            return new FinancialObligationEntity({
-              ...this.toProps(obligation),
-              status: FinancialObligationStatus.SETTLED,
-              transactionId: options.transactionId,
-              settledAt: options.settledAt,
+          const persistedSettlement =
+            await tx.financialObligationSettlement.create({
+              data: {
+                id: settlement.id,
+                obligationId: settlement.obligationId,
+                tenantId: settlement.tenantId,
+                userId: settlement.userId,
+                transactionId: settlement.transactionId,
+                principalAmount: new Prisma.Decimal(settlement.principalAmount),
+                interestAmount: new Prisma.Decimal(settlement.interestAmount),
+                feeAmount: new Prisma.Decimal(settlement.feeAmount),
+                discountAmount: new Prisma.Decimal(settlement.discountAmount),
+                settledAmount: cashAmount,
+                settledAt: settlement.settledAt,
+                createdAt: settlement.createdAt,
+              },
             });
-          }
 
-          const description =
-            options.description?.trim() ||
-            obligation.description ||
-            obligation.title;
-          const transaction = await tx.transaction.create({
-            data: {
-              tenantId: obligation.tenantId,
-              userId: options.userId,
-              accountId: account.id,
-              categoryId: category.id,
-              subCategoryId: obligation.subCategoryId,
-              title: obligation.title,
-              amount,
-              type: transactionType,
-              date: options.settledAt,
-              description,
-            },
-          });
-
-          await tx.ledgerEntry.create({
-            data: {
-              tenantId: obligation.tenantId,
-              userId: options.userId,
-              accountId: account.id,
-              type:
-                transactionType === TransactionType.INCOME
-                  ? LedgerEntryType.CREDIT
-                  : LedgerEntryType.DEBIT,
-              amount,
-              description,
-              referenceId: transaction.id,
-              referenceType: LedgerReferenceType.TRANSACTION,
-            },
-          });
-
-          const updatedAccount = await tx.account.updateMany({
+          const updated = await tx.financialObligation.updateMany({
             where: {
-              id: account.id,
-              tenantId: obligation.tenantId,
-              archivedAt: null,
+              id: current.id,
+              tenantId: current.tenantId,
+              status: current.status,
+              transactionId: current.transactionId,
+              updatedAt: current.updatedAt,
             },
-            data:
-              transactionType === TransactionType.INCOME
-                ? { balance: { increment: amount } }
-                : { balance: { decrement: amount } },
+            data: {
+              status: currentObligation.status,
+              settledAt: currentObligation.settledAt,
+            },
           });
-          if (updatedAccount.count !== 1) {
-            throw new ConflictException(
-              'Não foi possível atualizar o saldo da conta.',
-            );
-          }
 
-          const linked = await tx.financialObligation.updateMany({
-            where: {
-              id: obligation.id,
-              tenantId: obligation.tenantId,
-              status: PrismaFinancialObligationStatus.SETTLED,
-              transactionId: null,
-            },
-            data: { transactionId: transaction.id },
-          });
-          if (linked.count !== 1) {
+          if (updated.count !== 1) {
             throw new ConflictException(
-              'Não foi possível vincular a transação ao compromisso.',
+              'O compromisso foi alterado durante a liquidação. Tente novamente.',
             );
           }
 
           return new FinancialObligationEntity({
-            ...this.toProps(obligation),
-            status: FinancialObligationStatus.SETTLED,
-            transactionId: transaction.id,
-            settledAt: options.settledAt,
-            description,
+            ...this.toProps(currentObligation),
+            transactionId: current.transactionId,
+            settlements: [
+              ...currentObligation.settlements.filter(
+                (item) => item.id !== persistedSettlement.id,
+              ),
+              settlement,
+            ],
           });
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -354,6 +473,48 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
       }
       throw error;
     }
+  }
+
+  private toCreateData(obligation: FinancialObligationEntity) {
+    return {
+      id: obligation.id,
+      tenantId: obligation.tenantId,
+      userId: obligation.userId,
+      accountId: obligation.accountId,
+      categoryId: obligation.categoryId,
+      subCategoryId: obligation.subCategoryId,
+      sourceType: obligation.sourceType as PrismaFinancialObligationSourceType,
+      sourceId: obligation.sourceId,
+      type: obligation.type,
+      status: obligation.status,
+      title: obligation.title,
+      counterparty: obligation.counterparty,
+      amount: new Prisma.Decimal(obligation.amount),
+      dueDate: obligation.dueDate,
+      description: obligation.description,
+    };
+  }
+
+  private isSourceUniqueConflict(error: unknown): boolean {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== 'P2002'
+    ) {
+      return false;
+    }
+
+    const target = error.meta?.target;
+
+    if (Array.isArray(target)) {
+      return ['tenantId', 'sourceType', 'sourceId'].every((field) =>
+        target.includes(field),
+      );
+    }
+
+    return (
+      typeof target === 'string' &&
+      target.includes('FinancialObligation_tenantId_sourceType_sourceId_key')
+    );
   }
 
   private toUpdateData(obligation: FinancialObligationEntity) {
@@ -379,6 +540,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
       categoryId: obligation.categoryId,
       subCategoryId: obligation.subCategoryId,
       transactionId: obligation.transactionId,
+      sourceType: obligation.sourceType,
+      sourceId: obligation.sourceId,
       type: obligation.type,
       status: obligation.status,
       title: obligation.title,
@@ -392,30 +555,45 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
     };
   }
 
-  private toDomain(raw: {
-    id: string;
-    tenantId: string;
-    userId: string;
-    accountId: string;
-    categoryId: string;
-    subCategoryId: string | null;
-    transactionId: string | null;
-    type: PrismaFinancialObligationType;
-    status: PrismaFinancialObligationStatus;
-    title: string;
-    counterparty: string | null;
-    amount: Prisma.Decimal;
-    dueDate: Date;
-    settledAt: Date | null;
-    description: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): FinancialObligationEntity {
+  private toDomain(raw: any): FinancialObligationEntity {
+    const settlements = (raw.settlements ?? []).map(
+      (item: any) =>
+        new FinancialObligationSettlementEntity({
+          id: item.id,
+          obligationId: item.obligationId,
+          tenantId: item.tenantId,
+          userId: item.userId,
+          principalAmount: item.principalAmount.toFixed(2),
+          interestAmount: item.interestAmount.toFixed(2),
+          feeAmount: item.feeAmount.toFixed(2),
+          discountAmount: item.discountAmount.toFixed(2),
+          settledAt: item.settledAt,
+          transactionId: item.transactionId,
+          createdAt: item.createdAt,
+        }),
+    );
+
     return new FinancialObligationEntity({
-      ...raw,
+      id: raw.id,
+      tenantId: raw.tenantId,
+      userId: raw.userId,
+      accountId: raw.accountId,
+      categoryId: raw.categoryId,
+      subCategoryId: raw.subCategoryId,
+      transactionId: raw.transactionId,
+      sourceType: raw.sourceType as FinancialObligationSourceType,
+      sourceId: raw.sourceId,
       type: raw.type as FinancialObligationType,
       status: raw.status as FinancialObligationStatus,
+      title: raw.title,
+      counterparty: raw.counterparty,
       amount: raw.amount.toFixed(2),
+      dueDate: raw.dueDate,
+      settledAt: raw.settledAt,
+      description: raw.description,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+      settlements,
     });
   }
 }

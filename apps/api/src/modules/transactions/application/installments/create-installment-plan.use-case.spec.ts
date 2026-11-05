@@ -19,6 +19,7 @@ describe('CreateInstallmentPlanUseCase', () => {
     subCategory: { findFirst: jest.Mock };
     installmentPlan: { create: jest.Mock; findFirstOrThrow: jest.Mock };
     installment: { createMany: jest.Mock };
+    financialObligation: { createMany: jest.Mock };
     transaction: { create: jest.Mock };
     ledgerEntry: { create: jest.Mock };
   };
@@ -41,9 +42,24 @@ describe('CreateInstallmentPlanUseCase', () => {
     tenantId: 'tenant-1',
     totalAmount: '100.00',
     installments: [
-      { installmentNumber: 1, amount: '33.33' },
-      { installmentNumber: 2, amount: '33.33' },
-      { installmentNumber: 3, amount: '33.34' },
+      {
+        id: 'installment-1',
+        installmentNumber: 1,
+        amount: '33.33',
+        dueDate: new Date('2026-11-30T12:00:00.000Z'),
+      },
+      {
+        id: 'installment-2',
+        installmentNumber: 2,
+        amount: '33.33',
+        dueDate: new Date('2026-12-30T12:00:00.000Z'),
+      },
+      {
+        id: 'installment-3',
+        installmentNumber: 3,
+        amount: '33.34',
+        dueDate: new Date('2027-01-30T12:00:00.000Z'),
+      },
     ],
   };
 
@@ -70,6 +86,9 @@ describe('CreateInstallmentPlanUseCase', () => {
         findFirstOrThrow: jest.fn().mockResolvedValue(createdPlan),
       },
       installment: { createMany: jest.fn().mockResolvedValue({ count: 3 }) },
+      financialObligation: {
+        createMany: jest.fn().mockResolvedValue({ count: 3 }),
+      },
       transaction: { create: jest.fn() },
       ledgerEntry: { create: jest.fn() },
     };
@@ -93,6 +112,7 @@ describe('CreateInstallmentPlanUseCase', () => {
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(tx.installmentPlan.create).toHaveBeenCalledTimes(1);
     expect(tx.installment.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.financialObligation.createMany).toHaveBeenCalledTimes(1);
     expect(tx.installmentPlan.findFirstOrThrow).toHaveBeenCalledWith({
       where: { id: 'plan-1', tenantId: input.tenantId },
       include: { installments: { orderBy: { installmentNumber: 'asc' } } },
@@ -122,6 +142,23 @@ describe('CreateInstallmentPlanUseCase', () => {
     expect(installments.map((item: { amount: { toFixed: (n: number) => string } }) =>
       item.amount.toFixed(2),
     )).toEqual(['33.33', '33.33', '33.34']);
+
+    const obligations = tx.financialObligation.createMany.mock.calls[0][0].data;
+    expect(obligations).toHaveLength(3);
+    expect(obligations.map((item: { sourceId: string }) => item.sourceId))
+      .toEqual(['installment-1', 'installment-2', 'installment-3']);
+    expect(obligations.map((item: { amount: string }) => item.amount))
+      .toEqual(['33.33', '33.33', '33.34']);
+    expect(obligations[0]).toEqual(expect.objectContaining({
+      tenantId: input.tenantId,
+      userId: input.userId,
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+      type: 'PAYABLE',
+      status: 'PENDING',
+      sourceType: 'INSTALLMENT',
+      title: 'Compra parcelada - Parcela 1/3',
+    }));
 
     expect(tx.transaction.create).not.toHaveBeenCalled();
     expect(tx.ledgerEntry.create).not.toHaveBeenCalled();

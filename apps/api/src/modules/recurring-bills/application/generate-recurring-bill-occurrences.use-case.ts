@@ -5,14 +5,22 @@ import {
 } from '@nestjs/common';
 import {
   Prisma,
+  RecurringBill,
   RecurringBillFrequency,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { FinancialObligationEntity } from '../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
+import { FinancialObligationSourceType } from '../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
+import { FinancialObligationType } from '../../accounts-payable-receivable/domain/enums/financial-obligation-type.enum';
+import { FinancialObligationRepository } from '../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
 
 @Injectable()
 export class GenerateRecurringBillOccurrencesUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly obligations: FinancialObligationRepository,
+  ) {}
 
   async execute(
     tenantId: string,
@@ -47,7 +55,9 @@ export class GenerateRecurringBillOccurrencesUseCase {
     }
 
     if (!bill.isActive) {
-      return this.listOccurrences(tenantId, bill.id);
+      const existing = await this.listOccurrences(tenantId, bill.id);
+      await this.ensureFinancialObligations(bill, existing);
+      return existing;
     }
 
     const interval = this.getInterval(bill.frequency);
@@ -132,7 +142,42 @@ export class GenerateRecurringBillOccurrencesUseCase {
       });
     }
 
-    return this.listOccurrences(tenantId, bill.id);
+    const listed = await this.listOccurrences(tenantId, bill.id);
+    await this.ensureFinancialObligations(bill, listed);
+    return listed;
+  }
+
+  private async ensureFinancialObligations(
+    bill: RecurringBill,
+    occurrences: Array<{
+      id: string;
+      dueDate: Date;
+      expectedAmount: string | null;
+    }>,
+  ): Promise<void> {
+    for (const occurrence of occurrences) {
+      const amount = occurrence.expectedAmount?.trim();
+      if (!amount || !/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/.test(amount)) {
+        continue;
+      }
+
+      const obligation = new FinancialObligationEntity({
+        tenantId: bill.tenantId,
+        userId: bill.userId,
+        accountId: bill.accountId,
+        categoryId: bill.categoryId,
+        subCategoryId: bill.subCategoryId,
+        type: FinancialObligationType.PAYABLE,
+        title: bill.title,
+        amount,
+        dueDate: occurrence.dueDate,
+        description: bill.description,
+        sourceType: FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+        sourceId: occurrence.id,
+      });
+
+      await this.obligations.createOrFindBySource(obligation);
+    }
   }
 
   private getInterval(frequency: RecurringBillFrequency): number {

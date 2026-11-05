@@ -39,5 +39,9 @@ import { UpdateFinancialObligationUseCase } from './application/use-cases/update
       useClass: PrismaFinancialObligationRepository,
     },
   ],
+  exports: [
+    FinancialObligationRepository,
+    SettleFinancialObligationUseCase,
+  ],
 })
 export class AccountsPayableReceivableModule {}

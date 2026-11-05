@@ -1,21 +1,18 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  CategoryType,
-  LedgerEntryType,
-  LedgerReferenceType,
-  Prisma,
-  RecurringBillOccurrenceStatus,
-  TransactionType,
-} from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { runSerializableTransaction } from '../../transactions/application/run-serializable-transaction';
+import { FinancialObligationEntity } from '../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
+import { FinancialObligationStatus } from '../../accounts-payable-receivable/domain/enums/financial-obligation-status.enum';
+import { FinancialObligationSourceType } from '../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
+import { FinancialObligationType } from '../../accounts-payable-receivable/domain/enums/financial-obligation-type.enum';
+import { FinancialObligationRepository } from '../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
+import { SettleFinancialObligationUseCase } from '../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
 
 export interface PayRecurringBillInput {
   tenantId: string;
@@ -29,16 +26,20 @@ export interface PayRecurringBillInput {
 
 @Injectable()
 export class PayRecurringBillUseCase {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly obligations: FinancialObligationRepository,
+    private readonly settleObligation: SettleFinancialObligationUseCase,
+  ) {}
 
   async execute(input: PayRecurringBillInput) {
     if (!/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/.test(input.amount)) {
       throw new BadRequestException('Valor do pagamento inválido.');
     }
 
-    const amount = new Prisma.Decimal(input.amount);
+    const cashAmount = new Prisma.Decimal(input.amount);
 
-    if (!amount.isFinite() || amount.lte(0)) {
+    if (!cashAmount.isFinite() || cashAmount.lte(0)) {
       throw new BadRequestException(
         'O valor do pagamento deve ser maior que zero.',
       );
@@ -50,203 +51,234 @@ export class PayRecurringBillUseCase {
       throw new BadRequestException('Data do pagamento inválida.');
     }
 
-    return runSerializableTransaction(
-      this.prisma,
-      async (tx) => {
-        const occurrence = await tx.recurringBillOccurrence.findFirst({
-          where: {
-            id: input.occurrenceId,
-            tenantId: input.tenantId,
-            recurringBillId: input.recurringBillId,
-          },
-          include: {
-            recurringBill: true,
-          },
-        });
+    const occurrence = await this.prisma.recurringBillOccurrence.findFirst({
+      where: {
+        id: input.occurrenceId,
+        tenantId: input.tenantId,
+        recurringBillId: input.recurringBillId,
+      },
+      include: { recurringBill: true },
+    });
 
-        if (!occurrence) {
-          throw new NotFoundException(
-            'Vencimento não encontrado neste Espaço.',
-          );
-        }
+    if (!occurrence) {
+      throw new NotFoundException(
+        'Vencimento não encontrado neste Espaço.',
+      );
+    }
 
-        if (occurrence.status !== RecurringBillOccurrenceStatus.PENDING ||
-            occurrence.transactionId !== null) {
-          throw new ConflictException(
-            'Este vencimento já foi pago ou cancelado.',
-          );
-        }
+    const bill = occurrence.recurringBill;
+    const sourceType = FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE;
 
-        const bill = occurrence.recurringBill;
+    if (occurrence.status === 'PAID') {
+      const existing = await this.obligations.findBySource(
+        input.tenantId,
+        input.userId,
+        sourceType,
+        occurrence.id,
+      );
 
-        const account = await tx.account.findFirst({
-          where: {
-            id: bill.accountId,
-            tenantId: input.tenantId,
-            archivedAt: null,
-          },
-        });
-
-        if (!account) {
-          throw new NotFoundException(
-            'Conta financeira não encontrada neste Espaço.',
-          );
-        }
-
-        const membership = await tx.accountMember.findFirst({
-          where: {
-            accountId: account.id,
-            userId: input.userId,
-            status: 'ACTIVE',
-          },
-        });
-
-        if (!membership) {
-          throw new ForbiddenException(
-            'Você não tem acesso ativo a esta conta.',
-          );
-        }
-
-        if (membership.role === 'VIEWER') {
-          throw new ForbiddenException(
-            'Você não tem permissão para registrar pagamentos.',
-          );
-        }
-
-        const category = await tx.category.findFirst({
-          where: {
-            id: bill.categoryId,
-            tenantId: input.tenantId,
-            deletedAt: null,
-          },
-        });
-
-        if (!category || category.type !== CategoryType.EXPENSE) {
-          throw new BadRequestException(
-            'A categoria de despesa não está disponível.',
-          );
-        }
-
-        if (bill.subCategoryId) {
-          const subCategory = await tx.subCategory.findFirst({
-            where: {
-              id: bill.subCategoryId,
-              categoryId: bill.categoryId,
-              deletedAt: null,
-            },
-          });
-
-          if (!subCategory) {
-            throw new BadRequestException(
-              'A subcategoria não está disponível.',
-            );
-          }
-        }
-
-        // Reserva o vencimento dentro da transação Serializable.
-        // Uma segunda tentativa não poderá confirmar o mesmo pagamento.
-        const reserved = await tx.recurringBillOccurrence.updateMany({
-          where: {
-            id: occurrence.id,
-            tenantId: input.tenantId,
-            recurringBillId: bill.id,
-            status: RecurringBillOccurrenceStatus.PENDING,
-            transactionId: null,
-          },
-          data: {
-            status: RecurringBillOccurrenceStatus.PAID,
-            paidAmount: amount,
-            paidAt,
-          },
-        });
-
-        if (reserved.count !== 1) {
-          throw new ConflictException(
-            'Este vencimento já foi processado.',
-          );
-        }
-
-        const description =
-          input.description?.trim() ||
-          bill.description?.trim() ||
-          bill.title;
-
-        const transaction = await tx.transaction.create({
-          data: {
-            tenantId: input.tenantId,
-            userId: input.userId,
-            accountId: account.id,
-            categoryId: category.id,
-            subCategoryId: bill.subCategoryId,
-            title: bill.title,
-            amount,
-            type: TransactionType.EXPENSE,
-            date: paidAt,
-            description,
-          },
-        });
-
-        await tx.ledgerEntry.create({
-          data: {
-            tenantId: input.tenantId,
-            userId: input.userId,
-            accountId: account.id,
-            type: LedgerEntryType.DEBIT,
-            amount,
-            description,
-            referenceId: transaction.id,
-            referenceType: LedgerReferenceType.TRANSACTION,
-          },
-        });
-
-        const updatedAccount = await tx.account.updateMany({
-          where: {
-            id: account.id,
-            tenantId: input.tenantId,
-            archivedAt: null,
-          },
-          data: {
-            balance: {
-              decrement: amount,
-            },
-          },
-        });
-
-        if (updatedAccount.count !== 1) {
-          throw new ConflictException(
-            'Não foi possível atualizar o saldo da conta.',
-          );
-        }
-
-        const linked = await tx.recurringBillOccurrence.updateMany({
-          where: {
-            id: occurrence.id,
-            tenantId: input.tenantId,
-            recurringBillId: bill.id,
-            status: RecurringBillOccurrenceStatus.PAID,
-            transactionId: null,
-          },
-          data: {
-            transactionId: transaction.id,
-          },
-        });
-
-        if (linked.count !== 1) {
-          throw new ConflictException(
-            'Não foi possível vincular o pagamento ao vencimento.',
-          );
-        }
+      if (existing?.status === FinancialObligationStatus.SETTLED) {
+        const settlements = [...existing.settlements].sort(
+          (a, b) => a.settledAt.getTime() - b.settledAt.getTime(),
+        );
+        const lastSettlement = settlements[settlements.length - 1];
 
         return {
           occurrenceId: occurrence.id,
           recurringBillId: bill.id,
-          transactionId: transaction.id,
-          status: RecurringBillOccurrenceStatus.PAID,
-          paidAmount: amount.toString(),
-          paidAt,
+          transactionId:
+            occurrence.transactionId ?? lastSettlement?.transactionId ?? null,
+          status: 'PAID',
+          paidAmount: new Prisma.Decimal(
+            occurrence.paidAmount ?? existing.totalSettledAmount,
+          ).toFixed(2),
+          paidAt:
+            occurrence.paidAt ??
+            existing.settledAt ??
+            lastSettlement?.settledAt ??
+            paidAt,
         };
+      }
+
+      throw new ConflictException(
+        'Este vencimento já foi pago ou cancelado.',
+      );
+    }
+
+    if (occurrence.status !== 'PENDING' || occurrence.transactionId !== null) {
+      throw new ConflictException(
+        'Este vencimento já foi pago ou cancelado.',
+      );
+    }
+
+    let obligation = await this.obligations.findBySource(
+      input.tenantId,
+      input.userId,
+      sourceType,
+      occurrence.id,
+    );
+
+    if (!obligation) {
+      obligation = await this.obligations.createOrFindBySource(
+        new FinancialObligationEntity({
+          tenantId: bill.tenantId,
+          userId: bill.userId,
+          accountId: bill.accountId,
+          categoryId: bill.categoryId,
+          subCategoryId: bill.subCategoryId,
+          type: FinancialObligationType.PAYABLE,
+          title: bill.title,
+          amount: occurrence.expectedAmount?.toString() ?? input.amount,
+          dueDate: occurrence.dueDate,
+          description: bill.description,
+          sourceType,
+          sourceId: occurrence.id,
+        }),
+      );
+    }
+
+    // Recupera uma liquidação concluída caso a sincronização da ocorrência
+    // tenha falhado depois do commit financeiro.
+    if (obligation.status === FinancialObligationStatus.SETTLED) {
+      return this.markOccurrencePaid(input, obligation, paidAt);
+    }
+
+    if (
+      obligation.status !== FinancialObligationStatus.PENDING &&
+      obligation.status !== FinancialObligationStatus.PARTIALLY_SETTLED
+    ) {
+      throw new ConflictException(
+        'A obrigação desta recorrência não está disponível para liquidação.',
+      );
+    }
+
+    const principalAmount = new Prisma.Decimal(obligation.remainingAmount);
+
+    if (principalAmount.lte(0)) {
+      throw new ConflictException(
+        'A obrigação não possui saldo disponível para liquidação.',
+      );
+    }
+
+    // O endpoint recebe o valor efetivamente pago.
+    // A diferença para o saldo principal é registrada como desconto ou juros.
+    const discountAmount = cashAmount.lt(principalAmount)
+      ? principalAmount.minus(cashAmount)
+      : new Prisma.Decimal(0);
+
+    const interestAmount = cashAmount.gt(principalAmount)
+      ? cashAmount.minus(principalAmount)
+      : new Prisma.Decimal(0);
+
+    let settledObligation: FinancialObligationEntity;
+
+    try {
+      settledObligation = await this.settleObligation.execute({
+        id: obligation.id,
+        tenantId: input.tenantId,
+        userId: input.userId,
+        settledAt: paidAt,
+        principalAmount: principalAmount.toFixed(2),
+        interestAmount: interestAmount.toFixed(2),
+        feeAmount: '0.00',
+        discountAmount: discountAmount.toFixed(2),
+        description:
+          input.description?.trim() ||
+          bill.description?.trim() ||
+          bill.title,
+      });
+    } catch (error) {
+      // Uma requisição concorrente pode ter concluído a mesma obrigação.
+      const latest = await this.obligations.findBySource(
+        input.tenantId,
+        input.userId,
+        sourceType,
+        occurrence.id,
+      );
+
+      if (latest?.status === FinancialObligationStatus.SETTLED) {
+        return this.markOccurrencePaid(input, latest, paidAt);
+      }
+
+      throw error;
+    }
+
+    if (settledObligation.status !== FinancialObligationStatus.SETTLED) {
+      throw new ConflictException(
+        'A liquidação não concluiu a obrigação recorrente.',
+      );
+    }
+
+    return this.markOccurrencePaid(input, settledObligation, paidAt);
+  }
+
+  private async markOccurrencePaid(
+    input: PayRecurringBillInput,
+    obligation: FinancialObligationEntity,
+    fallbackPaidAt: Date,
+  ) {
+    const settlements = [...obligation.settlements].sort(
+      (a, b) => a.settledAt.getTime() - b.settledAt.getTime(),
+    );
+    const lastSettlement = settlements[settlements.length - 1];
+
+    const paidAt =
+      obligation.settledAt ??
+      lastSettlement?.settledAt ??
+      fallbackPaidAt;
+
+    const transactionId = lastSettlement?.transactionId ?? null;
+    const paidAmount = new Prisma.Decimal(obligation.totalSettledAmount);
+
+    const updated = await this.prisma.recurringBillOccurrence.updateMany({
+      where: {
+        id: input.occurrenceId,
+        tenantId: input.tenantId,
+        recurringBillId: input.recurringBillId,
+        status: 'PENDING',
+        transactionId: null,
       },
-      'Conflito ao registrar o pagamento. Tente novamente.',
+      data: {
+        status: 'PAID',
+        paidAmount,
+        paidAt,
+        transactionId,
+      },
+    });
+
+    if (updated.count === 1) {
+      return {
+        occurrenceId: input.occurrenceId,
+        recurringBillId: input.recurringBillId,
+        transactionId,
+        status: 'PAID',
+        paidAmount: paidAmount.toFixed(2),
+        paidAt,
+      };
+    }
+
+    // Outra requisição pode ter sincronizado a ocorrência simultaneamente.
+    const current = await this.prisma.recurringBillOccurrence.findFirst({
+      where: {
+        id: input.occurrenceId,
+        tenantId: input.tenantId,
+        recurringBillId: input.recurringBillId,
+      },
+    });
+
+    if (current?.status === 'PAID') {
+      return {
+        occurrenceId: current.id,
+        recurringBillId: current.recurringBillId,
+        transactionId: current.transactionId,
+        status: current.status,
+        paidAmount: current.paidAmount?.toString() ?? '0.00',
+        paidAt: current.paidAt ?? paidAt,
+      };
+    }
+
+    throw new ConflictException(
+      'A liquidação foi registrada, mas o vencimento precisa ser sincronizado. Tente novamente.',
     );
   }
 }
