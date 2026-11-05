@@ -1221,14 +1221,23 @@ model FinancialGoalContribution {
 }
 
 // Compromisso a pagar ou receber. Não altera saldo ou dashboard até liquidar.
+enum FinancialObligationSourceType {
+  MANUAL
+  RECURRING_BILL_OCCURRENCE
+  INSTALLMENT
+  CREDIT_CARD_INVOICE
+}
+
 model FinancialObligation {
-  id            String  @id @default(cuid())
+  id            String                        @id @default(cuid())
   tenantId      String
   userId        String
   accountId     String
   categoryId    String
   subCategoryId String?
-  transactionId String? @unique
+  transactionId String?                       @unique
+  sourceType    FinancialObligationSourceType @default(MANUAL)
+  sourceId      String?
 
   type         FinancialObligationType
   status       FinancialObligationStatus @default(PENDING)
@@ -1251,6 +1260,7 @@ model FinancialObligation {
   settlements FinancialObligationSettlement[]
 
   @@unique([id, tenantId])
+  @@unique([tenantId, sourceType, sourceId])
   @@index([tenantId, type, dueDate])
   @@index([tenantId, status, dueDate])
   @@index([tenantId, accountId])

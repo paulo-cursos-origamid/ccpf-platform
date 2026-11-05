@@ -6,6 +6,7 @@ import { PrismaModule } from '../../infrastructure/database/prisma.module';
 import { IdentityModule } from '../identity/identity.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { BillingModule } from '../billing/billing.module';
+import { AccountsPayableReceivableModule } from '../accounts-payable-receivable/accounts-payable-receivable.module';
 
 import { CreateRecurringBillUseCase } from './application/create-recurring-bill.use-case';
 import { ListRecurringBillsUseCase } from './application/list-recurring-bills.use-case';
@@ -18,6 +19,7 @@ import { RecurringBillsController } from './presentation/recurring-bills.control
     IdentityModule,
     TenantModule,
     BillingModule,
+    AccountsPayableReceivableModule,
   ],
   controllers: [RecurringBillsController],
   providers: [

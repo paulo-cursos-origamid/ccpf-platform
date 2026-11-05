@@ -3,6 +3,7 @@ import { PrismaModule } from '../../infrastructure/database/prisma.module';
 import { IdentityModule } from '../identity/identity.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { BillingModule } from '../billing/billing.module';
+import { AccountsPayableReceivableModule } from '../accounts-payable-receivable/accounts-payable-receivable.module';
 import { CreateTransactionUseCase } from './application/create-transaction.use-case';
 import { CreateTransferUseCase } from './application/create-transfer.use-case';
 import { ListTransfersUseCase } from './application/list-transfers.use-case';
@@ -21,7 +22,13 @@ import { PayInstallmentUseCase } from './application/installments/pay-installmen
 import { GetFinancialProjectionUseCase } from './application/get-financial-projection.use-case';
 
 @Module({
-  imports: [PrismaModule, IdentityModule, TenantModule, BillingModule],
+  imports: [
+    PrismaModule,
+    IdentityModule,
+    TenantModule,
+    BillingModule,
+    AccountsPayableReceivableModule,
+  ],
   controllers: [
     FinancialProjectionController,
     TransactionsController,

@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { FinancialObligationEntity } from '../../domain/entities/financial-obligation.entity';
 import { FinancialObligationSettlementEntity } from '../../domain/entities/financial-obligation-settlement.entity';
 import { FinancialObligationType } from '../../domain/enums/financial-obligation-type.enum';
+import { FinancialObligationSourceType } from '../../domain/enums/financial-obligation-source-type.enum';
 import { PrismaFinancialObligationRepository } from './prisma-financial-obligation.repository';
 
 describe('PrismaFinancialObligationRepository', () => {
@@ -33,6 +34,8 @@ describe('PrismaFinancialObligationRepository', () => {
     categoryId: obligation.categoryId,
     subCategoryId: null,
     transactionId: null,
+    sourceType: 'MANUAL',
+    sourceId: null,
     type: 'PAYABLE',
     status: 'PENDING',
     title: obligation.title,
@@ -66,6 +69,19 @@ describe('PrismaFinancialObligationRepository', () => {
       transactionId: options.transactionId,
       settledAt,
     });
+
+  const sourcedObligation = () =>
+    new FinancialObligationEntity({
+      ...obligation.toJSON(),
+      sourceType: FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+      sourceId: 'occurrence-1',
+    });
+
+  const sourcedRawObligation = () => ({
+    ...rawObligation(),
+    sourceType: 'RECURRING_BILL_OCCURRENCE',
+    sourceId: 'occurrence-1',
+  });
 
   beforeEach(() => {
     tx = {
@@ -118,7 +134,97 @@ describe('PrismaFinancialObligationRepository', () => {
 
     expect(created.status).toBe('PENDING');
     expect(prisma.financialObligation.create).toHaveBeenCalledTimes(1);
+    expect(prisma.financialObligation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ sourceType: 'MANUAL', sourceId: null }),
+      }),
+    );
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('finds an obligation by source within the tenant and active membership', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(sourcedRawObligation());
+
+    const result = await repository.findBySource(
+      'tenant-1',
+      'user-1',
+      FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+      'occurrence-1',
+    );
+
+    expect(result?.sourceId).toBe('occurrence-1');
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-1',
+        sourceType: 'RECURRING_BILL_OCCURRENCE',
+        sourceId: 'occurrence-1',
+        account: {
+          accountMembers: {
+            some: { userId: 'user-1', status: 'ACTIVE' },
+          },
+        },
+      },
+      include: { settlements: true },
+    });
+  });
+
+  it('returns the existing obligation for an already registered source', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(sourcedRawObligation());
+
+    const result = await repository.createOrFindBySource(sourcedObligation());
+
+    expect(result.sourceType).toBe(
+      FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+    );
+    expect(result.sourceId).toBe('occurrence-1');
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          tenantId: 'tenant-1',
+          sourceType: 'RECURRING_BILL_OCCURRENCE',
+          sourceId: 'occurrence-1',
+        },
+        include: { settlements: true },
+      }),
+    );
+    expect(prisma.financialObligation.create).not.toHaveBeenCalled();
+  });
+
+  it('creates an obligation when the source has not been registered', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(null);
+    prisma.financialObligation.create.mockResolvedValue(sourcedRawObligation());
+
+    const result = await repository.createOrFindBySource(sourcedObligation());
+
+    expect(result.sourceId).toBe('occurrence-1');
+    expect(prisma.financialObligation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sourceType: 'RECURRING_BILL_OCCURRENCE',
+          sourceId: 'occurrence-1',
+        }),
+      }),
+    );
+  });
+
+  it('returns the concurrently created obligation after a source unique conflict', async () => {
+    const concurrent = sourcedRawObligation();
+    prisma.financialObligation.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(concurrent);
+
+    prisma.financialObligation.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['tenantId', 'sourceType', 'sourceId'] },
+      }),
+    );
+
+    const result = await repository.createOrFindBySource(sourcedObligation());
+
+    expect(result.sourceId).toBe('occurrence-1');
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledTimes(2);
   });
 
   it('records a partial settlement and moves only the cash amount', async () => {
@@ -159,8 +265,8 @@ describe('PrismaFinancialObligationRepository', () => {
     expect(tx.account.updateMany).toHaveBeenCalledTimes(1);
   });
 
-  it('allows a discount-only settlement without financial movements', async () => {
-    const settlement = createSettlement('0.00', {
+  it('allows a full-discount settlement without financial movements', async () => {
+    const settlement = createSettlement('120.00', {
       discountAmount: '120.00',
     });
 

@@ -38,6 +38,7 @@ const money = new Intl.NumberFormat("pt-BR", {
 
 const STATUS_LABELS: Record<FinancialObligationStatus, string> = {
   PENDING: "Pendente",
+  PARTIALLY_SETTLED: "Parcialmente liquidado",
   SETTLED: "Liquidado",
   CANCELED: "Cancelado",
 };
@@ -62,8 +63,21 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function remainingAmountInCents(item: FinancialObligation) {
+  const settlements = item.settlements ?? [];
+  const reduced = settlements.reduce(
+    (sum, settlement) =>
+      sum + amountInCents(settlement.principalAmount),
+    0,
+  );
+  return Math.max(0, amountInCents(item.amount) - reduced);
+}
+
 function isOverdue(item: FinancialObligation) {
-  return item.status === "PENDING" && item.dueDate.slice(0, 10) < localToday();
+  return (
+    (item.status === "PENDING" || item.status === "PARTIALLY_SETTLED") &&
+    item.dueDate.slice(0, 10) < localToday()
+  );
 }
 
 function amountInCents(value: string | number) {
@@ -349,7 +363,7 @@ function ObligationEditor({
   );
 }
 
-/** Modal que cria uma transação ou associa uma transação já registrada. */
+/** Modal de liquidação total ou parcial de um compromisso. */
 function SettleObligationModal({
   item,
   accounts,
@@ -364,18 +378,55 @@ function SettleObligationModal({
   onSettled: () => Promise<unknown>;
 }) {
   const [settledDate, setSettledDate] = useState(localToday());
+  const [principalAmount, setPrincipalAmount] = useState("");
+  const [interestAmount, setInterestAmount] = useState("0,00");
+  const [feeAmount, setFeeAmount] = useState("0,00");
+  const [discountAmount, setDiscountAmount] = useState("0,00");
+  const [description, setDescription] = useState("");
   const [transactionId, setTransactionId] = useState("");
-  const [matchingTransactions, setMatchingTransactions] = useState<
-    Transaction[]
-  >([]);
+  const [matchingTransactions, setMatchingTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const settlements = item?.settlements ?? [];
+  const settledPrincipalCents = settlements.reduce(
+    (sum, settlement) => sum + amountInCents(settlement.principalAmount),
+    0,
+  );
+  const remainingCents = item
+    ? Math.max(0, amountInCents(item.amount) - settledPrincipalCents)
+    : 0;
+
+  const principalCents = amountInCents(principalAmount.replace(",", "."));
+  const interestCents = amountInCents(interestAmount.replace(",", "."));
+  const feeCents = amountInCents(feeAmount.replace(",", "."));
+  const discountCents = amountInCents(discountAmount.replace(",", "."));
+  const cashMovementCents =
+    principalCents - discountCents + interestCents + feeCents;
+  const remainingAfterSettlementCents = remainingCents - principalCents;
+
+  const accountName = accounts.find(
+    (account) => account.id === item?.accountId,
+  )?.name;
+  const categoryName = categories.find(
+    (category) => category.id === item?.categoryId,
+  )?.name;
+
   useEffect(() => {
     setSettledDate(localToday());
+    setPrincipalAmount(
+      item
+        ? (remainingAmountInCents(item) / 100).toFixed(2).replace(".", ",")
+        : "",
+    );
+    setInterestAmount("0,00");
+    setFeeAmount("0,00");
+    setDiscountAmount("0,00");
+    setDescription("");
     setTransactionId("");
     setError("");
+
     if (!item) {
       setMatchingTransactions([]);
       return;
@@ -384,20 +435,21 @@ function SettleObligationModal({
     let active = true;
     setLoadingTransactions(true);
     const type = item.type === "PAYABLE" ? "EXPENSE" : "INCOME";
+
     void transactionsService
       .list(type)
       .then((transactions) => {
-        if (!active) return;
-        setMatchingTransactions(
-          transactions.filter(
-            (transaction) =>
-              transaction.accountId === item.accountId &&
-              transaction.categoryId === item.categoryId &&
-              (transaction.subCategoryId ?? null) === item.subCategoryId &&
-              transaction.type === type &&
-              amountInCents(transaction.amount) === amountInCents(item.amount),
-          ),
-        );
+        if (active) {
+          setMatchingTransactions(
+            transactions.filter(
+              (transaction) =>
+                transaction.accountId === item.accountId &&
+                transaction.categoryId === item.categoryId &&
+                (transaction.subCategoryId ?? null) === item.subCategoryId &&
+                transaction.type === type,
+            ),
+          );
+        }
       })
       .catch(() => {
         if (active) setMatchingTransactions([]);
@@ -411,33 +463,80 @@ function SettleObligationModal({
     };
   }, [item]);
 
+  const compatibleTransactions = matchingTransactions.filter(
+    (transaction) =>
+      cashMovementCents > 0 &&
+      amountInCents(transaction.amount) === cashMovementCents,
+  );
+
+  function normalizeAmount(value: string) {
+    return value.trim().replace(",", ".");
+  }
+
+  function isValidAmount(value: string) {
+    return /^\d+(?:\.\d{1,2})?$/.test(normalizeAmount(value));
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!item || saving) return;
+
+    const values = [
+      principalAmount,
+      interestAmount,
+      feeAmount,
+      discountAmount,
+    ];
+
+    if (values.some((value) => !isValidAmount(value))) {
+      setError("Informe valores válidos com até duas casas decimais.");
+      return;
+    }
+
+    if (
+      principalCents <= 0 ||
+      discountCents > principalCents ||
+      principalCents > remainingCents
+    ) {
+      setError(
+        "Informe um principal maior que zero, sem ultrapassar o saldo restante, e um desconto que não exceda o principal.",
+      );
+      return;
+    }
+
+    if (cashMovementCents > 0 && transactionId) {
+      const selected = compatibleTransactions.find(
+        (transaction) => transaction.id === transactionId,
+      );
+      if (!selected) {
+        setError("A transação selecionada não corresponde ao valor movimentado.");
+        return;
+      }
+    }
+
     setSaving(true);
     setError("");
+
     try {
       await financialObligationsService.settle(item.id, {
         settledAt: new Date(`${settledDate}T12:00:00`).toISOString(),
-        ...(transactionId ? { transactionId } : {}),
+        principalAmount: normalizeAmount(principalAmount),
+        interestAmount: normalizeAmount(interestAmount),
+        feeAmount: normalizeAmount(feeAmount),
+        discountAmount: normalizeAmount(discountAmount),
+        ...(description.trim() ? { description: description.trim() } : {}),
+        ...(cashMovementCents > 0 && transactionId ? { transactionId } : {}),
       });
       await onSettled();
       onClose();
     } catch {
       setError(
-        "Não foi possível liquidar o compromisso. Verifique se a transação ainda está disponível.",
+        "Não foi possível registrar a liquidação. Confira os valores e a transação selecionada.",
       );
     } finally {
       setSaving(false);
     }
   }
-
-  const accountName = accounts.find(
-    (account) => account.id === item?.accountId,
-  )?.name;
-  const categoryName = categories.find(
-    (category) => category.id === item?.categoryId,
-  )?.name;
 
   return (
     <Modal
@@ -457,39 +556,113 @@ function SettleObligationModal({
         <form className={styles.form} onSubmit={submit}>
           <div className={styles.settlementSummary}>
             <strong>{item.title}</strong>
-            <span>
-              {accountName ?? "Conta"} · {categoryName ?? "Categoria"}
-            </span>
+            <span>{accountName ?? "Conta"} · {categoryName ?? "Categoria"}</span>
             <span>Vencimento em {formatDate(item.dueDate)}</span>
-            <b>{money.format(Number(item.amount))}</b>
+            <span>Valor original: {money.format(Number(item.amount))}</span>
+            <span>Já amortizado: {money.format(settledPrincipalCents / 100)}</span>
+            <strong>Saldo restante: {money.format(remainingCents / 100)}</strong>
           </div>
-          <Field
-            label="Data da liquidação"
-            htmlFor="obligation-settled-date"
-            required
-          >
-            <Input
-              id="obligation-settled-date"
-              type="date"
-              value={settledDate}
-              onChange={(event) => setSettledDate(event.target.value)}
-              required
-              disabled={saving}
-            />
-          </Field>
+
+          <div className={styles.formGrid}>
+            <Field label="Principal amortizado (R$)" htmlFor="settlement-principal" required>
+              <Input
+                id="settlement-principal"
+                inputMode="decimal"
+                value={principalAmount}
+                onChange={(event) => {
+                  setPrincipalAmount(event.target.value);
+                  setTransactionId("");
+                }}
+                required
+                disabled={saving}
+                placeholder="0,00"
+              />
+            </Field>
+            <Field label="Juros (R$)" htmlFor="settlement-interest">
+              <Input
+                id="settlement-interest"
+                inputMode="decimal"
+                value={interestAmount}
+                onChange={(event) => {
+                  setInterestAmount(event.target.value);
+                  setTransactionId("");
+                }}
+                disabled={saving}
+              />
+            </Field>
+            <Field label="Taxas e multas (R$)" htmlFor="settlement-fee">
+              <Input
+                id="settlement-fee"
+                inputMode="decimal"
+                value={feeAmount}
+                onChange={(event) => {
+                  setFeeAmount(event.target.value);
+                  setTransactionId("");
+                }}
+                disabled={saving}
+              />
+            </Field>
+            <Field
+              label="Desconto (R$)"
+              htmlFor="settlement-discount"
+              helperText="Reduz o saldo, mas não movimenta dinheiro."
+            >
+              <Input
+                id="settlement-discount"
+                inputMode="decimal"
+                value={discountAmount}
+                onChange={(event) => setDiscountAmount(event.target.value)}
+                disabled={saving}
+              />
+            </Field>
+            <Field label="Data da liquidação" htmlFor="obligation-settled-date" required>
+              <Input
+                id="obligation-settled-date"
+                type="date"
+                value={settledDate}
+                onChange={(event) => setSettledDate(event.target.value)}
+                required
+                disabled={saving}
+              />
+            </Field>
+            <Field label="Observações" htmlFor="settlement-description">
+              <Input
+                id="settlement-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                disabled={saving}
+                placeholder="Opcional"
+              />
+            </Field>
+          </div>
+
+          <div className={styles.settlementSummary}>
+            <span>Valor movimentado: <strong>{money.format(cashMovementCents / 100)}</strong></span>
+            <span>
+              Saldo após esta liquidação:{" "}
+              <strong>
+                {money.format(Math.max(0, remainingAfterSettlementCents) / 100)}
+              </strong>
+            </span>
+          </div>
+
           <Field
             label="Transação já registrada"
             htmlFor="obligation-existing-transaction"
-            helperText="Escolher uma transação compatível apenas vincula o compromisso, sem movimentar saldo novamente."
+            helperText="Uma transação compatível será vinculada sem movimentar o saldo novamente."
           >
             <select
               id="obligation-existing-transaction"
               value={transactionId}
               onChange={(event) => setTransactionId(event.target.value)}
-              disabled={saving || loadingTransactions}
+              disabled={saving || loadingTransactions || cashMovementCents === 0}
             >
-              <option value="">Criar uma nova transação ao liquidar</option>
-              {matchingTransactions.map((transaction) => (
+              <option value="">
+                {cashMovementCents === 0
+                  ? "Liquidação sem movimentação financeira"
+                  : "Criar uma nova transação"}
+              </option>
+              {compatibleTransactions.map((transaction) => (
                 <option key={transaction.id} value={transaction.id}>
                   {formatDate(transaction.date)} · {transaction.title} ·{" "}
                   {money.format(Number(transaction.amount))}
@@ -497,27 +670,38 @@ function SettleObligationModal({
               ))}
             </select>
           </Field>
+
           {loadingTransactions && (
             <p className={styles.helper}>Buscando transações compatíveis…</p>
           )}
-          {error && (
-            <p className={styles.formError} role="alert">
-              {error}
-            </p>
+
+          {settlements.length > 0 && (
+            <div className={styles.settlementHistory}>
+              <strong>Histórico de liquidações</strong>
+              {settlements.map((settlement) => (
+                <div key={settlement.id} className={styles.settlementHistoryItem}>
+                  <span>{formatDate(settlement.settledAt)}</span>
+                  <span>Principal: {money.format(Number(settlement.principalAmount))}</span>
+                  <span>Juros e taxas: {money.format(
+                    Number(settlement.interestAmount) + Number(settlement.feeAmount),
+                  )}</span>
+                  {Number(settlement.discountAmount) > 0 && (
+                    <span>Desconto: {money.format(Number(settlement.discountAmount))}</span>
+                  )}
+                  <strong>Movimentado: {money.format(Number(settlement.settledAmount))}</strong>
+                </div>
+              ))}
+            </div>
           )}
+
+          {error && <p className={styles.formError} role="alert">{error}</p>}
+
           <div className={styles.modalActions}>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={onClose}
-            >
+            <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit" loading={saving}>
-              {transactionId
-                ? "Vincular e liquidar"
-                : "Liquidar e criar transação"}
+              Registrar liquidação
             </Button>
           </div>
         </form>
@@ -542,13 +726,16 @@ export function ListFinancialObligations() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
-  const pending = obligations.filter((item) => item.status === "PENDING");
+  const pending = obligations.filter(
+    (item) =>
+      item.status === "PENDING" || item.status === "PARTIALLY_SETTLED",
+  );
   const pendingPayable = pending
     .filter((item) => item.type === "PAYABLE")
-    .reduce((sum, item) => sum + Number(item.amount), 0);
+    .reduce((sum, item) => sum + remainingAmountInCents(item) / 100, 0);
   const pendingReceivable = pending
     .filter((item) => item.type === "RECEIVABLE")
-    .reduce((sum, item) => sum + Number(item.amount), 0);
+    .reduce((sum, item) => sum + remainingAmountInCents(item) / 100, 0);
   const overdueCount = pending.filter(isOverdue).length;
   const visible = obligations.filter(
     (item) =>
@@ -673,6 +860,7 @@ export function ListFinancialObligations() {
             }
           >
             <option value="PENDING">Pendentes</option>
+            <option value="PARTIALLY_SETTLED">Parcialmente liquidados</option>
             <option value="SETTLED">Liquidados</option>
             <option value="CANCELED">Cancelados</option>
             <option value="ALL">Todos os estados</option>
@@ -735,7 +923,12 @@ export function ListFinancialObligations() {
                     <span>{category?.name ?? "Categoria indisponível"}</span>
                   </div>
                   <div className={styles.amountBlock}>
-                    <strong>{money.format(Number(item.amount))}</strong>
+                    <strong>{money.format(remainingAmountInCents(item) / 100)}</strong>
+                    {item.status === "PARTIALLY_SETTLED" && (
+                      <span className={styles.partialAmount}>
+                        de {money.format(Number(item.amount))}
+                      </span>
+                    )}
                     <span
                       className={`${styles.status} ${styles[item.status.toLowerCase()]}`}
                     >
@@ -747,38 +940,42 @@ export function ListFinancialObligations() {
                   <span className={styles.dueDate}>
                     <Calendar size={15} /> Vence {formatDate(item.dueDate)}
                   </span>
-                  {item.transactionId && (
+                  {item.settlements && item.settlements.length > 0 && (
                     <span className={styles.linkedTransaction}>
-                      <CheckCircle2 size={15} /> Transação vinculada
+                      <CheckCircle2 size={15} /> {item.settlements.length} liquidação(ões)
                     </span>
                   )}
-                  {item.status === "PENDING" && (
+                  {(item.status === "PENDING" || item.status === "PARTIALLY_SETTLED") && (
                     <div className={styles.rowActions}>
-                      <button
-                        type="button"
-                        className={styles.iconButton}
-                        title="Editar compromisso"
-                        aria-label={`Editar ${item.title}`}
-                        disabled={busyId === item.id}
-                        onClick={() => setEditor(item)}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.iconButton} ${styles.cancelAction}`}
-                        title="Cancelar compromisso"
-                        aria-label={`Cancelar ${item.title}`}
-                        disabled={busyId === item.id}
-                        onClick={() => void cancel(item)}
-                      >
-                        <XCircle size={16} />
-                      </button>
+                      {item.status === "PENDING" && (
+                        <>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            title="Editar compromisso"
+                            aria-label={`Editar ${item.title}`}
+                            disabled={busyId === item.id}
+                            onClick={() => setEditor(item)}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.iconButton} ${styles.cancelAction}`}
+                            title="Cancelar compromisso"
+                            aria-label={`Cancelar ${item.title}`}
+                            disabled={busyId === item.id}
+                            onClick={() => void cancel(item)}
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </>
+                      )}
                       <Button
                         onClick={() => setSettlement(item)}
                         disabled={busyId === item.id}
                       >
-                        <CheckCircle2 size={16} /> Liquidar
+                        <CheckCircle2 size={16} /> {item.status === "PARTIALLY_SETTLED" ? "Nova liquidação" : "Liquidar"}
                       </Button>
                     </div>
                   )}

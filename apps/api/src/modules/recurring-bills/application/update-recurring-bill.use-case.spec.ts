@@ -39,6 +39,9 @@ describe('UpdateRecurringBillUseCase', () => {
       recurringBillOccurrence: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      financialObligation: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
 
     prisma = {
@@ -72,6 +75,26 @@ describe('UpdateRecurringBillUseCase', () => {
         dueDate: new Date('2099-10-15T00:00:00.000Z'),
       },
     });
+    expect(tx.financialObligation.updateMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: input.tenantId,
+        sourceType: 'RECURRING_BILL_OCCURRENCE',
+        sourceId: 'occurrence-1',
+        status: 'PENDING',
+        settlements: { none: {} },
+      },
+      data: {
+        dueDate: new Date('2099-10-15T00:00:00.000Z'),
+      },
+    });
+  });
+
+  it('não sincroniza a obrigação quando a ocorrência não foi atualizada', async () => {
+    tx.recurringBillOccurrence.updateMany.mockResolvedValue({ count: 0 });
+
+    await useCase.execute(input);
+
+    expect(tx.financialObligation.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejeita dia de vencimento inválido antes da transação', async () => {

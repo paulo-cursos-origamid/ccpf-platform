@@ -8,6 +8,7 @@ import {
 import {
   CategoryType,
   FinancialObligationStatus as PrismaFinancialObligationStatus,
+  FinancialObligationSourceType as PrismaFinancialObligationSourceType,
   FinancialObligationType as PrismaFinancialObligationType,
   LedgerEntryType,
   LedgerReferenceType,
@@ -23,6 +24,7 @@ import {
 } from '../../domain/repositories/financial-obligation.repository';
 import { FinancialObligationStatus } from '../../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../../domain/enums/financial-obligation-type.enum';
+import { FinancialObligationSourceType } from '../../domain/enums/financial-obligation-source-type.enum';
 
 @Injectable()
 export class PrismaFinancialObligationRepository implements FinancialObligationRepository {
@@ -31,24 +33,72 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
   async create(
     obligation: FinancialObligationEntity,
   ): Promise<FinancialObligationEntity> {
+    if (obligation.sourceType !== FinancialObligationSourceType.MANUAL) {
+      throw new BadRequestException(
+        'Compromissos com origem automática devem usar createOrFindBySource.',
+      );
+    }
+
     const created = await this.prisma.financialObligation.create({
-      data: {
-        id: obligation.id,
-        tenantId: obligation.tenantId,
-        userId: obligation.userId,
-        accountId: obligation.accountId,
-        categoryId: obligation.categoryId,
-        subCategoryId: obligation.subCategoryId,
-        type: obligation.type,
-        status: obligation.status,
-        title: obligation.title,
-        counterparty: obligation.counterparty,
-        amount: new Prisma.Decimal(obligation.amount),
-        dueDate: obligation.dueDate,
-        description: obligation.description,
-      },
+      data: this.toCreateData(obligation),
     });
+
     return this.toDomain(created);
+  }
+
+  async createOrFindBySource(
+    obligation: FinancialObligationEntity,
+  ): Promise<FinancialObligationEntity> {
+    const sourceId = obligation.sourceId;
+
+    if (
+      obligation.sourceType === FinancialObligationSourceType.MANUAL ||
+      !sourceId
+    ) {
+      throw new BadRequestException(
+        'A criação idempotente exige uma origem automática identificada.',
+      );
+    }
+
+    const where = {
+      tenantId: obligation.tenantId,
+      sourceType: obligation.sourceType as PrismaFinancialObligationSourceType,
+      sourceId,
+    };
+
+    const existing = await this.prisma.financialObligation.findFirst({
+      where,
+      include: { settlements: true },
+    });
+
+    if (existing) {
+      return this.toDomain(existing);
+    }
+
+    try {
+      const created = await this.prisma.financialObligation.create({
+        data: this.toCreateData(obligation),
+        include: { settlements: true },
+      });
+
+      return this.toDomain(created);
+    } catch (error) {
+      if (!this.isSourceUniqueConflict(error)) {
+        throw error;
+      }
+
+      // Outra requisição pode ter criado a mesma origem simultaneamente.
+      const concurrent = await this.prisma.financialObligation.findFirst({
+        where,
+        include: { settlements: true },
+      });
+
+      if (concurrent) {
+        return this.toDomain(concurrent);
+      }
+
+      throw error;
+    }
   }
 
   async findById(
@@ -64,7 +114,31 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           accountMembers: { some: { userId, status: 'ACTIVE' } },
         },
       },
+      include: { settlements: true },
     });
+    return obligation ? this.toDomain(obligation) : null;
+  }
+
+  async findBySource(
+    tenantId: string,
+    userId: string,
+    sourceType: FinancialObligationSourceType,
+    sourceId: string,
+  ): Promise<FinancialObligationEntity | null> {
+    const obligation = await this.prisma.financialObligation.findFirst({
+      where: {
+        tenantId,
+        sourceType: sourceType as PrismaFinancialObligationSourceType,
+        sourceId,
+        account: {
+          accountMembers: {
+            some: { userId, status: 'ACTIVE' },
+          },
+        },
+      },
+      include: { settlements: true },
+    });
+
     return obligation ? this.toDomain(obligation) : null;
   }
 
@@ -85,6 +159,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
         ...(filters.type ? { type: filters.type } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
+      include: { settlements: true },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     });
     return obligations.map((obligation) => this.toDomain(obligation));
@@ -400,6 +475,48 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
     }
   }
 
+  private toCreateData(obligation: FinancialObligationEntity) {
+    return {
+      id: obligation.id,
+      tenantId: obligation.tenantId,
+      userId: obligation.userId,
+      accountId: obligation.accountId,
+      categoryId: obligation.categoryId,
+      subCategoryId: obligation.subCategoryId,
+      sourceType: obligation.sourceType as PrismaFinancialObligationSourceType,
+      sourceId: obligation.sourceId,
+      type: obligation.type,
+      status: obligation.status,
+      title: obligation.title,
+      counterparty: obligation.counterparty,
+      amount: new Prisma.Decimal(obligation.amount),
+      dueDate: obligation.dueDate,
+      description: obligation.description,
+    };
+  }
+
+  private isSourceUniqueConflict(error: unknown): boolean {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== 'P2002'
+    ) {
+      return false;
+    }
+
+    const target = error.meta?.target;
+
+    if (Array.isArray(target)) {
+      return ['tenantId', 'sourceType', 'sourceId'].every((field) =>
+        target.includes(field),
+      );
+    }
+
+    return (
+      typeof target === 'string' &&
+      target.includes('FinancialObligation_tenantId_sourceType_sourceId_key')
+    );
+  }
+
   private toUpdateData(obligation: FinancialObligationEntity) {
     return {
       accountId: obligation.accountId,
@@ -423,6 +540,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
       categoryId: obligation.categoryId,
       subCategoryId: obligation.subCategoryId,
       transactionId: obligation.transactionId,
+      sourceType: obligation.sourceType,
+      sourceId: obligation.sourceId,
       type: obligation.type,
       status: obligation.status,
       title: obligation.title,
@@ -462,6 +581,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
       categoryId: raw.categoryId,
       subCategoryId: raw.subCategoryId,
       transactionId: raw.transactionId,
+      sourceType: raw.sourceType as FinancialObligationSourceType,
+      sourceId: raw.sourceId,
       type: raw.type as FinancialObligationType,
       status: raw.status as FinancialObligationStatus,
       title: raw.title,

@@ -51,16 +51,20 @@ export class FinancialObligationSettlementEntity {
     this.feeAmount = this.normalize(props.feeAmount ?? '0');
     this.discountAmount = this.normalize(props.discountAmount ?? '0');
 
-    if (
-      this.cents(this.principalAmount) +
-        this.cents(this.discountAmount) <=
-      0n
-    ) {
+    const principalCents = this.cents(this.principalAmount);
+    const discountCents = this.cents(this.discountAmount);
+
+    if (principalCents <= 0n) {
       throw new Error('Settlement must reduce the outstanding obligation');
     }
 
+    if (discountCents > principalCents) {
+      throw new Error('Discount cannot exceed the amortized principal');
+    }
+
     this.settledAmount = this.format(
-      this.cents(this.principalAmount) +
+      principalCents -
+        discountCents +
         this.cents(this.interestAmount) +
         this.cents(this.feeAmount),
     );

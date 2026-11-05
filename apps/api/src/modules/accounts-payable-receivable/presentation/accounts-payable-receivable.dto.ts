@@ -1,3 +1,4 @@
+import { FinancialObligationSourceType } from '../domain/enums/financial-obligation-source-type.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { FinancialObligationStatus } from '../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../domain/enums/financial-obligation-type.enum';
@@ -212,6 +213,15 @@ export class FinancialObligationResponseDto {
     description: 'ID da transação que efetivou o compromisso.',
   })
   transactionId!: string | null;
+
+  @ApiProperty({ enum: FinancialObligationSourceType, example: 'MANUAL' })
+  sourceType!: FinancialObligationSourceType;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Identificador do registro que originou o compromisso.',
+  })
+  sourceId!: string | null;
 
   @ApiProperty({ enum: FinancialObligationType, example: 'PAYABLE' })
   type!: FinancialObligationType;

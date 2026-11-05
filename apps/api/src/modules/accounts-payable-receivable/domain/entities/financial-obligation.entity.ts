@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { FinancialObligationStatus } from '../enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../enums/financial-obligation-type.enum';
+import { FinancialObligationSourceType } from '../enums/financial-obligation-source-type.enum';
 import { FinancialObligationSettlementEntity } from './financial-obligation-settlement.entity';
 
 /** Propriedades públicas usadas para reconstruir e serializar um compromisso. */
@@ -12,6 +13,8 @@ export interface FinancialObligationProps {
   categoryId: string;
   subCategoryId?: string | null;
   transactionId?: string | null;
+  sourceType?: FinancialObligationSourceType;
+  sourceId?: string | null;
   type: FinancialObligationType;
   status?: FinancialObligationStatus;
   title: string;
@@ -34,6 +37,8 @@ export class FinancialObligationEntity {
   private _categoryId: string;
   private _subCategoryId: string | null;
   private _transactionId: string | null;
+  private readonly _sourceType: FinancialObligationSourceType;
+  private readonly _sourceId: string | null;
   private _type: FinancialObligationType;
   private _status: FinancialObligationStatus;
   private _title: string;
@@ -54,6 +59,9 @@ export class FinancialObligationEntity {
     this._categoryId = props.categoryId;
     this._subCategoryId = props.subCategoryId ?? null;
     this._transactionId = props.transactionId ?? null;
+    this._sourceType = props.sourceType ?? FinancialObligationSourceType.MANUAL;
+    this._sourceId = props.sourceId?.trim() || null;
+    this.validateSource();
     this._type = props.type;
     this._status = props.status ?? FinancialObligationStatus.PENDING;
     this._title = this.validateTitle(props.title);
@@ -87,6 +95,12 @@ export class FinancialObligationEntity {
   }
   get transactionId(): string | null {
     return this._transactionId;
+  }
+  get sourceType(): FinancialObligationSourceType {
+    return this._sourceType;
+  }
+  get sourceId(): string | null {
+    return this._sourceId;
   }
   get type(): FinancialObligationType {
     return this._type;
@@ -144,8 +158,7 @@ export class FinancialObligationEntity {
   get remainingAmount(): string {
     const remaining =
       this.toCents(this.amount) -
-      this.toCents(this.settledPrincipalAmount) -
-      this.toCents(this.discountAmount);
+      this.toCents(this.settledPrincipalAmount);
 
     return this.formatCents(remaining > 0n ? remaining : 0n);
   }
@@ -169,6 +182,8 @@ export class FinancialObligationEntity {
       categoryId: this.categoryId,
       subCategoryId: this.subCategoryId,
       transactionId: this.transactionId,
+      sourceType: this.sourceType,
+      sourceId: this.sourceId,
       type: this.type,
       status: this.status,
       title: this.title,
@@ -223,9 +238,7 @@ export class FinancialObligationEntity {
       throw new Error('Settlement does not belong to this financial obligation');
     }
 
-    const reduction =
-      this.toCents(settlement.principalAmount) +
-      this.toCents(settlement.discountAmount);
+    const reduction = this.toCents(settlement.principalAmount);
 
     if (reduction > this.toCents(this.remainingAmount)) {
       throw new Error('Settlement exceeds the outstanding obligation');
@@ -271,6 +284,15 @@ export class FinancialObligationEntity {
     }
     this._transactionId = transactionId;
     this.touch();
+  }
+
+  private validateSource(): void {
+    const isManual = this._sourceType === FinancialObligationSourceType.MANUAL;
+    const hasSourceId = this._sourceId !== null;
+
+    if (isManual === hasSourceId) {
+      throw new Error('Financial obligation source type and identifier are inconsistent');
+    }
   }
 
   private ensurePending(): void {

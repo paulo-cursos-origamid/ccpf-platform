@@ -175,12 +175,33 @@ export class CreateInstallmentPlanUseCase {
         }),
       });
 
-      return tx.installmentPlan.findFirstOrThrow({
+      const createdPlan = await tx.installmentPlan.findFirstOrThrow({
         where: { id: plan.id, tenantId: input.tenantId },
         include: {
           installments: { orderBy: { installmentNumber: 'asc' } },
         },
       });
+
+      // Plano, parcelas e obrigações são persistidos na mesma transação.
+      await tx.financialObligation.createMany({
+        data: createdPlan.installments.map((installment) => ({
+          tenantId: input.tenantId,
+          userId: input.userId,
+          accountId: account.id,
+          categoryId: category.id,
+          subCategoryId: input.subCategoryId ?? null,
+          type: 'PAYABLE',
+          status: 'PENDING',
+          title: `${input.title.trim()} - Parcela ${installment.installmentNumber}/${input.installmentCount}`,
+          amount: installment.amount,
+          dueDate: installment.dueDate,
+          description: input.description?.trim() || null,
+          sourceType: 'INSTALLMENT',
+          sourceId: installment.id,
+        })),
+      });
+
+      return createdPlan;
     });
   }
 }

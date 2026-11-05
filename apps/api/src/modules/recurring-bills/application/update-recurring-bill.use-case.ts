@@ -56,6 +56,7 @@ export class UpdateRecurringBillUseCase {
               id: true,
               dueDate: true,
               referenceMonth: true,
+              expectedAmount: true,
             },
           },
         },
@@ -98,24 +99,40 @@ export class UpdateRecurringBillUseCase {
       });
 
       await Promise.all(
-        bill.occurrences.map((occurrence) => {
+        bill.occurrences.map(async (occurrence) => {
           const referenceMonth = occurrence.referenceMonth;
+          const dueDate = dateAtUtcDay(
+            referenceMonth.getUTCFullYear(),
+            referenceMonth.getUTCMonth(),
+            input.dueDay,
+          );
 
-          return tx.recurringBillOccurrence.updateMany({
+          const updatedOccurrence =
+            await tx.recurringBillOccurrence.updateMany({
+              where: {
+                id: occurrence.id,
+                tenantId: input.tenantId,
+                recurringBillId: bill.id,
+                status: 'PENDING',
+                transactionId: null,
+              },
+              data: { dueDate },
+            });
+
+          if (updatedOccurrence.count !== 1) {
+            return;
+          }
+
+          // Só sincroniza compromissos ainda abertos e sem histórico de liquidação.
+          await tx.financialObligation.updateMany({
             where: {
-              id: occurrence.id,
               tenantId: input.tenantId,
-              recurringBillId: bill.id,
+              sourceType: 'RECURRING_BILL_OCCURRENCE',
+              sourceId: occurrence.id,
               status: 'PENDING',
-              transactionId: null,
+              settlements: { none: {} },
             },
-            data: {
-              dueDate: dateAtUtcDay(
-                referenceMonth.getUTCFullYear(),
-                referenceMonth.getUTCMonth(),
-                input.dueDay,
-              ),
-            },
+            data: { dueDate },
           });
         }),
       );

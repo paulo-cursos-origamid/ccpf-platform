@@ -48,9 +48,7 @@ export class SettleFinancialObligationUseCase {
     );
 
     const discountAmount = input.discountAmount ?? '0.00';
-    const principalAmount =
-      input.principalAmount ??
-      this.subtractAmounts(obligation.remainingAmount, discountAmount);
+    const principalAmount = input.principalAmount ?? obligation.remainingAmount;
 
     let settlement: FinancialObligationSettlementEntity;
 
@@ -80,27 +78,5 @@ export class SettleFinancialObligationUseCase {
       settlement,
       description: input.description,
     });
-  }
-
-  private subtractAmounts(amount: string, deduction: string): string {
-    const toCents = (value: string): bigint => {
-      const normalized = value.trim();
-      if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
-        throw new ConflictException('Valor monetário inválido.');
-      }
-
-      const [whole, fraction = ''] = normalized.split('.');
-      return BigInt(whole) * 100n + BigInt(fraction.padEnd(2, '0'));
-    };
-
-    const result = toCents(amount) - toCents(deduction);
-
-    if (result < 0n) {
-      throw new ConflictException(
-        'O desconto não pode ser maior que o saldo restante.',
-      );
-    }
-
-    return `${result / 100n}.${(result % 100n).toString().padStart(2, '0')}`;
   }
 }

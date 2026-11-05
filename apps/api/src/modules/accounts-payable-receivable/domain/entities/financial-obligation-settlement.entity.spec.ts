@@ -25,12 +25,12 @@ describe('FinancialObligationSettlementEntity', () => {
     expect(settlement.interestAmount).toBe('5.00');
     expect(settlement.feeAmount).toBe('2.00');
     expect(settlement.discountAmount).toBe('10.00');
-    expect(settlement.settledAmount).toBe('107.00');
+    expect(settlement.settledAmount).toBe('97.00');
   });
 
   it('allows a discount without cash movement', () => {
     const settlement = createSettlement({
-      principalAmount: '0',
+      principalAmount: '20',
       interestAmount: '0',
       feeAmount: '0',
       discountAmount: '20',
