@@ -143,11 +143,12 @@ export class AccountsPayableReceivableController {
   @ApiOperation({
     summary: 'Liquidar compromisso',
     description:
-      'Cria uma transação ou vincula uma existente compatível. O valor é efetivado uma única vez.',
+      'Para compromissos comuns, cria ou vincula uma transação. Para faturas de cartão, registra débito no Ledger sem criar nova transação ou duplicar despesa.',
   })
   @ApiOkResponse({
     type: FinancialObligationResponseDto,
-    description: 'Compromisso liquidado e associado a uma única transação.',
+    description:
+      'Compromisso liquidado. Faturas de cartão registram a movimentação no Ledger sem transação associada.',
   })
   @ApiBadRequestResponse({
     description: 'A transação informada não corresponde ao compromisso.',

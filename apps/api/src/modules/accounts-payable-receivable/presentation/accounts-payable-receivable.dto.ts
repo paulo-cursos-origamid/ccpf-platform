@@ -130,7 +130,7 @@ export class SettleFinancialObligationDto {
   @ApiPropertyOptional({
     example: '80.00',
     description:
-      'Principal amortizado. Quando omitido, utiliza o saldo restante menos o desconto.',
+      'Principal amortizado. Quando omitido, utiliza o saldo restante integral. O desconto reduz o valor efetivamente pago, sem reduzir o principal amortizado.',
   })
   @IsOptional()
   @Matches(/^\d+(?:\.\d{1,2})?$/)
@@ -161,8 +161,17 @@ export class SettleFinancialObligationDto {
   discountAmount?: string;
 
   @ApiPropertyOptional({
+    example: 'account-1',
     description:
-      'Transação já registrada, com valor e classificação compatíveis.',
+      'Conta utilizada nesta liquidação. Por padrão, utiliza a conta de referência do compromisso.',
+  })
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Transação já registrada, com valor e classificação compatíveis. Não se aplica ao pagamento de faturas de cartão.',
   })
   @IsOptional()
   @IsString()
@@ -199,11 +208,11 @@ export class FinancialObligationResponseDto {
   @ApiProperty()
   userId!: string;
 
-  @ApiProperty()
-  accountId!: string;
+  @ApiProperty({ nullable: true })
+  accountId!: string | null;
 
-  @ApiProperty()
-  categoryId!: string;
+  @ApiProperty({ nullable: true })
+  categoryId!: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   subCategoryId!: string | null;

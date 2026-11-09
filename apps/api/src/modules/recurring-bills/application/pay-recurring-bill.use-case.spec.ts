@@ -47,16 +47,19 @@ describe('PayRecurringBillUseCase', () => {
       sourceId: input.occurrenceId,
     });
 
-  const createSettledObligation = (options: {
-    interestAmount?: string;
-    discountAmount?: string;
-    feeAmount?: string;
-  } = {}) => {
+  const createSettledObligation = (
+    options: {
+      interestAmount?: string;
+      discountAmount?: string;
+      feeAmount?: string;
+    } = {},
+  ) => {
     const base = createObligation();
     const settlement = new FinancialObligationSettlementEntity({
       obligationId: base.id,
       tenantId: base.tenantId,
       userId: input.userId,
+      accountId: base.accountId,
       principalAmount: '150.00',
       interestAmount: options.interestAmount ?? '0.00',
       feeAmount: options.feeAmount ?? '0.00',
@@ -285,9 +288,9 @@ describe('PayRecurringBillUseCase', () => {
   });
 
   it('rejeita valor inválido antes de consultar a ocorrência', async () => {
-    await expect(
-      useCase.execute({ ...input, amount: '0' }),
-    ).rejects.toThrow(BadRequestException);
+    await expect(useCase.execute({ ...input, amount: '0' })).rejects.toThrow(
+      BadRequestException,
+    );
 
     expect(prisma.recurringBillOccurrence.findFirst).not.toHaveBeenCalled();
   });

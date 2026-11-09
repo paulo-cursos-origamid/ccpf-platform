@@ -12,6 +12,9 @@ import { CategoryRepository } from '../../categories/domain/repositories/categor
 import { FinancialObligationEntity } from '../domain/entities/financial-obligation.entity';
 import { FinancialObligationRepository } from '../domain/repositories/financial-obligation.repository';
 import { FinancialObligationType } from '../domain/enums/financial-obligation-type.enum';
+import { TenantMemberRepository } from '../../tenant/domain/repositories/tenant-member.repository';
+import { TenantMemberStatus } from '../../tenant/domain/enums/tenant-member-status.enum';
+import { TenantRole } from '../../tenant/domain/enums/tenant-role.enum';
 
 export interface FinancialObligationReferenceInput {
   tenantId: string;
@@ -29,6 +32,7 @@ export class FinancialObligationsApplicationService {
     private readonly accountRepository: AccountRepository,
     private readonly accountMemberRepository: AccountMemberRepository,
     private readonly categoryRepository: CategoryRepository,
+    private readonly tenantMemberRepository: TenantMemberRepository,
   ) {}
 
   async findObligation(
@@ -104,6 +108,31 @@ export class FinancialObligationsApplicationService {
     ) {
       throw new ForbiddenException(
         'Você não tem permissão para alterar esta conta.',
+      );
+    }
+  }
+
+  async assertTenantWriteAccess(
+    tenantId: string,
+    userId: string,
+  ): Promise<void> {
+    const member = await this.tenantMemberRepository.findByTenantAndUser(
+      tenantId,
+      userId,
+    );
+
+    if (!member) {
+      throw new NotFoundException(
+        'Vínculo com o Espaço não encontrado.',
+      );
+    }
+
+    if (
+      member.status !== TenantMemberStatus.ACTIVE ||
+      member.role === TenantRole.VIEWER
+    ) {
+      throw new ForbiddenException(
+        'Você não tem permissão para alterar compromissos deste Espaço.',
       );
     }
   }

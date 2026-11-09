@@ -2,14 +2,15 @@ import { FinancialObligationSettlementEntity } from './financial-obligation-sett
 
 describe('FinancialObligationSettlementEntity', () => {
   const createSettlement = (
-    overrides: Partial<ConstructorParameters<
-      typeof FinancialObligationSettlementEntity
-    >[0]> = {},
+    overrides: Partial<
+      ConstructorParameters<typeof FinancialObligationSettlementEntity>[0]
+    > = {},
   ) =>
     new FinancialObligationSettlementEntity({
       obligationId: 'obligation-1',
       tenantId: 'tenant-1',
       userId: 'user-1',
+      accountId: 'account-1',
       principalAmount: '100',
       interestAmount: '5',
       feeAmount: '2',
@@ -62,9 +63,9 @@ describe('FinancialObligationSettlementEntity', () => {
   });
 
   it('rejects invalid settlement dates and missing references', () => {
-    expect(() =>
-      createSettlement({ settledAt: new Date('invalid') }),
-    ).toThrow('Settlement date is invalid');
+    expect(() => createSettlement({ settledAt: new Date('invalid') })).toThrow(
+      'Settlement date is invalid',
+    );
 
     expect(() => createSettlement({ obligationId: ' ' })).toThrow(
       'Settlement references are required',

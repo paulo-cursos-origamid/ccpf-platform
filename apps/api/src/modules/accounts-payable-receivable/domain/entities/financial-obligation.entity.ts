@@ -9,8 +9,8 @@ export interface FinancialObligationProps {
   id?: string;
   tenantId: string;
   userId: string;
-  accountId: string;
-  categoryId: string;
+  accountId: string | null;
+  categoryId?: string | null;
   subCategoryId?: string | null;
   transactionId?: string | null;
   sourceType?: FinancialObligationSourceType;
@@ -33,8 +33,8 @@ export class FinancialObligationEntity {
   private readonly _id: string;
   private readonly _tenantId: string;
   private readonly _userId: string;
-  private _accountId: string;
-  private _categoryId: string;
+  private _accountId: string | null;
+  private _categoryId: string | null;
   private _subCategoryId: string | null;
   private _transactionId: string | null;
   private readonly _sourceType: FinancialObligationSourceType;
@@ -55,14 +55,16 @@ export class FinancialObligationEntity {
     this._id = props.id ?? randomUUID();
     this._tenantId = props.tenantId;
     this._userId = props.userId;
-    this._accountId = props.accountId;
-    this._categoryId = props.categoryId;
+    this._accountId = props.accountId?.trim() || null;
+    this._categoryId = props.categoryId?.trim() || null;
     this._subCategoryId = props.subCategoryId ?? null;
     this._transactionId = props.transactionId ?? null;
     this._sourceType = props.sourceType ?? FinancialObligationSourceType.MANUAL;
     this._sourceId = props.sourceId?.trim() || null;
     this.validateSource();
+    this.validateAccount();
     this._type = props.type;
+    this.validateCategory(this._categoryId, this._subCategoryId, this._type);
     this._status = props.status ?? FinancialObligationStatus.PENDING;
     this._title = this.validateTitle(props.title);
     this._counterparty = props.counterparty?.trim() || null;
@@ -84,10 +86,10 @@ export class FinancialObligationEntity {
   get userId(): string {
     return this._userId;
   }
-  get accountId(): string {
+  get accountId(): string | null {
     return this._accountId;
   }
-  get categoryId(): string {
+  get categoryId(): string | null {
     return this._categoryId;
   }
   get subCategoryId(): string | null {
@@ -199,8 +201,8 @@ export class FinancialObligationEntity {
   }
 
   updateDetails(props: {
-    accountId: string;
-    categoryId: string;
+    accountId: string | null;
+    categoryId: string | null;
     subCategoryId?: string | null;
     type: FinancialObligationType;
     title: string;
@@ -210,9 +212,16 @@ export class FinancialObligationEntity {
     description?: string | null;
   }): void {
     this.ensurePending();
-    this._accountId = props.accountId;
-    this._categoryId = props.categoryId;
-    this._subCategoryId = props.subCategoryId ?? null;
+    const accountId = props.accountId?.trim() || null;
+    const categoryId = props.categoryId?.trim() || null;
+    const subCategoryId = props.subCategoryId ?? null;
+
+    this.validateAccount(accountId);
+    this.validateCategory(categoryId, subCategoryId, props.type);
+
+    this._accountId = accountId;
+    this._categoryId = categoryId;
+    this._subCategoryId = subCategoryId;
     this._type = props.type;
     this._title = this.validateTitle(props.title);
     this._amount = this.normalizeAmount(props.amount);
@@ -232,8 +241,7 @@ export class FinancialObligationEntity {
 
     if (
       settlement.obligationId !== this.id ||
-      settlement.tenantId !== this.tenantId ||
-      settlement.userId !== this.userId
+      settlement.tenantId !== this.tenantId
     ) {
       throw new Error('Settlement does not belong to this financial obligation');
     }
@@ -284,6 +292,45 @@ export class FinancialObligationEntity {
     }
     this._transactionId = transactionId;
     this.touch();
+  }
+
+  private validateAccount(accountId = this._accountId): void {
+    const isCardInvoice =
+      this._sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE;
+
+    if (!isCardInvoice && !accountId) {
+      throw new Error('Financial obligation account is required');
+    }
+
+    if (isCardInvoice && accountId) {
+      throw new Error(
+        'Credit card invoice obligations cannot reference a bank account',
+      );
+    }
+  }
+
+  private validateCategory(
+    categoryId: string | null,
+    subCategoryId: string | null,
+    type: FinancialObligationType,
+  ): void {
+    if (
+      !categoryId &&
+      this._sourceType !== FinancialObligationSourceType.CREDIT_CARD_INVOICE
+    ) {
+      throw new Error('Financial obligation category is required');
+    }
+
+    if (!categoryId && subCategoryId) {
+      throw new Error('A subcategory requires a category');
+    }
+
+    if (
+      this._sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE &&
+      type !== FinancialObligationType.PAYABLE
+    ) {
+      throw new Error('Credit card invoice obligations must be payable');
+    }
   }
 
   private validateSource(): void {

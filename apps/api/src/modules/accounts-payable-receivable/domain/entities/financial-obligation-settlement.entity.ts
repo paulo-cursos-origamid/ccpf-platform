@@ -6,6 +6,7 @@ export interface FinancialObligationSettlementProps {
   obligationId: string;
   tenantId: string;
   userId: string;
+  accountId: string;
   principalAmount: string;
   interestAmount?: string;
   feeAmount?: string;
@@ -20,6 +21,7 @@ export class FinancialObligationSettlementEntity {
   readonly obligationId: string;
   readonly tenantId: string;
   readonly userId: string;
+  readonly accountId: string;
   readonly principalAmount: string;
   readonly interestAmount: string;
   readonly feeAmount: string;
@@ -30,7 +32,12 @@ export class FinancialObligationSettlementEntity {
   private _transactionId: string | null;
 
   constructor(props: FinancialObligationSettlementProps) {
-    if (!props.obligationId.trim() || !props.tenantId.trim() || !props.userId.trim()) {
+    if (
+      !props.obligationId.trim() ||
+      !props.tenantId.trim() ||
+      !props.userId.trim() ||
+      !props.accountId.trim()
+    ) {
       throw new Error('Settlement references are required');
     }
 
@@ -46,6 +53,7 @@ export class FinancialObligationSettlementEntity {
     this.obligationId = props.obligationId;
     this.tenantId = props.tenantId;
     this.userId = props.userId;
+    this.accountId = props.accountId;
     this.principalAmount = this.normalize(props.principalAmount);
     this.interestAmount = this.normalize(props.interestAmount ?? '0');
     this.feeAmount = this.normalize(props.feeAmount ?? '0');
@@ -94,6 +102,7 @@ export class FinancialObligationSettlementEntity {
       obligationId: this.obligationId,
       tenantId: this.tenantId,
       userId: this.userId,
+      accountId: this.accountId,
       principalAmount: this.principalAmount,
       interestAmount: this.interestAmount,
       feeAmount: this.feeAmount,

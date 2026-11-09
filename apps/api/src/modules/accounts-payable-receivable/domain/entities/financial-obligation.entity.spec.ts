@@ -32,7 +32,80 @@ describe('FinancialObligationEntity', () => {
 
     expect(obligation.sourceType).toBe(FinancialObligationSourceType.MANUAL);
     expect(obligation.sourceId).toBeNull();
-    expect(obligation.toJSON().sourceType).toBe(FinancialObligationSourceType.MANUAL);
+    expect(obligation.toJSON().sourceType).toBe(
+      FinancialObligationSourceType.MANUAL,
+    );
+  });
+
+  it('allows credit card invoice obligations without a category', () => {
+    const obligation = new FinancialObligationEntity({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      accountId: null,
+      categoryId: null,
+      sourceType: FinancialObligationSourceType.CREDIT_CARD_INVOICE,
+      sourceId: 'invoice-1',
+      type: FinancialObligationType.PAYABLE,
+      title: 'Fatura do cartão',
+      amount: '250',
+      dueDate: new Date('2026-11-15T12:00:00.000Z'),
+    });
+
+    expect(obligation.categoryId).toBeNull();
+    expect(obligation.accountId).toBeNull();
+    expect(obligation.toJSON().categoryId).toBeNull();
+  });
+
+  it('rejects a bank account reference for credit card invoice obligations', () => {
+    expect(
+      () =>
+        new FinancialObligationEntity({
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          accountId: 'account-1',
+          categoryId: null,
+          sourceType: FinancialObligationSourceType.CREDIT_CARD_INVOICE,
+          sourceId: 'invoice-1',
+          type: FinancialObligationType.PAYABLE,
+          title: 'Fatura do cartão',
+          amount: '250.00',
+          dueDate: new Date('2026-11-15T12:00:00.000Z'),
+        }),
+    ).toThrow(
+      'Credit card invoice obligations cannot reference a bank account',
+    );
+  });
+
+  it('requires a bank account for regular obligations', () => {
+    expect(
+      () =>
+        new FinancialObligationEntity({
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          accountId: null,
+          categoryId: 'category-1',
+          type: FinancialObligationType.PAYABLE,
+          title: 'Internet',
+          amount: '120.00',
+          dueDate: new Date('2026-11-15T12:00:00.000Z'),
+        }),
+    ).toThrow('Financial obligation account is required');
+  });
+
+  it('requires a category for regular obligations', () => {
+    expect(
+      () =>
+        new FinancialObligationEntity({
+          tenantId: 'tenant-1',
+          userId: 'user-1',
+          accountId: 'account-1',
+          categoryId: null,
+          type: FinancialObligationType.PAYABLE,
+          title: 'Internet',
+          amount: '120',
+          dueDate: new Date('2026-11-15T12:00:00.000Z'),
+        }),
+    ).toThrow('Financial obligation category is required');
   });
 
   it('rejects an automated source without its source identifier', () => {
@@ -49,7 +122,9 @@ describe('FinancialObligationEntity', () => {
           dueDate: new Date('2026-11-15T12:00:00.000Z'),
           sourceType: FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
         }),
-    ).toThrow('Financial obligation source type and identifier are inconsistent');
+    ).toThrow(
+      'Financial obligation source type and identifier are inconsistent',
+    );
   });
 
   it('rejects a manual obligation with an automated source identifier', () => {
@@ -66,7 +141,9 @@ describe('FinancialObligationEntity', () => {
           dueDate: new Date('2026-11-15T12:00:00.000Z'),
           sourceId: 'occurrence-1',
         }),
-    ).toThrow('Financial obligation source type and identifier are inconsistent');
+    ).toThrow(
+      'Financial obligation source type and identifier are inconsistent',
+    );
   });
 
   it('rejects zero, excessive precision, and invalid titles', () => {
@@ -152,14 +229,15 @@ describe('FinancialObligationEntity', () => {
   });
 
   const createSettlement = (
-    overrides: Partial<ConstructorParameters<
-      typeof FinancialObligationSettlementEntity
-    >[0]> = {},
+    overrides: Partial<
+      ConstructorParameters<typeof FinancialObligationSettlementEntity>[0]
+    > = {},
   ) =>
     new FinancialObligationSettlementEntity({
       obligationId: 'obligation-1',
       tenantId: 'tenant-1',
       userId: 'user-1',
+      accountId: 'account-1',
       principalAmount: '40',
       settledAt: new Date('2026-11-15T12:00:00.000Z'),
       ...overrides,
@@ -264,6 +342,32 @@ describe('FinancialObligationEntity', () => {
     ).toThrow('Settlement exceeds the outstanding obligation');
   });
 
+  it('allows another user in the same tenant to register a settlement', () => {
+    const obligation = new FinancialObligationEntity({
+      id: 'obligation-1',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      accountId: 'account-1',
+      categoryId: 'category-1',
+      type: FinancialObligationType.PAYABLE,
+      title: 'Internet',
+      amount: '120',
+      dueDate: new Date('2026-11-15T12:00:00.000Z'),
+    });
+
+    obligation.registerSettlement(
+      createSettlement({
+        userId: 'user-2',
+        principalAmount: '40',
+      }),
+    );
+
+    expect(obligation.status).toBe(
+      FinancialObligationStatus.PARTIALLY_SETTLED,
+    );
+    expect(obligation.settlements[0].userId).toBe('user-2');
+  });
+
   it('rejects settlements belonging to another obligation', () => {
     const obligation = new FinancialObligationEntity({
       id: 'obligation-1',
@@ -283,5 +387,4 @@ describe('FinancialObligationEntity', () => {
       ),
     ).toThrow('Settlement does not belong to this financial obligation');
   });
-
 });

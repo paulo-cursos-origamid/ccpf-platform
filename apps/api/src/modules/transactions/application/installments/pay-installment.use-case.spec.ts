@@ -77,6 +77,7 @@ describe('PayInstallmentUseCase', () => {
       obligationId: base.id,
       tenantId: base.tenantId,
       userId: input.userId,
+      accountId: base.accountId,
       principalAmount: '100.00',
       interestAmount: '0.00',
       feeAmount: '0.00',
@@ -103,9 +104,7 @@ describe('PayInstallmentUseCase', () => {
 
     obligations = {
       findBySource: jest.fn().mockResolvedValue(createObligation()),
-      createOrFindBySource: jest.fn().mockImplementation(
-        async (item) => item,
-      ),
+      createOrFindBySource: jest.fn().mockImplementation(async (item) => item),
     };
 
     settleObligation = {

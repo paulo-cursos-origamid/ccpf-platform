@@ -26,7 +26,7 @@ describe('PrismaFinancialObligationRepository', () => {
   let prisma: any;
   let repository: PrismaFinancialObligationRepository;
 
-  const rawObligation = () => ({
+  const rawObligation = (overrides: Record<string, unknown> = {}) => ({
     id: obligation.id,
     tenantId: obligation.tenantId,
     userId: obligation.userId,
@@ -47,6 +47,7 @@ describe('PrismaFinancialObligationRepository', () => {
     createdAt: settledAt,
     updatedAt: settledAt,
     settlements: [],
+    ...overrides,
   });
 
   const createSettlement = (
@@ -56,18 +57,28 @@ describe('PrismaFinancialObligationRepository', () => {
       feeAmount?: string;
       discountAmount?: string;
       transactionId?: string;
+      accountId?: string;
     } = {},
   ) =>
     new FinancialObligationSettlementEntity({
       obligationId: obligation.id,
       tenantId: obligation.tenantId,
       userId: 'user-1',
+      accountId: options.accountId ?? obligation.accountId,
       principalAmount,
       interestAmount: options.interestAmount ?? '0.00',
       feeAmount: options.feeAmount ?? '0.00',
       discountAmount: options.discountAmount ?? '0.00',
       transactionId: options.transactionId,
       settledAt,
+    });
+
+  const cardInvoiceObligation = () =>
+    new FinancialObligationEntity({
+      ...obligation.toJSON(),
+      accountId: null,
+      sourceType: FinancialObligationSourceType.CREDIT_CARD_INVOICE,
+      sourceId: 'invoice-1',
     });
 
   const sourcedObligation = () =>
@@ -93,6 +104,9 @@ describe('PrismaFinancialObligationRepository', () => {
         create: jest
           .fn()
           .mockImplementation(({ data }) => Promise.resolve({ id: data.id })),
+      },
+      creditCardInvoice: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       account: {
         findFirst: jest.fn().mockResolvedValue({ id: obligation.accountId }),
@@ -142,8 +156,84 @@ describe('PrismaFinancialObligationRepository', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('finds a card invoice by active Tenant membership without bank-account membership', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    );
+
+    const result = await repository.findById(
+      'obligation-1',
+      'tenant-1',
+      'user-1',
+    );
+
+    expect(result?.accountId).toBeNull();
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'obligation-1',
+        tenantId: 'tenant-1',
+        OR: [
+          {
+            account: {
+              accountMembers: {
+                some: { userId: 'user-1', status: 'ACTIVE' },
+              },
+            },
+          },
+          {
+            sourceType: 'CREDIT_CARD_INVOICE',
+            tenant: {
+              members: {
+                some: { userId: 'user-1', status: 'ACTIVE' },
+              },
+            },
+          },
+        ],
+      },
+      include: { settlements: true },
+    });
+  });
+
+  it('includes card invoices in the list for active Tenant members', async () => {
+    prisma.financialObligation.findMany.mockResolvedValue([
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    ]);
+
+    const result = await repository.findMany('tenant-1', 'user-1', {});
+
+    expect(result).toHaveLength(1);
+    expect(result[0].accountId).toBeNull();
+    expect(prisma.financialObligation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              sourceType: 'CREDIT_CARD_INVOICE',
+              tenant: {
+                members: {
+                  some: { userId: 'user-1', status: 'ACTIVE' },
+                },
+              },
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
   it('finds an obligation by source within the tenant and active membership', async () => {
-    prisma.financialObligation.findFirst.mockResolvedValue(sourcedRawObligation());
+    prisma.financialObligation.findFirst.mockResolvedValue(
+      sourcedRawObligation(),
+    );
 
     const result = await repository.findBySource(
       'tenant-1',
@@ -169,7 +259,9 @@ describe('PrismaFinancialObligationRepository', () => {
   });
 
   it('returns the existing obligation for an already registered source', async () => {
-    prisma.financialObligation.findFirst.mockResolvedValue(sourcedRawObligation());
+    prisma.financialObligation.findFirst.mockResolvedValue(
+      sourcedRawObligation(),
+    );
 
     const result = await repository.createOrFindBySource(sourcedObligation());
 
@@ -305,5 +397,167 @@ describe('PrismaFinancialObligationRepository', () => {
     expect(tx.account.updateMany).not.toHaveBeenCalled();
     expect(tx.financialObligationSettlement.create).toHaveBeenCalledTimes(1);
     expect(tx.financialObligation.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('pays a credit card invoice through the ledger without creating a transaction', async () => {
+    tx.financialObligation.findFirst.mockResolvedValueOnce(
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    );
+    tx.account.findFirst.mockResolvedValueOnce({ id: 'account-2' });
+
+    const settlement = createSettlement('80.00', {
+      accountId: 'account-2',
+    });
+
+    const result = await repository.settle(cardInvoiceObligation(), {
+      settlement,
+      description: 'Pagamento da fatura',
+    });
+
+    expect(result.status).toBe('PARTIALLY_SETTLED');
+    expect(tx.creditCardInvoice.updateMany).not.toHaveBeenCalled();
+    expect(tx.account.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'account-2',
+          tenantId: 'tenant-1',
+          archivedAt: null,
+        }),
+      }),
+    );
+    expect(tx.category.findFirst).not.toHaveBeenCalled();
+    expect(tx.subCategory.findFirst).not.toHaveBeenCalled();
+    expect(tx.transaction.findFirst).not.toHaveBeenCalled();
+    expect(tx.transaction.create).not.toHaveBeenCalled();
+
+    expect(tx.ledgerEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          accountId: 'account-2',
+          type: 'DEBIT',
+          amount: new Prisma.Decimal('80.00'),
+          referenceId: settlement.id,
+          referenceType: 'CREDIT_CARD_INVOICE_PAYMENT',
+        }),
+      }),
+    );
+
+    expect(tx.account.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'account-2' }),
+        data: { balance: { decrement: new Prisma.Decimal('80.00') } },
+      }),
+    );
+
+    expect(tx.financialObligationSettlement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          id: settlement.id,
+          accountId: 'account-2',
+          transactionId: null,
+        }),
+      }),
+    );
+  });
+
+  it('marks a credit card invoice as paid after full settlement', async () => {
+    tx.financialObligation.findFirst.mockResolvedValueOnce(
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    );
+    tx.account.findFirst.mockResolvedValueOnce({ id: 'account-2' });
+
+    const settlement = createSettlement('120.00', {
+      accountId: 'account-2',
+    });
+
+    const result = await repository.settle(cardInvoiceObligation(), {
+      settlement,
+      description: 'Pagamento integral da fatura',
+    });
+
+    expect(result.status).toBe('SETTLED');
+    expect(tx.ledgerEntry.create).toHaveBeenCalledTimes(1);
+    expect(tx.account.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.transaction.create).not.toHaveBeenCalled();
+    expect(tx.creditCardInvoice.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'invoice-1',
+        tenantId: 'tenant-1',
+        status: { in: ['OPEN', 'CLOSED'] },
+      },
+      data: { status: 'PAID' },
+    });
+  });
+
+  it('rejects transaction links when settling a credit card invoice', async () => {
+    tx.financialObligation.findFirst.mockResolvedValueOnce(
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    );
+
+    const settlement = createSettlement('50.00', {
+      transactionId: 'transaction-1',
+    });
+
+    await expect(
+      repository.settle(cardInvoiceObligation(), { settlement }),
+    ).rejects.toThrow(
+      'O pagamento de fatura de cartão não pode ser vinculado a uma transação.',
+    );
+
+    expect(tx.transaction.create).not.toHaveBeenCalled();
+    expect(tx.ledgerEntry.create).not.toHaveBeenCalled();
+    expect(tx.financialObligationSettlement.create).not.toHaveBeenCalled();
+  });
+
+  it('does not create a ledger entry for a fully discounted card invoice settlement', async () => {
+    tx.financialObligation.findFirst.mockResolvedValueOnce(
+      rawObligation({
+        accountId: null,
+        sourceType: 'CREDIT_CARD_INVOICE',
+        sourceId: 'invoice-1',
+      }),
+    );
+
+    const settlement = createSettlement('120.00', {
+      discountAmount: '120.00',
+    });
+
+    const result = await repository.settle(cardInvoiceObligation(), {
+      settlement,
+    });
+
+    expect(result.status).toBe('SETTLED');
+    expect(tx.creditCardInvoice.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'invoice-1',
+        tenantId: 'tenant-1',
+        status: { in: ['OPEN', 'CLOSED'] },
+      },
+      data: { status: 'PAID' },
+    });
+    expect(tx.transaction.create).not.toHaveBeenCalled();
+    expect(tx.ledgerEntry.create).not.toHaveBeenCalled();
+    expect(tx.account.updateMany).not.toHaveBeenCalled();
+    expect(tx.financialObligationSettlement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          accountId: 'account-1',
+          transactionId: null,
+          settledAmount: new Prisma.Decimal('0.00'),
+        }),
+      }),
+    );
   });
 });

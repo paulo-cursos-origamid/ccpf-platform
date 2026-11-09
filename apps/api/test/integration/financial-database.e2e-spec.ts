@@ -56,50 +56,36 @@ describe('Financial Database Integration', () => {
     expect(isolationLevel).toBe('serializable');
   });
 
-  it('executa rollback real quando ocorre uma exceção', async () => {
-    const marker = `ccpf-rollback-${Date.now()}`;
+  it("executa rollback real quando ocorre uma exceção", async () => {
+    const marker = "CCPF_ROLLBACK_" + Date.now() + "_" + Math.random().toString(36).slice(2);
 
     await expect(
       prisma.$transaction(
         async (tx) => {
-          await tx.$executeRaw`
-            CREATE TEMP TABLE financial_rollback_test (
-              marker TEXT NOT NULL
-            ) ON COMMIT DROP
-          `;
+          await tx.plan.create({
+            data: {
+              name: "Rollback de integração",
+              code: marker,
+              maxUsers: 1,
+              maxTenants: 1,
+            },
+          });
 
-          await tx.$executeRaw`
-            INSERT INTO financial_rollback_test (marker)
-            VALUES (${marker})
-          `;
+          const inserted = await tx.plan.findUnique({
+            where: { code: marker },
+          });
 
-          const records = await tx.$queryRaw<
-            Array<{ marker: string }>
-          >`
-            SELECT marker
-            FROM financial_rollback_test
-          `;
-
-          expect(records).toHaveLength(1);
-          expect(records[0].marker).toBe(marker);
-
-          throw new Error('ROLLBACK_TEST');
+          expect(inserted).not.toBeNull();
+          throw new Error("ROLLBACK_TEST");
         },
-        {
-          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
-    ).rejects.toThrow('ROLLBACK_TEST');
+    ).rejects.toThrow("ROLLBACK_TEST");
 
-    const tables = await prisma.$queryRaw<
-      Array<{ table_name: string }>
-    >`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-        AND table_name = 'financial_rollback_test'
-    `;
+    const persisted = await prisma.plan.findUnique({
+      where: { code: marker },
+    });
 
-    expect(tables).toHaveLength(0);
+    expect(persisted).toBeNull();
   });
 });

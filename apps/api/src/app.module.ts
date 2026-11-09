@@ -16,6 +16,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { FinancialGoalsModule } from './modules/financial-goals/financial-goals.module';
 import { AccountsPayableReceivableModule } from './modules/accounts-payable-receivable/accounts-payable-receivable.module';
+import { CreditCardsModule } from './modules/credit-cards/credit-cards.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AccountsPayableReceivableModule } from './modules/accounts-payable-rece
     NotificationsModule,
     FinancialGoalsModule,
     AccountsPayableReceivableModule,
+    CreditCardsModule,
   ],
   controllers: [],
   providers: [],

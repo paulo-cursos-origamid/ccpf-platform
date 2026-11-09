@@ -36,6 +36,21 @@ datasource db {
 
 // Usuário global da plataforma.
 // O usuário pode participar de vários Tenants através de TenantMember.
+
+enum CreditCardBrand {
+  VISA
+  MASTERCARD
+  ELO
+  AMEX
+  HIPERCARD
+  OTHER
+}
+
+enum CreditCardStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 model User {
   id                         String    @id @default(uuid())
   name                       String
@@ -70,6 +85,7 @@ model User {
   financialGoalContributions     FinancialGoalContribution[]
   financialObligations           FinancialObligation[]
   financialObligationSettlements FinancialObligationSettlement[]
+  creditCardPurchases CreditCardPurchase[]
 }
 
 enum UserRole {
@@ -96,6 +112,7 @@ model Tenant {
 
   members       TenantMember[]
   accounts      Account[]
+  creditCards   CreditCard[]
   categories    Category[]
   subscriptions Subscription[]
   invoices      Invoice[]
@@ -119,6 +136,9 @@ model Tenant {
   financialObligationSettlements FinancialObligationSettlement[]
 
   @@index([billingAccountId])
+  creditCardPurchases CreditCardPurchase[]
+  creditCardInvoices CreditCardInvoice[]
+  creditCardInstallments CreditCardInstallment[]
 }
 
 // Estado operacional do Tenant.
@@ -534,8 +554,9 @@ model Account {
   ledgerEntries     LedgerEntry[]
   installmentPlans  InstallmentPlan[]
 
-  recurringBills       RecurringBill[]
-  financialObligations FinancialObligation[]
+  recurringBills                 RecurringBill[]
+  financialObligations           FinancialObligation[]
+  financialObligationSettlements FinancialObligationSettlement[]
 
   @@unique([id, tenantId])
   @@index([tenantId])
@@ -794,6 +815,7 @@ model Category {
   @@index([tenantId, type])
   @@index([parentId])
   @@index([deletedAt])
+  creditCardPurchases CreditCardPurchase[]
 }
 
 // Subcategoria vinculada a uma categoria.
@@ -827,6 +849,7 @@ model SubCategory {
   @@index([categoryId])
   @@index([templateId])
   @@index([deletedAt])
+  creditCardPurchases CreditCardPurchase[]
 }
 
 enum CategoryDomain {
@@ -910,6 +933,7 @@ enum LedgerReferenceType {
   TRANSFER
   ADJUSTMENT
   REVERSAL
+  CREDIT_CARD_INVOICE_PAYMENT
 }
 
 // ============================================================
@@ -1232,8 +1256,8 @@ model FinancialObligation {
   id            String                        @id @default(cuid())
   tenantId      String
   userId        String
-  accountId     String
-  categoryId    String
+  accountId     String?
+  categoryId    String?
   subCategoryId String?
   transactionId String?                       @unique
   sourceType    FinancialObligationSourceType @default(MANUAL)
@@ -1253,8 +1277,8 @@ model FinancialObligation {
 
   tenant      Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user        User                            @relation(fields: [userId], references: [id], onDelete: Restrict)
-  account     Account                         @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
-  category    Category                        @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  account     Account?                        @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  category    Category?                       @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
   subCategory SubCategory?                    @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict)
   transaction Transaction?                    @relation(fields: [transactionId], references: [id], onDelete: Restrict)
   settlements FinancialObligationSettlement[]
@@ -1271,6 +1295,7 @@ model FinancialObligationSettlement {
   obligationId  String
   tenantId      String
   userId        String
+  accountId     String
   transactionId String? @unique
 
   principalAmount Decimal @db.Decimal(12, 2)
@@ -1282,10 +1307,112 @@ model FinancialObligationSettlement {
   settledAt   DateTime
   createdAt   DateTime            @default(now())
   obligation  FinancialObligation @relation(fields: [obligationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  account     Account             @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
   tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user        User                @relation(fields: [userId], references: [id], onDelete: Restrict)
   transaction Transaction?        @relation(fields: [transactionId], references: [id], onDelete: Restrict)
 
   @@index([tenantId, obligationId, settledAt])
   @@index([tenantId, userId])
+  @@index([tenantId, accountId, settledAt])
+}
+
+model CreditCard {
+  id             String           @id @default(uuid())
+  tenantId       String
+  name           String
+  brand          CreditCardBrand
+  lastFourDigits String?
+  creditLimit    Decimal          @db.Decimal(12, 2)
+  closingDay     Int
+  dueDay         Int
+  status         CreditCardStatus @default(ACTIVE)
+  archivedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  purchases CreditCardPurchase[]
+  invoices CreditCardInvoice[]
+}
+
+
+enum CreditCardInvoiceStatus {
+  OPEN
+  CLOSED
+  PAID
+}
+
+
+model CreditCardPurchase {
+  id               String   @id @default(cuid())
+  tenantId         String
+  userId           String
+  creditCardId     String
+  categoryId       String
+  subCategoryId    String?
+  title            String
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  purchaseDate     DateTime
+  installmentCount Int
+  description      String?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  creditCard   CreditCard   @relation(fields: [creditCardId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  category     Category     @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  subCategory  SubCategory? @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict, onUpdate: Cascade)
+  installments CreditCardInstallment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, tenantId])
+  @@index([tenantId, creditCardId, purchaseDate])
+  @@index([tenantId, categoryId, purchaseDate])
+}
+
+model CreditCardInvoice {
+  id             String                  @id @default(cuid())
+  tenantId       String
+  creditCardId   String
+  referenceMonth DateTime
+  closingDate    DateTime
+  dueDate        DateTime
+  status         CreditCardInvoiceStatus @default(OPEN)
+
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  creditCard   CreditCard               @relation(fields: [creditCardId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  installments CreditCardInstallment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, creditCardId, referenceMonth])
+  @@index([tenantId, status, dueDate])
+}
+
+model CreditCardInstallment {
+  id                String   @id @default(cuid())
+  tenantId          String
+  purchaseId        String
+  invoiceId         String
+  installmentNumber Int
+  amount            Decimal  @db.Decimal(12, 2)
+  dueDate           DateTime
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  purchase CreditCardPurchase @relation(fields: [purchaseId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+  invoice  CreditCardInvoice  @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, purchaseId, installmentNumber])
+  @@index([tenantId, invoiceId, dueDate])
+  @@index([tenantId, purchaseId])
 }

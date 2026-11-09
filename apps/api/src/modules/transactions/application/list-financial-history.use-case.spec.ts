@@ -6,21 +6,31 @@ describe('ListFinancialHistoryUseCase', () => {
   let useCase: ListFinancialHistoryUseCase;
   let transactionFindMany: jest.Mock;
   let transferFindMany: jest.Mock;
+  let installmentFindMany: jest.Mock;
+  let recurringOccurrenceFindMany: jest.Mock;
   let ledgerFindMany: jest.Mock;
   let prisma: {
     transaction: { findMany: jest.Mock };
     transfer: { findMany: jest.Mock };
+    installment: { findMany: jest.Mock };
+    recurringBillOccurrence: { findMany: jest.Mock };
     ledgerEntry: { findMany: jest.Mock };
   };
 
   beforeEach(() => {
     transactionFindMany = jest.fn().mockResolvedValue([]);
     transferFindMany = jest.fn().mockResolvedValue([]);
+    installmentFindMany = jest.fn().mockResolvedValue([]);
+    recurringOccurrenceFindMany = jest.fn().mockResolvedValue([]);
     ledgerFindMany = jest.fn().mockResolvedValue([]);
 
     prisma = {
       transaction: { findMany: transactionFindMany },
       transfer: { findMany: transferFindMany },
+      installment: { findMany: installmentFindMany },
+      recurringBillOccurrence: {
+        findMany: recurringOccurrenceFindMany,
+      },
       ledgerEntry: { findMany: ledgerFindMany },
     };
 
