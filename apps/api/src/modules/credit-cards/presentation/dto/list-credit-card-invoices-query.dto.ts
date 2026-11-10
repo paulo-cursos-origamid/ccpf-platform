@@ -1,5 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListCreditCardInvoicesQueryDto {
   @ApiPropertyOptional({ description: 'Filtrar por cartão de crédito.' })
@@ -30,4 +39,28 @@ export class ListCreditCardInvoicesQueryDto {
   @IsOptional()
   @IsDateString()
   referenceMonthTo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Número da página.',
+    default: 1,
+    minimum: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade de faturas por página.',
+    default: 10,
+    minimum: 1,
+    maximum: 100,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

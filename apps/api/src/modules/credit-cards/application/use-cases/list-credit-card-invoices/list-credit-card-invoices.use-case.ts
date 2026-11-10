@@ -17,6 +17,8 @@ export interface ListCreditCardInvoicesInput {
   status?: 'OPEN' | 'CLOSED' | 'PAID';
   referenceMonthFrom?: string;
   referenceMonthTo?: string;
+  page?: number;
+  limit?: number;
 }
 
 @Injectable()
@@ -24,6 +26,10 @@ export class ListCreditCardInvoicesUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(input: ListCreditCardInvoicesInput) {
+    const page = Math.max(1, input.page ?? 1);
+    const limit = Math.min(100, Math.max(1, input.limit ?? 10));
+    const skip = (page - 1) * limit;
+
     const from = input.referenceMonthFrom
       ? new Date(input.referenceMonthFrom)
       : undefined;
@@ -64,14 +70,27 @@ export class ListCreditCardInvoicesUseCase {
       };
     }
 
-    const invoices = await this.prisma.creditCardInvoice.findMany({
-      where,
-      include: creditCardInvoiceDetailsInclude,
-      orderBy: [{ referenceMonth: 'desc' }, { dueDate: 'asc' }],
-    });
+    const [invoices, total] = await Promise.all([
+      this.prisma.creditCardInvoice.findMany({
+        where,
+        skip,
+        take: limit,
+        include: creditCardInvoiceDetailsInclude,
+        orderBy: [{ referenceMonth: 'desc' }, { dueDate: 'asc' }],
+      }),
+      this.prisma.creditCardInvoice.count({ where }),
+    ]);
 
     if (invoices.length === 0) {
-      return [];
+      return {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
     }
 
     const invoiceIds = invoices.map((invoice) => invoice.id);
@@ -91,11 +110,19 @@ export class ListCreditCardInvoicesUseCase {
         .map((obligation) => [obligation.sourceId as string, obligation]),
     );
 
-    return invoices.map((invoice) =>
-      presentCreditCardInvoice(
-        invoice,
-        obligationsByInvoiceId.get(invoice.id),
+    return {
+      data: invoices.map((invoice) =>
+        presentCreditCardInvoice(
+          invoice,
+          obligationsByInvoiceId.get(invoice.id),
+        ),
       ),
-    );
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }
