@@ -162,6 +162,13 @@ export function presentCreditCardInvoice(
       discountAmount: discountAmount.toFixed(2),
       financialObligationStatus: obligation?.status ?? null,
     },
+    settlements: settlements.map((settlement) => ({
+      principalAmount: settlement.principalAmount.toFixed(2),
+      interestAmount: settlement.interestAmount.toFixed(2),
+      feeAmount: settlement.feeAmount.toFixed(2),
+      discountAmount: settlement.discountAmount.toFixed(2),
+      settledAt: settlement.settledAt,
+    })),
     purchases: Array.from(purchases.values()).map((purchase) => ({
       id: purchase.id,
       title: purchase.title,

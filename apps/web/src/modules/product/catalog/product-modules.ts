@@ -20,6 +20,7 @@ import {
   BusFront,
   Car,
   Calendar,
+  CreditCard,
   CircleDollarSign,
   Ellipsis,
   FileChartColumn,
@@ -37,6 +38,7 @@ import type { PlanFeatureCode } from "@/modules/billing";
 export type ProductModuleCode =
   | "DASHBOARD"
   | "ACCOUNTS"
+  | "CREDIT_CARDS"
   | "FINANCIAL_GOALS"
   | "FINANCIAL_OBLIGATIONS"
   | "CATEGORIES"
@@ -124,6 +126,17 @@ export const productModules: ProductModule[] = [
     icon: Wallet,
     href: "/dashboard/accounts",
     feature: null,
+    implemented: true,
+    tenantRequired: true,
+  },
+
+  {
+    code: "CREDIT_CARDS",
+    label: "Cartões de crédito",
+    section: "Financeiro",
+    icon: CreditCard,
+    href: "/dashboard/credit-cards",
+    feature: "DOMESTIC",
     implemented: true,
     tenantRequired: true,
   },

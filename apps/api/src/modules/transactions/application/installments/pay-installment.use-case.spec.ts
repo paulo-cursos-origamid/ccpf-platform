@@ -77,7 +77,7 @@ describe('PayInstallmentUseCase', () => {
       obligationId: base.id,
       tenantId: base.tenantId,
       userId: input.userId,
-      accountId: base.accountId,
+      accountId: base.accountId ?? 'account-1',
       principalAmount: '100.00',
       interestAmount: '0.00',
       feeAmount: '0.00',

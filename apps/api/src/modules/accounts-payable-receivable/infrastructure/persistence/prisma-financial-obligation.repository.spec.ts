@@ -64,7 +64,7 @@ describe('PrismaFinancialObligationRepository', () => {
       obligationId: obligation.id,
       tenantId: obligation.tenantId,
       userId: 'user-1',
-      accountId: options.accountId ?? obligation.accountId,
+      accountId: options.accountId ?? obligation.accountId ?? 'account-1',
       principalAmount,
       interestAmount: options.interestAmount ?? '0.00',
       feeAmount: options.feeAmount ?? '0.00',

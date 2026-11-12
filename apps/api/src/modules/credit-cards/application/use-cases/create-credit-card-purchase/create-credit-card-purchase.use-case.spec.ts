@@ -26,7 +26,8 @@ describe('CreateCreditCardPurchaseUseCase', () => {
       findFirstOrThrow: jest.Mock;
     };
     creditCardInvoice: { upsert: jest.Mock };
-    creditCardInstallment: { createMany: jest.Mock };
+    creditCardInstallment: { createMany: jest.Mock; aggregate: jest.Mock };
+    financialObligation: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
     transaction: { create: jest.Mock };
     ledgerEntry: { create: jest.Mock };
     account: { updateMany: jest.Mock };

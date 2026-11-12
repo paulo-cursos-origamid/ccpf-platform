@@ -89,6 +89,7 @@ describe('GetCreditCardInvoiceUseCase', () => {
       discountAmount: '0.00',
       financialObligationStatus: null,
     });
+    expect(result.settlements).toEqual([]);
     expect(result.purchases[0].installments).toHaveLength(1);
 
     expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith(

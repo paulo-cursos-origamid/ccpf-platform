@@ -65,7 +65,7 @@ describe('Billing API (e2e)', () => {
       },
     ];
 
-    const insertedPlanIds = await prisma.$transaction(async (tx) => {
+    const insertedPlanIds = await prisma!.$transaction(async (tx) => {
       const ids: string[] = [];
 
       for (const plan of publicPlans) {

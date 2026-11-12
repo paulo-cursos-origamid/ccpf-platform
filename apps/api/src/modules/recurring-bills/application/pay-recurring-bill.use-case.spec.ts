@@ -59,7 +59,7 @@ describe('PayRecurringBillUseCase', () => {
       obligationId: base.id,
       tenantId: base.tenantId,
       userId: input.userId,
-      accountId: base.accountId,
+      accountId: base.accountId ?? 'account-1',
       principalAmount: '150.00',
       interestAmount: options.interestAmount ?? '0.00',
       feeAmount: options.feeAmount ?? '0.00',
