@@ -1,0 +1,305 @@
+.modal {
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.invoiceHeader,
+.sectionHeader,
+.purchaseHeader,
+.historyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.invoiceHeader {
+  h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  p {
+    margin: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+}
+
+.reference {
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+  text-transform: capitalize;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sxs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.statusOPEN {
+  background: var(--warning-soft);
+  color: var(--text-warning);
+}
+
+.statusCLOSED {
+  background: rgba(var(--text-secondary-rgb), 0.1);
+  color: var(--text-secondary);
+}
+
+.statusPAID {
+  background: var(--success-soft);
+  color: var(--text-success);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.sectionHeader {
+  align-items: center;
+
+  h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+}
+
+.purchaseList,
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.purchase,
+.historyItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+}
+
+.purchaseHeader {
+  strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  span {
+    display: block;
+    margin-top: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+}
+
+.purchaseAmounts {
+  text-align: right;
+}
+
+.installments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.installmentHeading {
+  margin-bottom: var(--spacing-xs);
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+}
+
+.installment {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--spacing-sm);
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+
+  strong {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.historyHeader {
+  align-items: center;
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+  }
+}
+
+.historyValues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-lg);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sxs);
+  }
+}
+
+.muted,
+.helper {
+  color: var(--text-secondary);
+  font-size: var(--font-sxs);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.paymentSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: var(--font-lg);
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.feedback,
+.empty,
+.error,
+.warning,
+.success {
+  margin: 0;
+  font-size: var(--font-sm);
+}
+
+.feedback,
+.empty,
+.helper {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.warning {
+  color: var(--text-warning);
+}
+
+.success {
+  color: var(--text-success);
+}
+
+@media (max-width: 640px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .invoiceHeader,
+  .purchaseHeader,
+  .historyHeader {
+    flex-direction: column;
+  }
+
+  .purchaseAmounts {
+    text-align: left;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+
+    button {
+      width: 100%;
+    }
+  }
+}
