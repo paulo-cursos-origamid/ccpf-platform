@@ -560,4 +560,148 @@ describe('PrismaFinancialObligationRepository', () => {
       }),
     );
   });
+  it("lists obligations with pagination, filters and financial summary", async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const startDate = new Date("2026-11-01T00:00:00.000Z");
+    const endDate = new Date("2026-11-30T23:59:59.999Z");
+
+    const pageRecords = [
+      rawObligation({ id: "pending-1", amount: new Prisma.Decimal("100.00"), dueDate: yesterday }),
+      rawObligation({ id: "partial-1", amount: new Prisma.Decimal("80.00"), status: "PARTIALLY_SETTLED", dueDate: yesterday }),
+    ];
+
+    const summaryRecords = [
+      rawObligation({ id: "pending-1", amount: new Prisma.Decimal("100.00"), dueDate: yesterday }),
+      rawObligation({
+        id: "partial-1",
+        amount: new Prisma.Decimal("80.00"),
+        status: "PARTIALLY_SETTLED",
+        dueDate: yesterday,
+        settlements: [{ principalAmount: new Prisma.Decimal("20.00") }],
+      }),
+      rawObligation({
+        id: "settled-1",
+        amount: new Prisma.Decimal("50.00"),
+        status: "SETTLED",
+        dueDate: yesterday,
+        settlements: [{ principalAmount: new Prisma.Decimal("50.00") }],
+      }),
+      rawObligation({
+        id: "canceled-1",
+        amount: new Prisma.Decimal("30.00"),
+        status: "CANCELED",
+        dueDate: yesterday,
+      }),
+    ];
+
+    prisma.financialObligation.findMany
+      .mockResolvedValueOnce(pageRecords)
+      .mockResolvedValueOnce(summaryRecords);
+
+    const result = await repository.findManyPaginated("tenant-1", "user-1", {
+      type: FinancialObligationType.PAYABLE,
+      status: undefined,
+      sourceType: FinancialObligationSourceType.MANUAL,
+      accountId: "account-1",
+      startDate,
+      endDate,
+      page: 2,
+      limit: 10,
+    });
+
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination).toEqual({
+      page: 2,
+      limit: 10,
+      totalItems: 4,
+      totalPages: 1,
+    });
+
+    expect(result.summary).toEqual({
+      totalCount: 4,
+      pendingCount: 1,
+      partiallySettledCount: 1,
+      settledCount: 1,
+      canceledCount: 1,
+      totalRemainingAmount: "160.00",
+      overdueCount: 2,
+      overdueRemainingAmount: "160.00",
+    });
+
+    expect(prisma.financialObligation.findMany).toHaveBeenCalledTimes(2);
+
+    expect(prisma.financialObligation.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        skip: 10,
+        take: 10,
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+        where: expect.objectContaining({
+          tenantId: "tenant-1",
+          type: FinancialObligationType.PAYABLE,
+          sourceType: FinancialObligationSourceType.MANUAL,
+          accountId: "account-1",
+          dueDate: { gte: startDate, lte: endDate },
+          OR: expect.arrayContaining([
+            {
+              account: {
+                is: {
+                  accountMembers: {
+                    some: { userId: "user-1", status: "ACTIVE" },
+                  },
+                },
+              },
+            },
+          ]),
+        }),
+      }),
+    );
+
+    expect(prisma.financialObligation.findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: "tenant-1",
+          type: FinancialObligationType.PAYABLE,
+          sourceType: FinancialObligationSourceType.MANUAL,
+          accountId: "account-1",
+        }),
+        select: expect.objectContaining({
+          amount: true,
+          status: true,
+          dueDate: true,
+          settlements: {
+            select: { principalAmount: true },
+          },
+        }),
+      }),
+    );
+  });
+
+  it("normalizes pagination page and limit boundaries", async () => {
+    prisma.financialObligation.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const result = await repository.findManyPaginated("tenant-1", "user-1", {
+      page: -5,
+      limit: 500,
+    });
+
+    expect(result.pagination).toEqual({
+      page: 1,
+      limit: 100,
+      totalItems: 0,
+      totalPages: 1,
+    });
+
+    expect(prisma.financialObligation.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        skip: 0,
+        take: 100,
+      }),
+    );
+  });
+
 });

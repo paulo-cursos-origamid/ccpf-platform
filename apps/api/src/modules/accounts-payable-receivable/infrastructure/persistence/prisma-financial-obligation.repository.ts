@@ -19,6 +19,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma.servic
 import { FinancialObligationEntity } from '../../domain/entities/financial-obligation.entity';
 import { FinancialObligationSettlementEntity } from '../../domain/entities/financial-obligation-settlement.entity';
 import {
+  FinancialObligationFilters,
   FinancialObligationRepository,
   SettleFinancialObligationOptions,
 } from '../../domain/repositories/financial-obligation.repository';
@@ -171,10 +172,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
   async findMany(
     tenantId: string,
     userId: string,
-    filters: {
-      type?: FinancialObligationType;
-      status?: FinancialObligationStatus;
-    },
+    filters: FinancialObligationFilters,
   ): Promise<FinancialObligationEntity[]> {
     const obligations = await this.prisma.financialObligation.findMany({
       where: {
@@ -198,6 +196,16 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
         ],
         ...(filters.type ? { type: filters.type } : {}),
         ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
+        ...(filters.accountId ? { accountId: filters.accountId } : {}),
+        ...(filters.startDate || filters.endDate
+          ? {
+              dueDate: {
+                ...(filters.startDate ? { gte: filters.startDate } : {}),
+                ...(filters.endDate ? { lte: filters.endDate } : {}),
+              },
+            }
+          : {}),
       },
       include: { settlements: true },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
@@ -205,6 +213,148 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
 
     return obligations.map((obligation) => this.toDomain(obligation));
   }
+  async findManyPaginated(
+    tenantId: string,
+    userId: string,
+    filters: Parameters<FinancialObligationRepository["findManyPaginated"]>[2],
+  ) {
+    const page = Math.max(1, Math.floor(filters.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Math.floor(filters.limit ?? 20)));
+
+    const where: import("@prisma/client").Prisma.FinancialObligationWhereInput = {
+      tenantId,
+      OR: [
+        {
+          account: {
+            is: {
+              accountMembers: {
+                some: { userId, status: "ACTIVE" },
+              },
+            },
+          },
+        },
+        {
+          sourceType: PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+          tenant: {
+            members: {
+              some: { userId, status: "ACTIVE" },
+            },
+          },
+        },
+      ],
+      ...(filters.type ? { type: filters.type } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
+      ...(filters.accountId ? { accountId: filters.accountId } : {}),
+      ...(filters.startDate || filters.endDate
+        ? {
+            dueDate: {
+              ...(filters.startDate ? { gte: filters.startDate } : {}),
+              ...(filters.endDate ? { lte: filters.endDate } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [records, summaryRecords] = await Promise.all([
+      this.prisma.financialObligation.findMany({
+        where,
+        include: { settlements: true },
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.financialObligation.findMany({
+        where,
+        select: {
+          amount: true,
+          status: true,
+          dueDate: true,
+          settlements: {
+            select: { principalAmount: true },
+          },
+        },
+      }),
+    ]);
+
+    const toCents = (value: unknown): bigint => {
+      const decimal = String(value ?? "0");
+      const [whole, fraction = ""] = decimal.split(".");
+      const normalized = (fraction + "00").slice(0, 2);
+      return BigInt(whole) * 100n + BigInt(normalized);
+    };
+
+    const money = (value: bigint): string => {
+      const absolute = value < 0n ? -value : value;
+      const formatted = `${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`;
+      return value < 0n ? `-${formatted}` : formatted;
+    };
+
+    const now = new Date();
+
+    let totalRemaining = 0n;
+    let overdueRemaining = 0n;
+    let pendingCount = 0;
+    let partiallySettledCount = 0;
+    let settledCount = 0;
+    let canceledCount = 0;
+    let overdueCount = 0;
+
+    for (const item of summaryRecords) {
+      const status = item.status as string;
+
+      if (status === "PENDING") pendingCount++;
+      if (status === "PARTIALLY_SETTLED") partiallySettledCount++;
+      if (status === "SETTLED") settledCount++;
+      if (status === "CANCELED") canceledCount++;
+
+      const principalSettled = item.settlements.reduce(
+        (total, settlement) =>
+          total + toCents(settlement.principalAmount),
+        0n,
+      );
+
+      const remaining = [
+        toCents(item.amount) - principalSettled,
+        0n,
+      ].reduce((a, b) => a > b ? a : b);
+
+      const isOpen =
+        status === "PENDING" || status === "PARTIALLY_SETTLED";
+
+      if (isOpen) {
+        totalRemaining += remaining;
+
+        if (item.dueDate < now) {
+          overdueCount++;
+          overdueRemaining += remaining;
+        }
+      }
+    }
+
+    const totalItems = summaryRecords.length;
+
+    return {
+      data: records.map((record) => this.toDomain(record)),
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / limit)),
+      },
+      summary: {
+        totalCount: totalItems,
+        pendingCount,
+        partiallySettledCount,
+        settledCount,
+        canceledCount,
+        totalRemainingAmount: money(totalRemaining),
+        overdueCount,
+        overdueRemainingAmount: money(overdueRemaining),
+      },
+    };
+  }
+
   async update(
     obligation: FinancialObligationEntity,
   ): Promise<FinancialObligationEntity> {

@@ -33,9 +33,11 @@ import { UpdateFinancialObligationUseCase } from '../application/use-cases/updat
 import {
   CreateFinancialObligationDto,
   FinancialObligationResponseDto,
+  PaginatedFinancialObligationsResponseDto,
   ListFinancialObligationsQuery,
   SettleFinancialObligationDto,
   UpdateFinancialObligationDto,
+  PaginatedFinancialObligationsQuery,
 } from './accounts-payable-receivable.dto';
 
 @ApiTags('Accounts Payable/Receivable')
@@ -99,7 +101,33 @@ export class AccountsPayableReceivableController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: ListFinancialObligationsQuery,
   ) {
-    return this.listObligations.execute(tenant.tenantId, tenant.userId, query);
+    return this.listObligations.execute(tenant.tenantId, tenant.userId, {
+      ...query,
+      startDate: query.startDate ? new Date(query.startDate) : undefined,
+      endDate: query.endDate ? new Date(query.endDate) : undefined,
+    });
+  }
+
+  @Get('paginated')
+  @ApiOperation({
+    summary: 'Listar compromissos do Espaço ativo',
+    description:
+      'Aceita filtros opcionais por tipo (PAYABLE/RECEIVABLE) e estado.',
+  })
+  @ApiOkResponse({ type: PaginatedFinancialObligationsResponseDto })
+  listPaginated(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: PaginatedFinancialObligationsQuery,
+  ) {
+    return this.listObligations.executePaginated(
+      tenant.tenantId,
+      tenant.userId,
+      {
+        ...query,
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined,
+      },
+    );
   }
 
   @Get(':id')

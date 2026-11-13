@@ -15,4 +15,12 @@ export class ListFinancialObligationsUseCase {
   ) {
     return this.repository.findMany(tenantId, userId, filters);
   }
+
+  executePaginated(
+    tenantId: string,
+    userId: string,
+    filters: FinancialObligationFilters,
+  ) {
+    return this.repository.findManyPaginated(tenantId, userId, filters);
+  }
 }

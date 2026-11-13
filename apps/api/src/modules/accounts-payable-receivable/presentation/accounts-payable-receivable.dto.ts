@@ -1,15 +1,19 @@
-import { FinancialObligationSourceType } from '../domain/enums/financial-obligation-source-type.enum';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FinancialObligationStatus } from '../domain/enums/financial-obligation-status.enum';
-import { FinancialObligationType } from '../domain/enums/financial-obligation-type.enum';
+import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
+import { FinancialObligationSourceType } from '../domain/enums/financial-obligation-source-type.enum';
+import { FinancialObligationStatus } from '../domain/enums/financial-obligation-status.enum';
+import { FinancialObligationType } from '../domain/enums/financial-obligation-type.enum';
 
 /** Payload validado para cadastrar um compromisso a pagar ou receber. */
 export class CreateFinancialObligationDto {
@@ -185,7 +189,7 @@ export class SettleFinancialObligationDto {
 }
 
 /** Filtros opcionais para listar compromissos por direção e estado. */
-export class ListFinancialObligationsQuery {
+export class PaginatedFinancialObligationsQuery {
   @ApiPropertyOptional({ enum: FinancialObligationType })
   @IsOptional()
   @IsEnum(FinancialObligationType)
@@ -195,6 +199,34 @@ export class ListFinancialObligationsQuery {
   @IsOptional()
   @IsEnum(FinancialObligationStatus)
   status?: FinancialObligationStatus;
+  @IsOptional()
+  @IsEnum(FinancialObligationSourceType)
+  sourceType?: FinancialObligationSourceType;
+
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit = 20;
 }
 
 /** Resposta pública compartilhada pelos endpoints de compromissos. */
@@ -261,4 +293,60 @@ export class FinancialObligationResponseDto {
 
   @ApiProperty({ type: String, format: 'date-time' })
   updatedAt!: Date;
+}
+
+export class ListFinancialObligationsQuery extends OmitType(
+  PaginatedFinancialObligationsQuery,
+  ['page', 'limit'] as const,
+) {}
+
+export class FinancialObligationPaginationDto {
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  limit!: number;
+
+  @ApiProperty({ example: 45 })
+  totalItems!: number;
+
+  @ApiProperty({ example: 3 })
+  totalPages!: number;
+}
+
+export class FinancialObligationSummaryDto {
+  @ApiProperty({ example: 45 })
+  totalCount!: number;
+
+  @ApiProperty({ example: 20 })
+  pendingCount!: number;
+
+  @ApiProperty({ example: 5 })
+  partiallySettledCount!: number;
+
+  @ApiProperty({ example: 15 })
+  settledCount!: number;
+
+  @ApiProperty({ example: 5 })
+  canceledCount!: number;
+
+  @ApiProperty({ example: '1250.00' })
+  totalRemainingAmount!: string;
+
+  @ApiProperty({ example: 3 })
+  overdueCount!: number;
+
+  @ApiProperty({ example: '450.00' })
+  overdueRemainingAmount!: string;
+}
+
+export class PaginatedFinancialObligationsResponseDto {
+  @ApiProperty({ type: [FinancialObligationResponseDto] })
+  data!: FinancialObligationResponseDto[];
+
+  @ApiProperty({ type: FinancialObligationPaginationDto })
+  pagination!: FinancialObligationPaginationDto;
+
+  @ApiProperty({ type: FinancialObligationSummaryDto })
+  summary!: FinancialObligationSummaryDto;
 }

@@ -7,6 +7,34 @@ import { FinancialObligationSourceType } from '../enums/financial-obligation-sou
 export interface FinancialObligationFilters {
   type?: FinancialObligationType;
   status?: FinancialObligationStatus;
+  sourceType?: FinancialObligationSourceType;
+  accountId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  page?: number;
+  limit?: number;
+}
+
+export interface FinancialObligationSummary {
+  totalCount: number;
+  pendingCount: number;
+  partiallySettledCount: number;
+  settledCount: number;
+  canceledCount: number;
+  totalRemainingAmount: string;
+  overdueCount: number;
+  overdueRemainingAmount: string;
+}
+
+export interface PaginatedFinancialObligations {
+  data: FinancialObligationEntity[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+  summary: FinancialObligationSummary;
 }
 
 export interface SettleFinancialObligationOptions {
@@ -20,6 +48,11 @@ export abstract class FinancialObligationRepository {
   abstract findById(id: string, tenantId: string, userId: string): Promise<FinancialObligationEntity | null>;
   abstract findBySource(tenantId: string, userId: string, sourceType: FinancialObligationSourceType, sourceId: string): Promise<FinancialObligationEntity | null>;
   abstract findMany(tenantId: string, userId: string, filters: FinancialObligationFilters): Promise<FinancialObligationEntity[]>;
+  abstract findManyPaginated(
+    tenantId: string,
+    userId: string,
+    filters: FinancialObligationFilters,
+  ): Promise<PaginatedFinancialObligations>;
   abstract update(obligation: FinancialObligationEntity): Promise<FinancialObligationEntity>;
   abstract cancel(obligation: FinancialObligationEntity): Promise<void>;
   abstract settle(
