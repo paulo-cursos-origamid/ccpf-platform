@@ -298,7 +298,10 @@ export class FinancialObligationEntity {
     const isCardInvoice =
       this._sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE;
 
-    if (!isCardInvoice && !accountId) {
+    const isRecurringOccurrence =
+      this._sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE;
+
+    if (!isCardInvoice && !isRecurringOccurrence && !accountId) {
       throw new Error('Financial obligation account is required');
     }
 

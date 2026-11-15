@@ -15,7 +15,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service';
 export interface CreateRecurringBillInput {
   tenantId: string;
   userId: string;
-  accountId: string;
+  accountId?: string;
   categoryId: string;
   subCategoryId?: string;
   title: string;
@@ -78,34 +78,60 @@ export class CreateRecurringBillUseCase {
       }
     }
 
-    const account = await this.prisma.account.findFirst({
-      where: {
-        id: input.accountId,
-        tenantId: input.tenantId,
-        archivedAt: null,
-      },
-    });
+    let accountId: string | null = null;
 
-    if (!account) {
-      throw new NotFoundException('Conta não encontrada neste Espaço.');
-    }
+    if (input.accountId) {
+      const account = await this.prisma.account.findFirst({
+        where: {
+          id: input.accountId,
+          tenantId: input.tenantId,
+          archivedAt: null,
+        },
+      });
 
-    const membership = await this.prisma.accountMember.findFirst({
-      where: {
-        accountId: account.id,
-        userId: input.userId,
-        status: 'ACTIVE',
-      },
-    });
+      if (!account) {
+        throw new NotFoundException('Conta não encontrada neste Espaço.');
+      }
 
-    if (!membership) {
-      throw new ForbiddenException('Você não tem acesso a esta conta.');
-    }
+      const membership = await this.prisma.accountMember.findFirst({
+        where: {
+          accountId: account.id,
+          userId: input.userId,
+          status: 'ACTIVE',
+        },
+      });
 
-    if (membership.role === 'VIEWER') {
-      throw new ForbiddenException(
-        'Você não tem permissão para cadastrar contas recorrentes.',
-      );
+      if (!membership) {
+        throw new ForbiddenException('Você não tem acesso a esta conta.');
+      }
+
+      if (membership.role === 'VIEWER') {
+        throw new ForbiddenException(
+          'Você não tem permissão para cadastrar contas recorrentes.',
+        );
+      }
+
+      accountId = account.id;
+    } else {
+      const tenantMembership = await this.prisma.tenant.findFirst({
+        where: {
+          id: input.tenantId,
+          members: {
+            some: {
+              userId: input.userId,
+              status: 'ACTIVE',
+              role: { not: 'VIEWER' },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      if (!tenantMembership) {
+        throw new ForbiddenException(
+          'Você não tem permissão para cadastrar contas recorrentes.',
+        );
+      }
     }
 
     const category = await this.prisma.category.findFirst({
@@ -146,7 +172,7 @@ export class CreateRecurringBillUseCase {
       data: {
         tenantId: input.tenantId,
         userId: input.userId,
-        accountId: account.id,
+        accountId,
         categoryId: category.id,
         subCategoryId: input.subCategoryId ?? null,
         title,

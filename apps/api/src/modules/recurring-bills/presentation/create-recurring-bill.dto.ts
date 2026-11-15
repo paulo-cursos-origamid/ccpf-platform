@@ -23,9 +23,10 @@ export class CreateRecurringBillDto {
   @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/)
   expectedAmount?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  accountId!: string;
+  accountId?: string;
 
   @ApiProperty()
   @IsString()

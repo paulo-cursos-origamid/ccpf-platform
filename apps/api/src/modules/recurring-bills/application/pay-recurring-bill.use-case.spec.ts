@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { FinancialPaymentMethod, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { FinancialObligationEntity } from '../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
@@ -25,11 +25,14 @@ describe('PayRecurringBillUseCase', () => {
     occurrenceId: 'occurrence-1',
     amount: '150.00',
     paidAt: paidAt.toISOString(),
+    paymentMethod: FinancialPaymentMethod.CASH,
+    accountId: 'account-1',
   };
 
   let prisma: any;
   let obligations: any;
   let settleObligation: any;
+  let createCardPurchase: any;
   let useCase: PayRecurringBillUseCase;
 
   const createObligation = () =>
@@ -82,6 +85,7 @@ describe('PayRecurringBillUseCase', () => {
     recurringBillId: input.recurringBillId,
     status: 'PENDING',
     transactionId: null,
+    creditCardPurchaseId: null,
     dueDate: paidAt,
     expectedAmount: new Prisma.Decimal('150.00'),
     recurringBill: {
@@ -114,11 +118,90 @@ describe('PayRecurringBillUseCase', () => {
       execute: jest.fn().mockResolvedValue(createSettledObligation()),
     };
 
+    createCardPurchase = {
+      execute: jest.fn(),
+    };
+
     useCase = new PayRecurringBillUseCase(
       prisma as PrismaService,
       obligations as FinancialObligationRepository,
       settleObligation as SettleFinancialObligationUseCase,
+      createCardPurchase,
     );
+  });
+
+  it('converte a recorrência em compra no cartão atomicamente', async () => {
+    const tx = {
+      financialObligation: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      recurringBillOccurrence: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+
+    createCardPurchase.execute.mockImplementation(
+      async (_purchaseInput, afterCreate) => {
+        await afterCreate(tx, 'purchase-1');
+        return { id: 'purchase-1' };
+      },
+    );
+
+    const result = await useCase.execute({
+      ...input,
+      paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+      accountId: undefined,
+      creditCardId: 'card-1',
+    });
+
+    expect(createCardPurchase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: input.tenantId,
+        userId: input.userId,
+        creditCardId: 'card-1',
+        categoryId: 'category-1',
+        title: 'Conta de energia',
+        totalAmount: '150.00',
+        installmentCount: 1,
+      }),
+      expect.any(Function),
+    );
+
+    expect(tx.financialObligation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'obligation-1',
+        tenantId: input.tenantId,
+        status: 'PENDING',
+      },
+      data: { status: 'CONVERTED' },
+    });
+
+    expect(tx.recurringBillOccurrence.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: input.occurrenceId,
+        tenantId: input.tenantId,
+        recurringBillId: input.recurringBillId,
+        status: 'PENDING',
+        transactionId: null,
+        creditCardPurchaseId: null,
+      },
+      data: expect.objectContaining({
+        status: 'CHARGED_TO_CARD',
+        paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+        creditCardPurchaseId: 'purchase-1',
+        paidAmount: new Prisma.Decimal('150.00'),
+        paidAt,
+      }),
+    });
+
+    expect(settleObligation.execute).not.toHaveBeenCalled();
+    expect(prisma.recurringBillOccurrence.updateMany).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.objectContaining({
+      status: 'CHARGED_TO_CARD',
+      creditCardPurchaseId: 'purchase-1',
+      transactionId: null,
+      paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+    }));
   });
 
   it('liquida a obrigação central e sincroniza a ocorrência', async () => {
@@ -129,6 +212,7 @@ describe('PayRecurringBillUseCase', () => {
       tenantId: input.tenantId,
       userId: input.userId,
       settledAt: paidAt,
+      accountId: 'account-1',
       principalAmount: '150.00',
       interestAmount: '0.00',
       feeAmount: '0.00',
@@ -149,6 +233,7 @@ describe('PayRecurringBillUseCase', () => {
         paidAmount: new Prisma.Decimal('150.00'),
         paidAt,
         transactionId: 'transaction-1',
+        paymentMethod: FinancialPaymentMethod.CASH,
       },
     });
 

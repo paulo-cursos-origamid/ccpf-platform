@@ -46,16 +46,23 @@ export class SettleFinancialObligationUseCase {
       obligation.sourceType ===
       FinancialObligationSourceType.CREDIT_CARD_INVOICE;
 
+    const isRecurringOccurrence =
+      obligation.sourceType ===
+      FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE;
+
     const obligationAccountId = obligation.accountId;
-    const settlementAccountId = isCardInvoice
-      ? input.accountId?.trim()
-      : obligationAccountId;
+    const settlementAccountId =
+      isCardInvoice || isRecurringOccurrence
+        ? input.accountId?.trim()
+        : obligationAccountId;
 
     if (!settlementAccountId) {
       throw new BadRequestException(
         isCardInvoice
           ? 'Selecione a conta bancária utilizada para pagar a fatura.'
-          : 'A conta de referência do compromisso não está disponível.',
+          : isRecurringOccurrence
+            ? 'Selecione a conta utilizada para pagar a recorrência.'
+            : 'A conta de referência do compromisso não está disponível.',
       );
     }
 
@@ -77,15 +84,26 @@ export class SettleFinancialObligationUseCase {
         input.userId,
       );
     } else {
-      if (!obligationAccountId) {
-        throw new BadRequestException(
-          'A conta de referência do compromisso não está disponível.',
+      if (
+        !isRecurringOccurrence &&
+        input.accountId &&
+        input.accountId !== obligationAccountId
+      ) {
+        throw new ConflictException(
+          'A conta utilizada deve ser a conta de referência do compromisso.',
         );
       }
 
-      if (input.accountId && input.accountId !== obligationAccountId) {
-        throw new ConflictException(
-          'A conta utilizada deve ser a conta de referência do compromisso.',
+      if (isRecurringOccurrence) {
+        await this.obligations.assertTenantWriteAccess(
+          obligation.tenantId,
+          input.userId,
+        );
+
+        await this.obligations.assertAccountAccess(
+          settlementAccountId,
+          obligation.tenantId,
+          input.userId,
         );
       }
 
@@ -96,7 +114,7 @@ export class SettleFinancialObligationUseCase {
       }
 
       await this.obligations.validateReferences({
-        accountId: obligationAccountId,
+        accountId: settlementAccountId,
         categoryId: obligation.categoryId,
         subCategoryId: obligation.subCategoryId,
         type: obligation.type,

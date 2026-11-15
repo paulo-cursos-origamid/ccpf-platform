@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { FinancialPaymentMethod, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { FinancialObligationEntity } from '../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
@@ -13,6 +13,7 @@ import { FinancialObligationSourceType } from '../../accounts-payable-receivable
 import { FinancialObligationType } from '../../accounts-payable-receivable/domain/enums/financial-obligation-type.enum';
 import { FinancialObligationRepository } from '../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
 import { SettleFinancialObligationUseCase } from '../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
+import { CreateCreditCardPurchaseUseCase } from '../../credit-cards/application/use-cases/create-credit-card-purchase/create-credit-card-purchase.use-case';
 
 export interface PayRecurringBillInput {
   tenantId: string;
@@ -21,6 +22,9 @@ export interface PayRecurringBillInput {
   occurrenceId: string;
   amount: string;
   paidAt: string;
+  paymentMethod: FinancialPaymentMethod;
+  accountId?: string;
+  creditCardId?: string;
   description?: string;
 }
 
@@ -30,6 +34,7 @@ export class PayRecurringBillUseCase {
     private readonly prisma: PrismaService,
     private readonly obligations: FinancialObligationRepository,
     private readonly settleObligation: SettleFinancialObligationUseCase,
+    private readonly createCardPurchase: CreateCreditCardPurchaseUseCase,
   ) {}
 
   async execute(input: PayRecurringBillInput) {
@@ -105,7 +110,11 @@ export class PayRecurringBillUseCase {
       );
     }
 
-    if (occurrence.status !== 'PENDING' || occurrence.transactionId !== null) {
+    if (
+      occurrence.status !== 'PENDING' ||
+      occurrence.transactionId !== null ||
+      occurrence.creditCardPurchaseId !== null
+    ) {
       throw new ConflictException(
         'Este vencimento já foi pago ou cancelado.',
       );
@@ -152,6 +161,106 @@ export class PayRecurringBillUseCase {
       );
     }
 
+    if (input.paymentMethod === FinancialPaymentMethod.CREDIT_CARD) {
+      if (!input.creditCardId) {
+        throw new BadRequestException(
+          'Selecione o cartão de crédito para confirmar esta recorrência.',
+        );
+      }
+
+      if (obligation.status !== FinancialObligationStatus.PENDING) {
+        throw new ConflictException(
+          'A obrigação já possui liquidações e não pode ser convertida em compra no cartão.',
+        );
+      }
+
+      const purchase = await this.createCardPurchase.execute(
+        {
+          tenantId: input.tenantId,
+          userId: input.userId,
+          creditCardId: input.creditCardId,
+          categoryId: bill.categoryId,
+          subCategoryId: bill.subCategoryId ?? undefined,
+          title: bill.title,
+          totalAmount: cashAmount.toFixed(2),
+          purchaseDate: paidAt.toISOString(),
+          installmentCount: 1,
+          description: input.description?.trim() || bill.description || undefined,
+        },
+        async (tx, purchaseId) => {
+          const converted = await tx.financialObligation.updateMany({
+            where: {
+              id: obligation.id,
+              tenantId: input.tenantId,
+              status: 'PENDING',
+            },
+            data: { status: 'CONVERTED' },
+          });
+
+          if (converted.count !== 1) {
+            throw new ConflictException(
+              'A obrigação não pôde ser convertida em compra no cartão.',
+            );
+          }
+
+          const updated = await tx.recurringBillOccurrence.updateMany({
+            where: {
+              id: input.occurrenceId,
+              tenantId: input.tenantId,
+              recurringBillId: input.recurringBillId,
+              status: 'PENDING',
+              transactionId: null,
+              creditCardPurchaseId: null,
+            },
+            data: {
+              status: 'CHARGED_TO_CARD',
+              paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+              creditCardPurchaseId: purchaseId,
+              paidAmount: cashAmount,
+              paidAt,
+            },
+          });
+
+          if (updated.count !== 1) {
+            throw new ConflictException(
+              'O vencimento já foi confirmado por outra operação.',
+            );
+          }
+        },
+      );
+
+      return {
+        occurrenceId: input.occurrenceId,
+        recurringBillId: input.recurringBillId,
+        creditCardPurchaseId: purchase.id,
+        transactionId: null,
+        status: 'CHARGED_TO_CARD',
+        paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+        paidAmount: cashAmount.toFixed(2),
+        paidAt,
+      };
+    }
+
+    if (
+      input.paymentMethod !== FinancialPaymentMethod.CASH &&
+      input.paymentMethod !== FinancialPaymentMethod.PIX &&
+      input.paymentMethod !== FinancialPaymentMethod.BANK_SLIP
+    ) {
+      throw new BadRequestException('Forma de pagamento inválida.');
+    }
+
+    if (!input.accountId) {
+      throw new BadRequestException(
+        'Selecione a conta utilizada para confirmar esta recorrência.',
+      );
+    }
+
+    if (input.creditCardId) {
+      throw new BadRequestException(
+        'Não informe cartão para pagamentos fora do cartão de crédito.',
+      );
+    }
+
     const principalAmount = new Prisma.Decimal(obligation.remainingAmount);
 
     if (principalAmount.lte(0)) {
@@ -178,6 +287,7 @@ export class PayRecurringBillUseCase {
         tenantId: input.tenantId,
         userId: input.userId,
         settledAt: paidAt,
+        accountId: input.accountId,
         principalAmount: principalAmount.toFixed(2),
         interestAmount: interestAmount.toFixed(2),
         feeAmount: '0.00',
@@ -240,6 +350,7 @@ export class PayRecurringBillUseCase {
       },
       data: {
         status: 'PAID',
+        paymentMethod: input.paymentMethod,
         paidAmount,
         paidAt,
         transactionId,

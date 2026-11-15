@@ -4,4 +4,5 @@ export enum FinancialObligationStatus {
   PARTIALLY_SETTLED = 'PARTIALLY_SETTLED',
   SETTLED = 'SETTLED',
   CANCELED = 'CANCELED',
+  CONVERTED = 'CONVERTED',
 }

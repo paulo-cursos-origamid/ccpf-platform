@@ -7,6 +7,7 @@ import { IdentityModule } from '../identity/identity.module';
 import { TenantModule } from '../tenant/tenant.module';
 import { BillingModule } from '../billing/billing.module';
 import { AccountsPayableReceivableModule } from '../accounts-payable-receivable/accounts-payable-receivable.module';
+import { CreditCardsModule } from '../credit-cards/credit-cards.module';
 
 import { CreateRecurringBillUseCase } from './application/create-recurring-bill.use-case';
 import { ListRecurringBillsUseCase } from './application/list-recurring-bills.use-case';
@@ -20,6 +21,7 @@ import { RecurringBillsController } from './presentation/recurring-bills.control
     TenantModule,
     BillingModule,
     AccountsPayableReceivableModule,
+    CreditCardsModule,
   ],
   controllers: [RecurringBillsController],
   providers: [

@@ -40,15 +40,39 @@ export class GenerateRecurringBillOccurrencesUseCase {
       );
     }
 
-    const membership = await this.prisma.accountMember.findFirst({
-      where: {
-        accountId: bill.accountId,
-        userId,
-        status: 'ACTIVE',
-      },
-    });
+    let hasWriteAccess = false;
 
-    if (!membership || membership.role === 'VIEWER') {
+    if (bill.accountId) {
+      const membership = await this.prisma.accountMember.findFirst({
+        where: {
+          accountId: bill.accountId,
+          userId,
+          status: 'ACTIVE',
+        },
+      });
+
+      hasWriteAccess = Boolean(
+        membership && membership.role !== 'VIEWER',
+      );
+    } else {
+      const tenantMembership = await this.prisma.tenant.findFirst({
+        where: {
+          id: tenantId,
+          members: {
+            some: {
+              userId,
+              status: 'ACTIVE',
+              role: { not: 'VIEWER' },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      hasWriteAccess = Boolean(tenantMembership);
+    }
+
+    if (!hasWriteAccess) {
       throw new ForbiddenException(
         'Você não tem permissão para gerar vencimentos nesta conta.',
       );

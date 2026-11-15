@@ -909,6 +909,7 @@ enum FinancialObligationStatus {
   PARTIALLY_SETTLED
   SETTLED
   CANCELED
+  CONVERTED
 }
 
 // Natureza do lançamento no livro-razão.
@@ -1123,9 +1124,17 @@ enum RecurringBillFrequency {
   YEARLY
 }
 
+enum FinancialPaymentMethod {
+  CASH
+  PIX
+  BANK_SLIP
+  CREDIT_CARD
+}
+
 enum RecurringBillOccurrenceStatus {
   PENDING
   PAID
+  CHARGED_TO_CARD
   CANCELED
 }
 
@@ -1133,7 +1142,7 @@ model RecurringBill {
   id            String  @id @default(cuid())
   tenantId      String
   userId        String
-  accountId     String
+  accountId     String?
   categoryId    String
   subCategoryId String?
 
@@ -1151,7 +1160,7 @@ model RecurringBill {
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
-  account     Account      @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  account     Account?     @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
   category    Category     @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict)
   subCategory SubCategory? @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict)
 
@@ -1167,7 +1176,9 @@ model RecurringBillOccurrence {
   id              String  @id @default(cuid())
   tenantId        String
   recurringBillId String
-  transactionId   String? @unique
+  transactionId        String? @unique
+  creditCardPurchaseId  String? @unique
+  paymentMethod         FinancialPaymentMethod?
 
   referenceMonth DateTime
   dueDate        DateTime
@@ -1181,9 +1192,11 @@ model RecurringBillOccurrence {
 
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   recurringBill RecurringBill @relation(fields: [recurringBillId, tenantId], references: [id, tenantId], onDelete: Restrict)
-  transaction   Transaction?  @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  transaction       Transaction?       @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  creditCardPurchase CreditCardPurchase? @relation(fields: [creditCardPurchaseId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
   @@unique([recurringBillId, referenceMonth])
+  @@unique([creditCardPurchaseId, tenantId])
   @@index([tenantId, dueDate, status])
   @@index([tenantId, recurringBillId])
 }
@@ -1366,7 +1379,8 @@ model CreditCardPurchase {
   creditCard   CreditCard   @relation(fields: [creditCardId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   category     Category     @relation(fields: [categoryId, tenantId], references: [id, tenantId], onDelete: Restrict, onUpdate: Cascade)
   subCategory  SubCategory? @relation(fields: [subCategoryId, categoryId], references: [id, categoryId], onDelete: Restrict, onUpdate: Cascade)
-  installments CreditCardInstallment[]
+  installments        CreditCardInstallment[]
+  recurringOccurrence RecurringBillOccurrence?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

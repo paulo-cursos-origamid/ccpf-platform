@@ -120,7 +120,12 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
             },
           },
           {
-            sourceType: PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+            sourceType: {
+              in: [
+                PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+                PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+              ],
+            },
             tenant: {
               members: {
                 some: { userId, status: 'ACTIVE' },
@@ -141,7 +146,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
     sourceId: string,
   ): Promise<FinancialObligationEntity | null> {
     const accessFilter =
-      sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE
+      sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE ||
+      sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE
         ? {
             tenant: {
               members: {
@@ -186,7 +192,12 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
             },
           },
           {
-            sourceType: PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+            sourceType: {
+              in: [
+                PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+                PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+              ],
+            },
             tenant: {
               members: {
                 some: { userId, status: 'ACTIVE' },
@@ -234,7 +245,12 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           },
         },
         {
-          sourceType: PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+          sourceType: {
+              in: [
+                PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
+                PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+              ],
+            },
           tenant: {
             members: {
               some: { userId, status: "ACTIVE" },

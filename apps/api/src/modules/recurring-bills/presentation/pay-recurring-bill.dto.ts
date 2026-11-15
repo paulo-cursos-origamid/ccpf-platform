@@ -1,6 +1,8 @@
+import { FinancialPaymentMethod } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsEnum,
   IsOptional,
   IsString,
   Matches,
@@ -15,9 +17,21 @@ export class PayRecurringBillDto {
   @Matches(/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/)
   amount!: string;
 
-  @ApiProperty({
-    example: '2026-10-25T12:00:00.000Z',
-  })
+  @ApiProperty({ enum: FinancialPaymentMethod })
+  @IsEnum(FinancialPaymentMethod)
+  paymentMethod!: FinancialPaymentMethod;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  creditCardId?: string;
+
+  @ApiProperty({ example: '2026-10-25T12:00:00.000Z' })
   @IsDateString()
   paidAt!: string;
 

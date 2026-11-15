@@ -91,6 +91,44 @@ describe('SettleFinancialObligationUseCase', () => {
     expect(result).toBe(obligation);
   });
 
+  it('settles a recurring occurrence using the selected account when no account was predefined', async () => {
+    obligation = createObligation({
+      accountId: null,
+      sourceType: FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+      sourceId: 'occurrence-1',
+    });
+    obligations.findObligation.mockResolvedValue(obligation);
+
+    await useCase.execute({
+      id: obligation.id,
+      tenantId: obligation.tenantId,
+      userId: obligation.userId,
+      accountId: 'account-2',
+      settledAt,
+    });
+
+    expect(obligations.assertTenantWriteAccess).toHaveBeenCalledWith(
+      'tenant-1',
+      'user-1',
+    );
+    expect(obligations.assertAccountAccess).toHaveBeenCalledWith(
+      'account-2',
+      'tenant-1',
+      'user-1',
+    );
+    expect(obligations.validateReferences).toHaveBeenCalledWith({
+      accountId: 'account-2',
+      categoryId: 'category-1',
+      subCategoryId: null,
+      type: FinancialObligationType.PAYABLE,
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    const [, options] = repository.settle.mock.calls[0];
+    expect(options.settlement.accountId).toBe('account-2');
+  });
+
   it('settles a card invoice using the selected account without requiring a category', async () => {
     obligation = createObligation({
       accountId: null,

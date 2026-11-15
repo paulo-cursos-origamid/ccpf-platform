@@ -30,7 +30,13 @@ export class CreateCreditCardPurchaseUseCase {
     private readonly tenantMemberRepository: TenantMemberRepository,
   ) {}
 
-  async execute(input: CreateCreditCardPurchaseInput) {
+  async execute(
+    input: CreateCreditCardPurchaseInput,
+    afterCreate?: (
+      tx: Prisma.TransactionClient,
+      purchaseId: string,
+    ) => Promise<void>,
+  ) {
     await ensureTenantCardPurchaseAccess(
       this.tenantMemberRepository,
       input.tenantId,
@@ -167,6 +173,11 @@ export class CreateCreditCardPurchaseUseCase {
         },
         select: { id: true },
       });
+
+      // Executa a conversão da origem dentro da mesma transação da compra.
+      if (afterCreate) {
+        await afterCreate(tx, purchase.id);
+      }
 
       const cyclesByMonth = new Map<
         string,
