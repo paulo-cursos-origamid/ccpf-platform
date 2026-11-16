@@ -16,8 +16,13 @@ import type {
   CreateCreditCardPurchaseInput,
 } from "../types/credit-card-purchase";
 import type { CreditCardInvoicePaymentResult } from "../types/credit-card-payment";
+import type { CreditCardDashboard } from "../types/credit-card-dashboard";
 
 class CreditCardsService {
+  getDashboard() {
+    return api.get<CreditCardDashboard>("/credit-cards/dashboard");
+  }
+
   list() {
     return api.get<CreditCard[]>("/credit-cards");
   }

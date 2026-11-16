@@ -7,6 +7,22 @@ export interface RecurringBillOccurrence {
   paidAt: string | null;
   status: string;
   transactionId: string | null;
+  paymentMethod?: "CASH" | "PIX" | "BANK_SLIP" | "CREDIT_CARD" | null;
+  creditCardPurchaseId?: string | null;
+}
+
+export type RecurringBillPaymentMethod =
+  | "CASH"
+  | "PIX"
+  | "BANK_SLIP"
+  | "CREDIT_CARD";
+
+export interface PayRecurringBillInput {
+  amount: string;
+  paidAt: string;
+  paymentMethod: RecurringBillPaymentMethod;
+  accountId?: string;
+  creditCardId?: string;
 }
 
 export interface RecurringBill {
@@ -17,7 +33,7 @@ export interface RecurringBill {
   dueDay: number;
   frequency: string;
   isActive: boolean;
-  account: { id: string; name: string };
+  account: { id: string; name: string } | null;
   category: { id: string; name: string };
   occurrences: RecurringBillOccurrence[];
 }

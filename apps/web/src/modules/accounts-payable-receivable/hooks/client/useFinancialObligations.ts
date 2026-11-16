@@ -3,18 +3,59 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTenantStore } from "@/modules/tenant/stores";
 import { financialObligationsService } from "../../services/financial-obligations.service";
-import type { FinancialObligation } from "../../types";
+import type {
+  FinancialObligation,
+  FinancialObligationPagination,
+  FinancialObligationSummary,
+  ListFinancialObligationsParams,
+} from "../../types";
 
-/** Carrega compromissos e descarta respostas antigas ao trocar de tenant. */
-export function useFinancialObligations() {
+const INITIAL_PAGINATION: FinancialObligationPagination = {
+  page: 1,
+  limit: 20,
+  totalItems: 0,
+  totalPages: 1,
+};
+
+const INITIAL_SUMMARY: FinancialObligationSummary = {
+  totalCount: 0,
+  pendingCount: 0,
+  partiallySettledCount: 0,
+  settledCount: 0,
+  canceledCount: 0,
+  totalRemainingAmount: "0.00",
+  overdueCount: 0,
+  overdueRemainingAmount: "0.00",
+};
+
+/** Carrega compromissos paginados e respeita o tenant ativo. */
+export function useFinancialObligations(
+  query: ListFinancialObligationsParams = {},
+) {
   const activeTenantId = useTenantStore((state) => state.activeTenantId);
+
   const [obligations, setObligations] = useState<FinancialObligation[]>([]);
+  const [pagination, setPagination] =
+    useState<FinancialObligationPagination>(INITIAL_PAGINATION);
+  const [summary, setSummary] =
+    useState<FinancialObligationSummary>(INITIAL_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const {
+    type,
+    status,
+    page = 1,
+    limit = 20,
+    startDate,
+    endDate,
+  } = query;
 
   const load = useCallback(async () => {
     if (!activeTenantId) {
       setObligations([]);
+      setPagination(INITIAL_PAGINATION);
+      setSummary(INITIAL_SUMMARY);
       setLoading(false);
       setError(false);
       return [];
@@ -22,46 +63,43 @@ export function useFinancialObligations() {
 
     setLoading(true);
     setError(false);
+
     try {
-      const result = await financialObligationsService.list();
-      setObligations(result);
-      return result;
+      const result = await financialObligationsService.listPaginated({
+        type,
+        status,
+        page,
+        limit,
+        startDate,
+        endDate,
+      });
+
+      setObligations(result.data);
+      setPagination(result.pagination);
+      setSummary(result.summary);
+
+      return result.data;
     } catch {
+      setObligations([]);
+      setPagination(INITIAL_PAGINATION);
+      setSummary(INITIAL_SUMMARY);
       setError(true);
       return [];
     } finally {
       setLoading(false);
     }
-  }, [activeTenantId]);
+  }, [activeTenantId, type, status, page, limit, startDate, endDate]);
 
   useEffect(() => {
-    let active = true;
+    void load();
+  }, [load]);
 
-    async function fetchObligations() {
-      if (!activeTenantId) {
-        setObligations([]);
-        setLoading(false);
-        setError(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(false);
-      try {
-        const result = await financialObligationsService.list();
-        if (active) setObligations(result);
-      } catch {
-        if (active) setError(true);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void fetchObligations();
-    return () => {
-      active = false;
-    };
-  }, [activeTenantId]);
-
-  return { obligations, loading, error, load };
+  return {
+    obligations,
+    pagination,
+    summary,
+    loading,
+    error,
+    load,
+  };
 }

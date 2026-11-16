@@ -42,6 +42,39 @@ export interface FinancialObligation {
   updatedAt: string;
 }
 
+export interface FinancialObligationPagination {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface FinancialObligationSummary {
+  totalCount: number;
+  pendingCount: number;
+  partiallySettledCount: number;
+  settledCount: number;
+  canceledCount: number;
+  totalRemainingAmount: string;
+  overdueCount: number;
+  overdueRemainingAmount: string;
+}
+
+export interface PaginatedFinancialObligationsResponse {
+  data: FinancialObligation[];
+  pagination: FinancialObligationPagination;
+  summary: FinancialObligationSummary;
+}
+
+export interface ListFinancialObligationsParams {
+  type?: FinancialObligationType;
+  status?: FinancialObligationStatus;
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface CreateFinancialObligationInput {
   type: FinancialObligationType;
   title: string;

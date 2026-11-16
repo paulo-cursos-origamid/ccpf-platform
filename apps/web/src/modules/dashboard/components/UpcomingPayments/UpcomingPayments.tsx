@@ -30,9 +30,9 @@ export function UpcomingPayments({ upcomingPayments }: {
           <div className={styles.dashboardPanelHeading}>
             <div>
               <h2>Próximas contas</h2>
-              <p>Parcelas e recorrências a vencer</p>
+              <p>Obrigações financeiras em aberto</p>
             </div>
-            <Link href="/dashboard/transactions">Ver todas</Link>
+            <Link href="/dashboard/accounts-payable-receivable">Ver todas</Link>
           </div>
 
           {upcomingPayments.length === 0 ? (

@@ -177,7 +177,7 @@ export function MonthlyPaymentsSection() {
           title: bill.title,
           origin: "RECURRING",
           detail: "Conta recorrente",
-          account: bill.account.name,
+          account: bill.account?.name ?? (occurrence.paymentMethod === "CREDIT_CARD" ? "Cartão de crédito" : ""),
           dueDate,
           expectedAmount: Number(
             occurrence.expectedAmount ?? bill.expectedAmount ?? 0,

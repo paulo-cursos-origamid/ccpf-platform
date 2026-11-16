@@ -1,11 +1,9 @@
-import { ListCreditCards } from "@/modules/credit-cards/components/client/ListCreditCards";
-import { ListCreditCardInvoices } from "@/modules/credit-cards/components/client/ListCreditCardInvoices";
+import { CreditCardDashboardView } from "@/modules/credit-cards/components/client/CreditCardDashboard";
 
 export default function CreditCardsPage() {
   return (
     <main>
-      <ListCreditCards />
-      <ListCreditCardInvoices />
+      <CreditCardDashboardView />
     </main>
   );
 }

@@ -2,6 +2,8 @@ import { api } from "@/lib/api/client";
 import type {
   CreateFinancialObligationInput,
   FinancialObligation,
+  ListFinancialObligationsParams,
+  PaginatedFinancialObligationsResponse,
   FinancialObligationStatus,
   FinancialObligationType,
   SettleFinancialObligationInput,
@@ -33,6 +35,23 @@ class FinancialObligationsService {
     return api.post<FinancialObligation>(
       `/financial-obligations/${id}/cancel`,
       {},
+    );
+  }
+
+  listPaginated(params: ListFinancialObligationsParams = {}) {
+    const query = new URLSearchParams();
+
+    if (params.type) query.set("type", params.type);
+    if (params.status) query.set("status", params.status);
+    if (params.page !== undefined) query.set("page", String(params.page));
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.startDate) query.set("startDate", params.startDate);
+    if (params.endDate) query.set("endDate", params.endDate);
+
+    const suffix = query.size ? `?${query.toString()}` : "";
+
+    return api.get<PaginatedFinancialObligationsResponse>(
+      `/financial-obligations/paginated${suffix}`,
     );
   }
 

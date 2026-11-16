@@ -169,19 +169,28 @@
   gap: var(--spacing-xs);
 }
 
-.sectionTitle {
-  margin: 0;
+/* Separa visualmente cada grupo de navegação. */
+.section + .section {
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-primary);
+}
 
+.sectionTitle {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+
+  margin: 0;
   padding: 0 var(--spacing-md);
 
   overflow: hidden;
 
-  color: var(--text-secondary);
+  color: var(--text-muted);
 
   font-size: var(--font-xs);
   font-weight: var(--font-weight-semibold);
 
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 
   white-space: nowrap;
@@ -329,7 +338,8 @@
 .subscription {
   flex-shrink: 0;
 
-  padding: 0 var(--spacing-md) var(--spacing-md);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-primary);
 }
 
 .collapsed .subscription {

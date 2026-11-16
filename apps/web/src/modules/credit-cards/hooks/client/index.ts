@@ -5,3 +5,4 @@ export * from "./useUpdateCreditCard";
 export * from "./useArchiveCreditCard";
 export * from "./useCreateCreditCardPurchase";
 export * from "./usePayCreditCardInvoice";
+export * from "./useCreditCardDashboard";

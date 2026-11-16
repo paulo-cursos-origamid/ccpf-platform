@@ -2,6 +2,7 @@ import { api } from "@/lib/api/client";
 import type {
   CreateRecurringBillInput,
   RecurringBill,
+  PayRecurringBillInput,
 } from "../types/recurring-bill";
 
 class RecurringBillsService {
@@ -24,15 +25,11 @@ class RecurringBillsService {
   pay(
     billId: string,
     occurrenceId: string,
-    amount: string,
-    paidAt: string = new Date().toISOString(),
+    data: PayRecurringBillInput,
   ) {
     return api.post<unknown>(
       `/recurring-bills/${billId}/occurrences/${occurrenceId}/pay`,
-      {
-        amount,
-        paidAt,
-      },
+      data,
     );
   }
 }

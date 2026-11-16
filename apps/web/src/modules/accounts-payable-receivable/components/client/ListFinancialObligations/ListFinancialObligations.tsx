@@ -21,6 +21,8 @@ import { transactionsService } from "@/modules/transactions/services";
 import type { Transaction } from "@/modules/transactions/types";
 import { financialObligationsService } from "../../../services/financial-obligations.service";
 import { useFinancialObligations } from "../../../hooks";
+import { useCreditCards } from "@/modules/credit-cards/hooks";
+import { creditCardsService } from "@/modules/credit-cards/services";
 import type {
   FinancialObligation,
   FinancialObligationStatus,
@@ -30,6 +32,13 @@ import styles from "./ListFinancialObligations.module.scss";
 
 type TypeFilter = "ALL" | FinancialObligationType;
 type StatusFilter = "ALL" | FinancialObligationStatus;
+
+interface CreditCardCommitmentSummary {
+  id: string;
+  name: string;
+  remainingAmount: number;
+  remainingInstallments: number;
+}
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -51,6 +60,37 @@ function localToday() {
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
 }
+
+function currentMonthValue() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthDateRange(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+
+  return {
+    startDate: `${month}-01T00:00:00.000Z`,
+    endDate: new Date(
+      Date.UTC(year, monthNumber, 0, 23, 59, 59, 999),
+    ).toISOString(),
+  };
+}
+
+const MONTH_OPTIONS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 function dateInputValue(value?: string | null) {
   return value ? value.slice(0, 10) : localToday();
@@ -712,11 +752,40 @@ function SettleObligationModal({
 
 /** Tela principal para acompanhar os compromissos financeiros do tenant. */
 export function ListFinancialObligations() {
-  const { obligations, loading, error, load } = useFinancialObligations();
-  const { accounts } = useAccounts();
-  const { categories } = useCategories();
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
+  const [monthFilter, setMonthFilter] = useState(currentMonthValue);
+  const [page, setPage] = useState(1);
+  const [selectedYear, selectedMonth] = monthFilter.split("-");
+  const { startDate, endDate } = monthDateRange(monthFilter);
+
+  const {
+    obligations,
+    pagination,
+    summary,
+    loading,
+    error,
+    load,
+  } = useFinancialObligations({
+    type: typeFilter === "ALL" ? undefined : typeFilter,
+    status: statusFilter === "ALL" ? undefined : statusFilter,
+    startDate,
+    endDate,
+    page,
+    limit: 20,
+  });
+
+  const { accounts } = useAccounts();
+  const { categories } = useCategories();
+  const {
+    cards,
+    loading: cardsLoading,
+    error: cardsError,
+  } = useCreditCards();
+
+  const [cardCommitments, setCardCommitments] = useState<CreditCardCommitmentSummary[]>([]);
+  const [cardCommitmentsLoading, setCardCommitmentsLoading] = useState(true);
+  const [cardCommitmentsError, setCardCommitmentsError] = useState(false);
   const [editor, setEditor] = useState<"NEW" | FinancialObligation | null>(
     null,
   );
@@ -726,27 +795,110 @@ export function ListFinancialObligations() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
-  const pending = obligations.filter(
-    (item) =>
-      item.status === "PENDING" || item.status === "PARTIALLY_SETTLED",
-  );
-  const pendingPayable = pending
-    .filter((item) => item.type === "PAYABLE")
-    .reduce((sum, item) => sum + remainingAmountInCents(item) / 100, 0);
-  const pendingReceivable = pending
-    .filter((item) => item.type === "RECEIVABLE")
-    .reduce((sum, item) => sum + remainingAmountInCents(item) / 100, 0);
-  const overdueCount = pending.filter(isOverdue).length;
-  const visible = obligations.filter(
-    (item) =>
-      (typeFilter === "ALL" || item.type === typeFilter) &&
-      (statusFilter === "ALL" || item.status === statusFilter),
-  );
+  useEffect(() => {
+    if (!loading && page > pagination.totalPages) {
+      setPage(Math.max(1, pagination.totalPages));
+    }
+  }, [loading, page, pagination.totalPages]);
+
+
+  useEffect(() => {
+    if (cardsLoading) return;
+
+    let active = true;
+
+    async function loadCardCommitments() {
+      const activeCards = cards.filter((card) => card.status === "ACTIVE");
+
+      if (cardsError) {
+        setCardCommitments([]);
+        setCardCommitmentsError(true);
+        setCardCommitmentsLoading(false);
+        return;
+      }
+
+      if (activeCards.length === 0) {
+        setCardCommitments([]);
+        setCardCommitmentsError(false);
+        setCardCommitmentsLoading(false);
+        return;
+      }
+
+      setCardCommitmentsLoading(true);
+      setCardCommitmentsError(false);
+
+      try {
+        const firstPage = await creditCardsService.listInvoices({
+          page: 1,
+          limit: 100,
+        });
+
+        const remainingPages = await Promise.all(
+          Array.from(
+            { length: Math.max(firstPage.pagination.totalPages - 1, 0) },
+            (_, index) =>
+              creditCardsService.listInvoices({
+                page: index + 2,
+                limit: 100,
+              }),
+          ),
+        );
+
+        const invoices = [
+          ...firstPage.data,
+          ...remainingPages.flatMap((result) => result.data),
+        ];
+
+        const summaries = new Map(
+          activeCards.map((card) => [
+            card.id,
+            {
+              id: card.id,
+              name: card.name,
+              remainingAmount: 0,
+              remainingInstallments: 0,
+            },
+          ]),
+        );
+
+        for (const invoice of invoices) {
+          const remainingAmount = Number(invoice.indicators.remainingAmount);
+
+          if (remainingAmount <= 0) continue;
+
+          const summary = summaries.get(invoice.creditCard.id);
+          if (!summary) continue;
+
+          summary.remainingAmount += remainingAmount;
+          summary.remainingInstallments += invoice.indicators.installmentCount;
+        }
+
+        if (active) {
+          setCardCommitments(Array.from(summaries.values()));
+        }
+      } catch {
+        if (active) {
+          setCardCommitments([]);
+          setCardCommitmentsError(true);
+        }
+      } finally {
+        if (active) setCardCommitmentsLoading(false);
+      }
+    }
+
+    void loadCardCommitments();
+
+    return () => {
+      active = false;
+    };
+  }, [cards, cardsLoading, cardsError]);
 
   async function cancel(item: FinancialObligation) {
     if (!window.confirm(`Cancelar o compromisso "${item.title}"?`)) return;
+
     setBusyId(item.id);
     setActionError("");
+
     try {
       await financialObligationsService.cancel(item.id);
       await load();
@@ -792,15 +944,15 @@ export function ListFinancialObligations() {
 
       <div
         className={styles.summary}
-        aria-label="Resumo de compromissos pendentes"
+        aria-label="Resumo dos compromissos"
       >
         <article className={styles.summaryItem}>
           <span className={`${styles.summaryIcon} ${styles.payableIcon}`}>
-            <ArrowUpRight size={18} />
+            <WalletCards size={18} />
           </span>
           <div>
-            <span>A pagar</span>
-            <strong>{money.format(pendingPayable)}</strong>
+            <span>Total de compromissos</span>
+            <strong>{summary.totalCount}</strong>
           </div>
         </article>
         <article className={styles.summaryItem}>
@@ -808,8 +960,10 @@ export function ListFinancialObligations() {
             <ArrowDownRight size={18} />
           </span>
           <div>
-            <span>A receber</span>
-            <strong>{money.format(pendingReceivable)}</strong>
+            <span>Saldo em aberto</span>
+            <strong>
+              {money.format(Number(summary.totalRemainingAmount))}
+            </strong>
           </div>
         </article>
         <article className={styles.summaryItem}>
@@ -818,7 +972,40 @@ export function ListFinancialObligations() {
           </span>
           <div>
             <span>Em atraso</span>
-            <strong>{overdueCount}</strong>
+            <strong>{summary.overdueCount}</strong>
+          </div>
+        </article>
+
+        <article className={`${styles.summaryItem} ${styles.cardSummaryItem}`}>
+          <span className={`${styles.summaryIcon} ${styles.payableIcon}`}>
+            <WalletCards size={18} />
+          </span>
+          <div className={styles.cardSummaryContent}>
+            <span className={styles.cardSummaryTitle}>Comprometido nos cartões</span>
+
+            {cardCommitmentsLoading ? (
+              <span className={styles.cardSummaryFeedback}>Carregando cartões...</span>
+            ) : cardCommitmentsError ? (
+              <span className={styles.cardSummaryFeedback}>Não foi possível carregar os cartões.</span>
+            ) : cardCommitments.length === 0 ? (
+              <span className={styles.cardSummaryFeedback}>Nenhum cartão ativo.</span>
+            ) : (
+              <ul className={styles.cardSummaryList}>
+                {cardCommitments.map((card) => (
+                  <li key={card.id}>
+                    <div>
+                      <strong>{card.name}</strong>
+                      <span>
+                        {card.remainingInstallments} parcela
+                        {card.remainingInstallments === 1 ? "" : "s"} restante
+                        {card.remainingInstallments === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <strong>{money.format(card.remainingAmount)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </article>
       </div>
@@ -841,7 +1028,10 @@ export function ListFinancialObligations() {
               type="button"
               aria-pressed={typeFilter === filter}
               className={typeFilter === filter ? styles.segmentActive : ""}
-              onClick={() => setTypeFilter(filter)}
+              onClick={() => {
+                setTypeFilter(filter);
+                setPage(1);
+              }}
             >
               {filter === "ALL"
                 ? "Todos"
@@ -851,13 +1041,15 @@ export function ListFinancialObligations() {
             </button>
           ))}
         </div>
+
         <label className={styles.statusFilter}>
           <span>Estado</span>
           <select
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as StatusFilter)
-            }
+            onChange={(event) => {
+              setStatusFilter(event.target.value as StatusFilter);
+              setPage(1);
+            }}
           >
             <option value="PENDING">Pendentes</option>
             <option value="PARTIALLY_SETTLED">Parcialmente liquidados</option>
@@ -866,28 +1058,64 @@ export function ListFinancialObligations() {
             <option value="ALL">Todos os estados</option>
           </select>
         </label>
+
+        <label className={styles.monthFilter}>
+          <span>Mês de vencimento</span>
+
+          <select
+            aria-label="Mês de vencimento"
+            value={selectedMonth}
+            onChange={(event) => {
+              setMonthFilter(`${selectedYear}-${event.target.value}`);
+              setPage(1);
+            }}
+          >
+            {MONTH_OPTIONS.map((month, index) => (
+              <option
+                key={month}
+                value={String(index + 1).padStart(2, "0")}
+              >
+                {month}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Ano de vencimento"
+            value={selectedYear}
+            onChange={(event) => {
+              setMonthFilter(`${event.target.value}-${selectedMonth}`);
+              setPage(1);
+            }}
+          >
+            {Array.from(
+              { length: new Date().getFullYear() - 1999 + 6 },
+              (_, index) => 2000 + index,
+            ).map((year) => (
+              <option key={year} value={String(year)}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <span className={styles.resultCount}>
-          {visible.length} compromisso{visible.length === 1 ? "" : "s"}
+          {pagination.totalItems} compromisso
+          {pagination.totalItems === 1 ? "" : "s"}
         </span>
       </div>
 
-      {visible.length === 0 ? (
+      {obligations.length === 0 ? (
         <div className={styles.empty}>
           <WalletCards size={28} />
-          <h2>
-            {obligations.length === 0
-              ? "Nenhum compromisso cadastrado"
-              : "Nenhum resultado para estes filtros"}
-          </h2>
-          {obligations.length === 0 && (
-            <Button onClick={() => setEditor("NEW")}>
-              <Plus size={16} /> Novo compromisso
-            </Button>
-          )}
+          <h2>Nenhum compromisso encontrado para estes filtros</h2>
+          <Button onClick={() => setEditor("NEW")}>
+            <Plus size={16} /> Novo compromisso
+          </Button>
         </div>
       ) : (
         <div className={styles.obligationList}>
-          {visible.map((item) => {
+          {obligations.map((item) => {
             const account = accounts.find(
               (candidate) => candidate.id === item.accountId,
             );
@@ -895,6 +1123,7 @@ export function ListFinancialObligations() {
               (candidate) => candidate.id === item.categoryId,
             );
             const overdue = isOverdue(item);
+
             return (
               <article className={styles.obligationRow} key={item.id}>
                 <div className={styles.rowMain}>
@@ -918,12 +1147,16 @@ export function ListFinancialObligations() {
                       </span>
                     </div>
                   </div>
+
                   <div className={styles.context}>
                     <span>{account?.name ?? "Conta indisponível"}</span>
                     <span>{category?.name ?? "Categoria indisponível"}</span>
                   </div>
+
                   <div className={styles.amountBlock}>
-                    <strong>{money.format(remainingAmountInCents(item) / 100)}</strong>
+                    <strong>
+                      {money.format(remainingAmountInCents(item) / 100)}
+                    </strong>
                     {item.status === "PARTIALLY_SETTLED" && (
                       <span className={styles.partialAmount}>
                         de {money.format(Number(item.amount))}
@@ -936,16 +1169,20 @@ export function ListFinancialObligations() {
                     </span>
                   </div>
                 </div>
+
                 <footer className={styles.rowFooter}>
                   <span className={styles.dueDate}>
                     <Calendar size={15} /> Vence {formatDate(item.dueDate)}
                   </span>
+
                   {item.settlements && item.settlements.length > 0 && (
                     <span className={styles.linkedTransaction}>
                       <CheckCircle2 size={15} /> {item.settlements.length} liquidação(ões)
                     </span>
                   )}
-                  {(item.status === "PENDING" || item.status === "PARTIALLY_SETTLED") && (
+
+                  {(item.status === "PENDING" ||
+                    item.status === "PARTIALLY_SETTLED") && (
                     <div className={styles.rowActions}>
                       {item.status === "PENDING" && (
                         <>
@@ -971,11 +1208,15 @@ export function ListFinancialObligations() {
                           </button>
                         </>
                       )}
+
                       <Button
                         onClick={() => setSettlement(item)}
                         disabled={busyId === item.id}
                       >
-                        <CheckCircle2 size={16} /> {item.status === "PARTIALLY_SETTLED" ? "Nova liquidação" : "Liquidar"}
+                        <CheckCircle2 size={16} />{" "}
+                        {item.status === "PARTIALLY_SETTLED"
+                          ? "Nova liquidação"
+                          : "Liquidar"}
                       </Button>
                     </div>
                   )}
@@ -984,6 +1225,36 @@ export function ListFinancialObligations() {
             );
           })}
         </div>
+      )}
+
+      {pagination.totalPages > 1 && (
+        <nav className={styles.pagination} aria-label="Paginação dos compromissos">
+          <button
+            type="button"
+            className={styles.paginationButton}
+            disabled={page <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            Anterior
+          </button>
+
+          <span className={styles.paginationInfo}>
+            Página {pagination.page} de {pagination.totalPages}
+          </span>
+
+          <button
+            type="button"
+            className={styles.paginationButton}
+            disabled={page >= pagination.totalPages}
+            onClick={() =>
+              setPage((current) =>
+                Math.min(pagination.totalPages, current + 1),
+              )
+            }
+          >
+            Próxima
+          </button>
+        </nav>
       )}
 
       {editor !== null && (
@@ -995,6 +1266,7 @@ export function ListFinancialObligations() {
           onSaved={load}
         />
       )}
+
       <SettleObligationModal
         item={settlement}
         accounts={accounts}

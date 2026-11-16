@@ -1,13 +1,16 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { Button, Field, Input } from "@/components/ui/forms";
+import { Button, Field, Input, Select } from "@/components/ui/forms";
+import { useAccounts } from "@/modules/accounts/hooks";
+import { useCreditCards } from "@/modules/credit-cards/hooks";
 import { Modal } from "@/components/ui/overlay/Modal";
 import { useTenantStore } from "@/modules/tenant/stores";
 import { recurringBillsService } from "../services/recurring-bills.service";
 import type {
   RecurringBill,
   RecurringBillOccurrence,
+  RecurringBillPaymentMethod,
 } from "../types/recurring-bill";
 import styles from "@/modules/transactions/components/client/TransactionsPage.module.scss";
 
@@ -95,6 +98,13 @@ function RecurringPaymentModal({
   const [paidDate, setPaidDate] = useState(localToday);
   const [saving, setSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<RecurringBillPaymentMethod>("CASH");
+  const [accountId, setAccountId] = useState("");
+  const [creditCardId, setCreditCardId] = useState("");
+  const { accounts, loading: accountsLoading } = useAccounts();
+  const { cards, loading: cardsLoading } = useCreditCards();
+  const activeAccounts = accounts.filter((account) => account.status === "ACTIVE");
+  const activeCards = cards.filter((card) => card.status === "ACTIVE");
 
   useEffect(() => {
     if (!selection) return;
@@ -106,6 +116,9 @@ function RecurringPaymentModal({
     );
     setPaidDate(localToday());
     setPaymentError("");
+    setPaymentMethod("CASH");
+    setAccountId(selection.bill.account?.id ?? "");
+    setCreditCardId("");
   }, [selection]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -124,17 +137,32 @@ function RecurringPaymentModal({
       return;
     }
 
+    if (paymentMethod === "CREDIT_CARD" && !creditCardId) {
+      setPaymentError("Selecione o cartão de crédito.");
+      return;
+    }
+
+    if (paymentMethod !== "CREDIT_CARD" && !accountId) {
+      setPaymentError("Selecione a conta de pagamento.");
+      return;
+    }
+
     setSaving(true);
     setPaymentError("");
 
     try {
       const paidAt = new Date(`${paidDate}T12:00:00`).toISOString();
+      const paymentData = {
+        amount: normalized,
+        paidAt,
+        paymentMethod,
+        ...(paymentMethod === "CREDIT_CARD" ? { creditCardId } : { accountId }),
+      };
 
       await recurringBillsService.pay(
         selection.bill.id,
         selection.occurrence.id,
-        normalized,
-        paidAt,
+        paymentData,
       );
 
       onPaid();
@@ -148,6 +176,13 @@ function RecurringPaymentModal({
     }
   }
 
+  const canSubmit =
+    !saving &&
+    Boolean(paidDate) &&
+    (paymentMethod === "CREDIT_CARD"
+      ? Boolean(creditCardId) && !cardsLoading && activeCards.length > 0
+      : Boolean(accountId) && !accountsLoading && activeAccounts.length > 0);
+
   return (
     <Modal
       open={selection !== null}
@@ -160,7 +195,7 @@ function RecurringPaymentModal({
         <form className={styles.recurringPaymentForm} onSubmit={submit}>
           <div className={styles.recurringPaymentSummary}>
             <strong>{selection.bill.title}</strong>
-            <span>Conta: {selection.bill.account.name}</span>
+            <span>Conta: {selection.bill.account?.name ?? "Não vinculada"}</span>
             <span>Categoria: {selection.bill.category.name}</span>
             <span>
               Vencimento: {formatDueDate(selection.occurrence.dueDate)}
@@ -200,6 +235,61 @@ function RecurringPaymentModal({
             />
           </Field>
 
+          <Field label="Forma de pagamento" htmlFor="recurring-payment-method" required>
+            <Select
+              id="recurring-payment-method"
+              value={paymentMethod}
+              onChange={(event) => {
+                const nextMethod = event.target.value as RecurringBillPaymentMethod;
+                setPaymentMethod(nextMethod);
+                setAccountId("");
+                setCreditCardId("");
+              }}
+              disabled={saving}
+            >
+              <option value="CASH">Dinheiro</option>
+              <option value="PIX">Pix</option>
+              <option value="BANK_SLIP">Boleto</option>
+              <option value="CREDIT_CARD">Cartão de crédito</option>
+            </Select>
+          </Field>
+
+          {paymentMethod === "CREDIT_CARD" ? (
+            <Field label="Cartão de crédito" htmlFor="recurring-credit-card" required>
+              <Select
+                id="recurring-credit-card"
+                value={creditCardId}
+                onChange={(event) => setCreditCardId(event.target.value)}
+                disabled={saving || cardsLoading || activeCards.length === 0}
+                required
+              >
+                <option value="">Selecione um cartão</option>
+                {activeCards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.name} — {card.brand} •••• {card.lastFourDigits}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field label="Conta de pagamento" htmlFor="recurring-payment-account" required>
+              <Select
+                id="recurring-payment-account"
+                value={accountId}
+                onChange={(event) => setAccountId(event.target.value)}
+                disabled={saving || accountsLoading || activeAccounts.length === 0}
+                required
+              >
+                <option value="">Selecione uma conta</option>
+                {activeAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
           {paymentError && (
             <p className={styles.recurringPaymentError} role="alert">
               {paymentError}
@@ -216,7 +306,7 @@ function RecurringPaymentModal({
               Cancelar
             </Button>
 
-            <Button type="submit" disabled={saving || !paidDate}>
+            <Button type="submit" disabled={!canSubmit}>
               {saving ? "Registrando..." : "Confirmar pagamento"}
             </Button>
           </div>
@@ -286,7 +376,7 @@ function EditRecurringBillModal({
         <form className={styles.recurringPaymentForm} onSubmit={submit}>
           <div className={styles.recurringPaymentSummary}>
             <strong>{bill.title}</strong>
-            <span>Conta: {bill.account.name}</span>
+            <span>Conta: {bill.account?.name ?? "Não vinculada"}</span>
             <span>Dia atual: {bill.dueDay}</span>
           </div>
 
@@ -392,7 +482,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
     [
       bill.title,
       bill.description ?? "",
-      bill.account.name,
+      bill.account?.name ?? "",
       bill.category.name,
     ].some((value) =>
       value.toLocaleLowerCase("pt-BR").includes(normalizedSearch),
@@ -448,7 +538,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                   : `Dia ${bill.dueDay}`}
               </td>
 
-              <td>{bill.account.name}</td>
+              <td>{bill.account?.name ?? "Não vinculada"}</td>
               <td>{bill.category.name}</td>
 
               <td>
@@ -541,6 +631,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                           <tbody>
                             {bill.occurrences.map((occurrence) => {
                               const paid = occurrence.status === "PAID";
+                              const chargedToCard = occurrence.status === "CHARGED_TO_CARD";
                               const overdue =
                                 !paid &&
                                 occurrence.status === "PENDING" &&
@@ -570,15 +661,19 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                                   <td>
                                     {paid
                                       ? "Paga"
-                                      : overdue
-                                        ? "Vencida"
-                                        : occurrence.status === "PENDING"
-                                          ? "Pendente"
-                                          : occurrence.status}
+                                      : chargedToCard
+                                        ? "Lançada no cartão"
+                                        : overdue
+                                          ? "Vencida"
+                                          : occurrence.status === "PENDING"
+                                            ? "Pendente"
+                                            : occurrence.status}
                                   </td>
                                   <td>
                                     {paid ? (
                                       <span>Pago</span>
+                                    ) : chargedToCard ? (
+                                      <span>No cartão</span>
                                     ) : occurrence.status === "PENDING" ? (
                                       <Button
                                         type="button"
