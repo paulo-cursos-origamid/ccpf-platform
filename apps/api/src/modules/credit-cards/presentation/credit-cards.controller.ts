@@ -31,6 +31,7 @@ import { UpdateCreditCardDto } from './dto/update-credit-card.dto';
 import { PayCreditCardInvoiceUseCase } from '../application/use-cases/pay-credit-card-invoice/pay-credit-card-invoice.use-case';
 import { PayCreditCardInvoiceDto } from './dto/pay-credit-card-invoice.dto';
 import { ListCreditCardInvoicesUseCase } from '../application/use-cases/list-credit-card-invoices/list-credit-card-invoices.use-case';
+import { GetCreditCardDashboardUseCase } from '../application/use-cases/get-credit-card-dashboard/get-credit-card-dashboard.use-case';
 import { GetCreditCardInvoiceUseCase } from '../application/use-cases/get-credit-card-invoice/get-credit-card-invoice.use-case';
 import { ListCreditCardInvoicesQueryDto } from './dto/list-credit-card-invoices-query.dto';
 
@@ -54,6 +55,7 @@ export class CreditCardsController {
     private readonly payInvoice: PayCreditCardInvoiceUseCase,
     private readonly listInvoicesUseCase: ListCreditCardInvoicesUseCase,
     private readonly getInvoiceUseCase: GetCreditCardInvoiceUseCase,
+    private readonly getDashboard: GetCreditCardDashboardUseCase,
   ) {}
 
   @Post()
@@ -75,6 +77,14 @@ export class CreditCardsController {
     return this.listCards.execute({
       tenantId: tenant.tenantId,
       userId: tenant.userId,
+    });
+  }
+
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Consultar dashboard dos cartões de crédito' })
+  getDashboardData(@CurrentTenant() tenant: TenantContext) {
+    return this.getDashboard.execute({
+      tenantId: tenant.tenantId,
     });
   }
 

@@ -4,6 +4,7 @@ import { FinancialObligationEntity } from '../../domain/entities/financial-oblig
 import { FinancialObligationSettlementEntity } from '../../domain/entities/financial-obligation-settlement.entity';
 import { FinancialObligationType } from '../../domain/enums/financial-obligation-type.enum';
 import { FinancialObligationSourceType } from '../../domain/enums/financial-obligation-source-type.enum';
+import { FinancialPaymentMethod } from '../../domain/enums/financial-payment-method.enum';
 import { PrismaFinancialObligationRepository } from './prisma-financial-obligation.repository';
 
 describe('PrismaFinancialObligationRepository', () => {
@@ -58,6 +59,7 @@ describe('PrismaFinancialObligationRepository', () => {
       discountAmount?: string;
       transactionId?: string;
       accountId?: string;
+      paymentMethod?: FinancialPaymentMethod;
     } = {},
   ) =>
     new FinancialObligationSettlementEntity({
@@ -70,6 +72,7 @@ describe('PrismaFinancialObligationRepository', () => {
       feeAmount: options.feeAmount ?? '0.00',
       discountAmount: options.discountAmount ?? '0.00',
       transactionId: options.transactionId,
+      paymentMethod: options.paymentMethod,
       settledAt,
     });
 
@@ -185,7 +188,9 @@ describe('PrismaFinancialObligationRepository', () => {
             },
           },
           {
-            sourceType: 'CREDIT_CARD_INVOICE',
+            sourceType: {
+              in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE'],
+            },
             tenant: {
               members: {
                 some: { userId: 'user-1', status: 'ACTIVE' },
@@ -217,7 +222,9 @@ describe('PrismaFinancialObligationRepository', () => {
           tenantId: 'tenant-1',
           OR: expect.arrayContaining([
             expect.objectContaining({
-              sourceType: 'CREDIT_CARD_INVOICE',
+              sourceType: {
+                in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE'],
+              },
               tenant: {
                 members: {
                   some: { userId: 'user-1', status: 'ACTIVE' },
@@ -248,8 +255,8 @@ describe('PrismaFinancialObligationRepository', () => {
         tenantId: 'tenant-1',
         sourceType: 'RECURRING_BILL_OCCURRENCE',
         sourceId: 'occurrence-1',
-        account: {
-          accountMembers: {
+        tenant: {
+          members: {
             some: { userId: 'user-1', status: 'ACTIVE' },
           },
         },
@@ -320,7 +327,9 @@ describe('PrismaFinancialObligationRepository', () => {
   });
 
   it('records a partial settlement and moves only the cash amount', async () => {
-    const settlement = createSettlement('50.00');
+    const settlement = createSettlement('50.00', {
+      paymentMethod: FinancialPaymentMethod.PIX,
+    });
 
     const result = await repository.settle(obligation, { settlement });
 
@@ -338,6 +347,13 @@ describe('PrismaFinancialObligationRepository', () => {
     );
     expect(tx.ledgerEntry.create).toHaveBeenCalledTimes(1);
     expect(tx.account.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.financialObligationSettlement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          paymentMethod: FinancialPaymentMethod.PIX,
+        }),
+      }),
+    );
     expect(tx.financialObligationSettlement.create).toHaveBeenCalledTimes(1);
     expect(tx.financialObligation.updateMany).toHaveBeenCalledTimes(1);
   });
@@ -397,6 +413,48 @@ describe('PrismaFinancialObligationRepository', () => {
     expect(tx.account.updateMany).not.toHaveBeenCalled();
     expect(tx.financialObligationSettlement.create).toHaveBeenCalledTimes(1);
     expect(tx.financialObligation.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    FinancialObligationSourceType.INSTALLMENT,
+    FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+  ])("allows an alternative account for %s settlements", async (sourceType) => {
+    const sourceId = "source-2";
+    const sourced = new FinancialObligationEntity({
+      ...obligation.toJSON(),
+      sourceType,
+      sourceId,
+    });
+
+    tx.financialObligation.findFirst.mockResolvedValueOnce(
+      rawObligation({ sourceType, sourceId }),
+    );
+    tx.account.findFirst.mockResolvedValueOnce({ id: "account-2" });
+
+    const settlement = createSettlement("50.00", {
+      accountId: "account-2",
+      paymentMethod: FinancialPaymentMethod.BANK_SLIP,
+    });
+
+    await repository.settle(sourced, { settlement });
+
+    expect(tx.account.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "account-2",
+          tenantId: "tenant-1",
+          archivedAt: null,
+        }),
+      }),
+    );
+    expect(tx.financialObligationSettlement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          accountId: "account-2",
+          paymentMethod: FinancialPaymentMethod.BANK_SLIP,
+        }),
+      }),
+    );
   });
 
   it('pays a credit card invoice through the ledger without creating a transaction', async () => {

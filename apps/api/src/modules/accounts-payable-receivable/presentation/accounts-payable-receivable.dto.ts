@@ -14,6 +14,7 @@ import {
 import { FinancialObligationSourceType } from '../domain/enums/financial-obligation-source-type.enum';
 import { FinancialObligationStatus } from '../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../domain/enums/financial-obligation-type.enum';
+import { FinancialPaymentMethod } from '../domain/enums/financial-payment-method.enum';
 
 /** Payload validado para cadastrar um compromisso a pagar ou receber. */
 export class CreateFinancialObligationDto {
@@ -172,6 +173,14 @@ export class SettleFinancialObligationDto {
   @IsOptional()
   @IsString()
   accountId?: string;
+
+  @ApiPropertyOptional({
+    enum: FinancialPaymentMethod,
+    description: "Forma utilizada nesta liquidação. Cartão de crédito deve usar o fluxo específico de conversão da recorrência.",
+  })
+  @IsOptional()
+  @IsEnum(FinancialPaymentMethod)
+  paymentMethod?: FinancialPaymentMethod;
 
   @ApiPropertyOptional({
     description:

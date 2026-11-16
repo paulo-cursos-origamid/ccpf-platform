@@ -10,6 +10,7 @@ import {
   FinancialObligationStatus as PrismaFinancialObligationStatus,
   FinancialObligationSourceType as PrismaFinancialObligationSourceType,
   FinancialObligationType as PrismaFinancialObligationType,
+  FinancialPaymentMethod as PrismaFinancialPaymentMethod,
   LedgerEntryType,
   LedgerReferenceType,
   Prisma,
@@ -26,6 +27,7 @@ import {
 import { FinancialObligationStatus } from '../../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../../domain/enums/financial-obligation-type.enum';
 import { FinancialObligationSourceType } from '../../domain/enums/financial-obligation-source-type.enum';
+import { FinancialPaymentMethod } from '../../domain/enums/financial-payment-method.enum';
 
 @Injectable()
 export class PrismaFinancialObligationRepository implements FinancialObligationRepository {
@@ -449,6 +451,11 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           }
 
           const isCardInvoice = current.sourceType === 'CREDIT_CARD_INVOICE';
+          const allowsAlternativeAccount =
+            isCardInvoice ||
+            current.sourceType === 'RECURRING_BILL_OCCURRENCE' ||
+            current.sourceType === 'INSTALLMENT';
+
           if (!isCardInvoice && !current.categoryId) {
             throw new ConflictException(
               'A categoria da obrigação não está disponível para liquidação.',
@@ -456,7 +463,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           }
 
 
-          if (!isCardInvoice && settlement.accountId !== current.accountId) {
+          if (!allowsAlternativeAccount && settlement.accountId !== current.accountId) {
             throw new BadRequestException(
               'A conta utilizada deve ser a conta de referência do compromisso.',
             );
@@ -702,6 +709,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
                 feeAmount: new Prisma.Decimal(settlement.feeAmount),
                 discountAmount: new Prisma.Decimal(settlement.discountAmount),
                 settledAmount: cashAmount,
+                paymentMethod:
+                  settlement.paymentMethod as PrismaFinancialPaymentMethod | null,
                 settledAt: settlement.settledAt,
                 createdAt: settlement.createdAt,
               },
@@ -872,6 +881,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           interestAmount: item.interestAmount.toFixed(2),
           feeAmount: item.feeAmount.toFixed(2),
           discountAmount: item.discountAmount.toFixed(2),
+          paymentMethod: item.paymentMethod as FinancialPaymentMethod | null,
           settledAt: item.settledAt,
           transactionId: item.transactionId,
           createdAt: item.createdAt,

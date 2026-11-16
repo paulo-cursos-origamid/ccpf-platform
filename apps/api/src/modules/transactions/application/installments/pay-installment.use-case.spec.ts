@@ -12,6 +12,7 @@ import { FinancialObligationSettlementEntity } from '../../../accounts-payable-r
 import { FinancialObligationStatus } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-status.enum';
 import { FinancialObligationSourceType } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
 import { FinancialObligationType } from '../../../accounts-payable-receivable/domain/enums/financial-obligation-type.enum';
+import { FinancialPaymentMethod } from '../../../accounts-payable-receivable/domain/enums/financial-payment-method.enum';
 import { FinancialObligationRepository } from '../../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
 import { SettleFinancialObligationUseCase } from '../../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
 import { PayInstallmentUseCase } from './pay-installment.use-case';
@@ -94,6 +95,46 @@ describe('PayInstallmentUseCase', () => {
     });
   };
 
+  const createPartiallySettledObligation = () => {
+    const base = createObligation();
+    const settlement = new FinancialObligationSettlementEntity({
+      obligationId: base.id,
+      tenantId: base.tenantId,
+      userId: input.userId,
+      accountId: "account-2",
+      principalAmount: "40.00",
+      interestAmount: "2.00",
+      feeAmount: "0.00",
+      discountAmount: "5.00",
+      transactionId: null,
+      paymentMethod: FinancialPaymentMethod.PIX,
+      settledAt: paidAt,
+    });
+
+    base.registerSettlement(settlement);
+    return base;
+  };
+
+  const createFullySettledAfterPartialObligation = () => {
+    const base = createPartiallySettledObligation();
+    const settlement = new FinancialObligationSettlementEntity({
+      obligationId: base.id,
+      tenantId: base.tenantId,
+      userId: input.userId,
+      accountId: "account-2",
+      principalAmount: "60.00",
+      interestAmount: "0.00",
+      feeAmount: "0.00",
+      discountAmount: "0.00",
+      transactionId: "transaction-2",
+      paymentMethod: FinancialPaymentMethod.CASH,
+      settledAt: new Date(paidAt.getTime() + 86400000),
+    });
+
+    base.registerSettlement(settlement);
+    return base;
+  };
+
   beforeEach(() => {
     prisma = {
       installment: {
@@ -155,8 +196,97 @@ describe('PayInstallmentUseCase', () => {
       installmentNumber: 1,
       status: 'PAID',
       amount: '100.00',
+      totalSettledAmount: '100.00',
+      remainingAmount: '0.00',
       paidAt,
     });
+  });
+
+  it("registra uma liquidação parcial sem marcar a parcela como paga", async () => {
+    const partial = createPartiallySettledObligation();
+    settleObligation.execute.mockResolvedValue(partial);
+
+    const result = await useCase.execute({
+      ...input,
+      accountId: "account-2",
+      paymentMethod: FinancialPaymentMethod.PIX,
+      principalAmount: "40.00",
+      interestAmount: "2.00",
+      discountAmount: "5.00",
+    });
+
+    expect(settleObligation.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "account-2",
+        paymentMethod: FinancialPaymentMethod.PIX,
+        principalAmount: "40.00",
+        interestAmount: "2.00",
+        discountAmount: "5.00",
+      }),
+    );
+    expect(prisma.installment.updateMany).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      installmentId: input.installmentId,
+      installmentPlanId: input.installmentPlanId,
+      transactionId: null,
+      installmentNumber: 1,
+      status: "PENDING",
+      amount: "100.00",
+      totalSettledAmount: "37.00",
+      remainingAmount: "60.00",
+      paidAt: null,
+    });
+  });
+
+  it("liquida o saldo restante e só então marca a parcela como paga", async () => {
+    obligations.findBySource.mockResolvedValue(
+      createPartiallySettledObligation(),
+    );
+    const settled = createFullySettledAfterPartialObligation();
+    settleObligation.execute.mockResolvedValue(settled);
+
+    const result = await useCase.execute(input);
+
+    expect(settleObligation.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        principalAmount: "60.00",
+      }),
+    );
+    expect(prisma.installment.updateMany).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("PAID");
+    expect(result.totalSettledAmount).toBe("97.00");
+    expect(result.remainingAmount).toBe("0.00");
+    expect(result.transactionId).toBe("transaction-2");
+  });
+
+  it("recupera uma liquidação parcial feita por requisição concorrente", async () => {
+    const partial = createPartiallySettledObligation();
+    obligations.findBySource
+      .mockResolvedValueOnce(createObligation())
+      .mockResolvedValueOnce(partial);
+    settleObligation.execute.mockRejectedValue(
+      new ConflictException("Conflito concorrente."),
+    );
+
+    const result = await useCase.execute(input);
+
+    expect(result.status).toBe("PENDING");
+    expect(result.totalSettledAmount).toBe("37.00");
+    expect(result.remainingAmount).toBe("60.00");
+    expect(result.paidAt).toBeNull();
+    expect(prisma.installment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("propaga o erro quando não existe uma nova liquidação parcial concorrente", async () => {
+    const partial = createPartiallySettledObligation();
+    obligations.findBySource
+      .mockResolvedValueOnce(partial)
+      .mockResolvedValueOnce(partial);
+    const error = new BadRequestException("Valor de liquidação inválido.");
+    settleObligation.execute.mockRejectedValue(error);
+
+    await expect(useCase.execute(input)).rejects.toBe(error);
+    expect(prisma.installment.updateMany).not.toHaveBeenCalled();
   });
 
   it('cria obrigação vinculada quando o plano ainda não possui uma', async () => {

@@ -60,7 +60,7 @@ export class InstallmentPlansController {
   @ApiOperation({
     summary: 'Registrar pagamento de uma parcela',
     description:
-      'Registra transação, débito no Ledger, atualização do saldo e pagamento da parcela atomicamente.',
+      'Registra uma liquidação parcial ou total da obrigação da parcela. A parcela e seu status são sincronizados como pagos somente quando o principal estiver totalmente liquidado.',
   })
   pay(
     @CurrentTenant() tenant: TenantContext,
@@ -74,6 +74,13 @@ export class InstallmentPlansController {
       installmentPlanId,
       installmentId,
       paidAt: dto.paidAt,
+      accountId: dto.accountId,
+      paymentMethod: dto.paymentMethod,
+      principalAmount: dto.principalAmount,
+      interestAmount: dto.interestAmount,
+      feeAmount: dto.feeAmount,
+      discountAmount: dto.discountAmount,
+      description: dto.description,
     });
   }
 

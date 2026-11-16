@@ -4,6 +4,7 @@ import { FinancialObligationRepository } from '../../../domain/repositories/fina
 import { FinancialObligationSourceType } from '../../../domain/enums/financial-obligation-source-type.enum';
 import { FinancialObligationStatus } from '../../../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationType } from '../../../domain/enums/financial-obligation-type.enum';
+import { FinancialPaymentMethod } from '../../../domain/enums/financial-payment-method.enum';
 import { FinancialObligationsApplicationService } from '../../financial-obligations-application.service';
 import { SettleFinancialObligationUseCase } from './settle-financial-obligation.use-case';
 
@@ -104,6 +105,7 @@ describe('SettleFinancialObligationUseCase', () => {
       tenantId: obligation.tenantId,
       userId: obligation.userId,
       accountId: 'account-2',
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
     });
 
@@ -127,6 +129,21 @@ describe('SettleFinancialObligationUseCase', () => {
 
     const [, options] = repository.settle.mock.calls[0];
     expect(options.settlement.accountId).toBe('account-2');
+    expect(options.settlement.paymentMethod).toBe(FinancialPaymentMethod.PIX);
+  });
+
+  it('rejects credit card as a payment method in the generic settlement flow', async () => {
+    await expect(
+      useCase.execute({
+        id: obligation.id,
+        tenantId: obligation.tenantId,
+        userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+        settledAt,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(repository.settle).not.toHaveBeenCalled();
   });
 
   it('settles a card invoice using the selected account without requiring a category', async () => {

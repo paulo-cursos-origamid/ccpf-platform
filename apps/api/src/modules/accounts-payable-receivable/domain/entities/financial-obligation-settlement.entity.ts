@@ -1,3 +1,5 @@
+import { FinancialPaymentMethod } from '../enums/financial-payment-method.enum';
+
 import { randomUUID } from 'node:crypto';
 
 /** Registro imutável de uma liquidação individual do compromisso. */
@@ -13,6 +15,7 @@ export interface FinancialObligationSettlementProps {
   discountAmount?: string;
   settledAt: Date;
   transactionId?: string | null;
+  paymentMethod?: FinancialPaymentMethod | null;
   createdAt?: Date;
 }
 
@@ -28,6 +31,7 @@ export class FinancialObligationSettlementEntity {
   readonly discountAmount: string;
   readonly settledAmount: string;
   readonly settledAt: Date;
+  readonly paymentMethod: FinancialPaymentMethod | null;
   readonly createdAt: Date;
   private _transactionId: string | null;
 
@@ -77,6 +81,7 @@ export class FinancialObligationSettlementEntity {
         this.cents(this.feeAmount),
     );
     this.settledAt = props.settledAt;
+    this.paymentMethod = props.paymentMethod ?? null;
     this.createdAt = props.createdAt ?? new Date();
     this._transactionId = props.transactionId ?? null;
 
@@ -110,6 +115,7 @@ export class FinancialObligationSettlementEntity {
       settledAmount: this.settledAmount,
       settledAt: this.settledAt,
       transactionId: this.transactionId,
+      paymentMethod: this.paymentMethod,
       createdAt: this.createdAt,
     };
   }

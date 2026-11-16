@@ -15,6 +15,7 @@ import { AccountsPayableReceivableModule } from '../accounts-payable-receivable/
 import { PayCreditCardInvoiceUseCase } from './application/use-cases/pay-credit-card-invoice/pay-credit-card-invoice.use-case';
 import { ListCreditCardInvoicesUseCase } from './application/use-cases/list-credit-card-invoices/list-credit-card-invoices.use-case';
 import { GetCreditCardInvoiceUseCase } from './application/use-cases/get-credit-card-invoice/get-credit-card-invoice.use-case';
+import { GetCreditCardDashboardUseCase } from './application/use-cases/get-credit-card-dashboard/get-credit-card-dashboard.use-case';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { GetCreditCardInvoiceUseCase } from './application/use-cases/get-credit-
     PayCreditCardInvoiceUseCase,
     ListCreditCardInvoicesUseCase,
     GetCreditCardInvoiceUseCase,
+    GetCreditCardDashboardUseCase,
   ],
   exports: [
     CreateCreditCardUseCase,
@@ -48,6 +50,7 @@ import { GetCreditCardInvoiceUseCase } from './application/use-cases/get-credit-
     PayCreditCardInvoiceUseCase,
     ListCreditCardInvoicesUseCase,
     GetCreditCardInvoiceUseCase,
+    GetCreditCardDashboardUseCase,
   ],
 })
 export class CreditCardsModule {}

@@ -2,6 +2,7 @@ import { ConflictException, Injectable, BadRequestException } from '@nestjs/comm
 import { FinancialObligationSettlementEntity } from '../../../domain/entities/financial-obligation-settlement.entity';
 import { FinancialObligationStatus } from '../../../domain/enums/financial-obligation-status.enum';
 import { FinancialObligationSourceType } from '../../../domain/enums/financial-obligation-source-type.enum';
+import { FinancialPaymentMethod } from '../../../domain/enums/financial-payment-method.enum';
 import { FinancialObligationRepository } from '../../../domain/repositories/financial-obligation.repository';
 import { FinancialObligationsApplicationService } from '../../financial-obligations-application.service';
 
@@ -10,6 +11,7 @@ export interface SettleFinancialObligationInput {
   tenantId: string;
   userId: string;
   accountId?: string;
+  paymentMethod?: FinancialPaymentMethod;
   settledAt: Date;
   principalAmount?: string;
   interestAmount?: string;
@@ -49,12 +51,22 @@ export class SettleFinancialObligationUseCase {
     const isRecurringOccurrence =
       obligation.sourceType ===
       FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE;
+    const isInstallment =
+      obligation.sourceType === FinancialObligationSourceType.INSTALLMENT;
+
+    if (input.paymentMethod === FinancialPaymentMethod.CREDIT_CARD) {
+      throw new BadRequestException(
+        "Cartão de crédito deve utilizar o fluxo específico de conversão da recorrência.",
+      );
+    }
 
     const obligationAccountId = obligation.accountId;
     const settlementAccountId =
       isCardInvoice || isRecurringOccurrence
         ? input.accountId?.trim()
-        : obligationAccountId;
+        : isInstallment
+          ? input.accountId?.trim() || obligationAccountId
+          : obligationAccountId;
 
     if (!settlementAccountId) {
       throw new BadRequestException(
@@ -86,6 +98,7 @@ export class SettleFinancialObligationUseCase {
     } else {
       if (
         !isRecurringOccurrence &&
+        !isInstallment &&
         input.accountId &&
         input.accountId !== obligationAccountId
       ) {
@@ -94,7 +107,7 @@ export class SettleFinancialObligationUseCase {
         );
       }
 
-      if (isRecurringOccurrence) {
+      if (isRecurringOccurrence || isInstallment) {
         await this.obligations.assertTenantWriteAccess(
           obligation.tenantId,
           input.userId,
@@ -143,6 +156,7 @@ export class SettleFinancialObligationUseCase {
         interestAmount: input.interestAmount ?? '0.00',
         feeAmount: input.feeAmount ?? '0.00',
         discountAmount,
+        paymentMethod: input.paymentMethod ?? null,
         settledAt,
         transactionId: input.transactionId,
       });
