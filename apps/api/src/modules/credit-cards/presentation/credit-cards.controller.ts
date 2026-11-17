@@ -112,6 +112,7 @@ export class CreditCardsController {
     return this.getInvoiceUseCase.execute({
       invoiceId,
       tenantId: tenant.tenantId,
+      userId: tenant.userId,
     });
   }
 

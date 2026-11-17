@@ -25,6 +25,7 @@ describe('GetCreditCardInvoiceUseCase', () => {
       useCase.execute({
         invoiceId: 'invoice-1',
         tenantId: 'tenant-1',
+        userId: 'user-1',
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
 
@@ -60,6 +61,7 @@ describe('GetCreditCardInvoiceUseCase', () => {
           dueDate: new Date('2026-11-17T00:00:00.000Z'),
           purchase: {
             id: 'purchase-1',
+            userId: 'user-1',
             title: 'Monitor',
             totalAmount: new Prisma.Decimal('251.00'),
             purchaseDate: new Date('2026-10-10T12:00:00.000Z'),
@@ -74,6 +76,7 @@ describe('GetCreditCardInvoiceUseCase', () => {
     const result = await useCase.execute({
       invoiceId: 'invoice-1',
       tenantId: 'tenant-1',
+      userId: 'user-1',
     });
 
     expect(result.id).toBe('invoice-1');

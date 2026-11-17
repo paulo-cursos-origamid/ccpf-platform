@@ -10,6 +10,7 @@ import {
 export interface GetCreditCardInvoiceInput {
   invoiceId: string;
   tenantId: string;
+  userId: string;
 }
 
 @Injectable()
@@ -38,6 +39,6 @@ export class GetCreditCardInvoiceUseCase {
       select: creditCardInvoiceObligationSelect,
     });
 
-    return presentCreditCardInvoice(invoice, obligation);
+    return presentCreditCardInvoice(invoice, obligation, input.userId);
   }
 }

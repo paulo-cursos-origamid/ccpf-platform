@@ -15,6 +15,7 @@ export const creditCardInvoiceDetailsInclude = {
       purchase: {
         select: {
           id: true,
+          userId: true,
           title: true,
           totalAmount: true,
           purchaseDate: true,
@@ -25,10 +26,9 @@ export const creditCardInvoiceDetailsInclude = {
   },
 } satisfies Prisma.CreditCardInvoiceInclude;
 
-export type CreditCardInvoiceWithDetails =
-  Prisma.CreditCardInvoiceGetPayload<{
-    include: typeof creditCardInvoiceDetailsInclude;
-  }>;
+export type CreditCardInvoiceWithDetails = Prisma.CreditCardInvoiceGetPayload<{
+  include: typeof creditCardInvoiceDetailsInclude;
+}>;
 
 export const creditCardInvoiceObligationSelect = {
   sourceId: true,
@@ -45,13 +45,13 @@ export const creditCardInvoiceObligationSelect = {
   },
 } satisfies Prisma.FinancialObligationSelect;
 
-export type CreditCardInvoiceObligation =
-  Prisma.FinancialObligationGetPayload<{
-    select: typeof creditCardInvoiceObligationSelect;
-  }>;
+export type CreditCardInvoiceObligation = Prisma.FinancialObligationGetPayload<{
+  select: typeof creditCardInvoiceObligationSelect;
+}>;
 
 interface PurchaseSummary {
   id: string;
+  userId: string;
   title: string;
   totalAmount: string;
   purchaseDate: Date;
@@ -68,6 +68,7 @@ interface PurchaseSummary {
 export function presentCreditCardInvoice(
   invoice: CreditCardInvoiceWithDetails,
   obligation?: CreditCardInvoiceObligation | null,
+  currentUserId?: string,
 ) {
   const zero = new Prisma.Decimal(0);
 
@@ -109,9 +110,7 @@ export function presentCreditCardInvoice(
   );
 
   const remainingAmount = totalAmount.minus(principalPaidAmount);
-  const safeRemainingAmount = remainingAmount.gt(0)
-    ? remainingAmount
-    : zero;
+  const safeRemainingAmount = remainingAmount.gt(0) ? remainingAmount : zero;
 
   const purchases = new Map<string, PurchaseSummary>();
 
@@ -122,6 +121,7 @@ export function presentCreditCardInvoice(
     if (!summary) {
       summary = {
         id: purchase.id,
+        userId: purchase.userId,
         title: purchase.title,
         totalAmount: purchase.totalAmount.toFixed(2),
         purchaseDate: purchase.purchaseDate,
@@ -176,6 +176,12 @@ export function presentCreditCardInvoice(
       purchaseDate: purchase.purchaseDate,
       installmentCount: purchase.installmentCount,
       invoiceAmount: purchase.invoiceAmount.toFixed(2),
+      canEdit: Boolean(
+        currentUserId &&
+        purchase.userId === currentUserId &&
+        purchase.installments[0]?.installmentNumber === 1 &&
+        purchase.installments[0].dueDate.getTime() > Date.now(),
+      ),
       installments: purchase.installments,
     })),
   };
