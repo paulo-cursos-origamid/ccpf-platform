@@ -24,7 +24,9 @@ import { ListCreditCardsUseCase } from '../application/use-cases/list-credit-car
 import { GetCreditCardUseCase } from '../application/use-cases/get-credit-card/get-credit-card.use-case';
 import { UpdateCreditCardUseCase } from '../application/use-cases/update-credit-card/update-credit-card.use-case';
 import { ArchiveCreditCardUseCase } from '../application/use-cases/archive-credit-card/archive-credit-card.use-case';
+import { UpdateCreditCardPurchaseUseCase } from '../application/use-cases/update-credit-card-purchase/update-credit-card-purchase.use-case';
 import { CreateCreditCardPurchaseUseCase } from '../application/use-cases/create-credit-card-purchase/create-credit-card-purchase.use-case';
+import { UpdateCreditCardPurchaseDto } from './dto/update-credit-card-purchase.dto';
 import { CreateCreditCardPurchaseDto } from './dto/create-credit-card-purchase.dto';
 import { CreateCreditCardDto } from './dto/create-credit-card.dto';
 import { UpdateCreditCardDto } from './dto/update-credit-card.dto';
@@ -52,6 +54,7 @@ export class CreditCardsController {
     private readonly updateCard: UpdateCreditCardUseCase,
     private readonly archiveCard: ArchiveCreditCardUseCase,
     private readonly createPurchase: CreateCreditCardPurchaseUseCase,
+    private readonly updatePurchase: UpdateCreditCardPurchaseUseCase,
     private readonly payInvoice: PayCreditCardInvoiceUseCase,
     private readonly listInvoicesUseCase: ListCreditCardInvoicesUseCase,
     private readonly getInvoiceUseCase: GetCreditCardInvoiceUseCase,
@@ -147,6 +150,25 @@ export class CreditCardsController {
     });
   }
 
+  @Patch(':id/purchases/:purchaseId')
+  @ApiOperation({
+    summary: 'Corrigir valor e quantidade de parcelas de uma compra',
+  })
+  updatePurchaseEntry(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') cardId: string,
+    @Param('purchaseId') purchaseId: string,
+    @Body() dto: UpdateCreditCardPurchaseDto,
+  ) {
+    return this.updatePurchase.execute({
+      ...dto,
+      creditCardId: cardId,
+      purchaseId,
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+    });
+  }
+
   @Post(':id/purchases')
   @ApiOperation({ summary: 'Registrar compra no cartão de crédito' })
   createPurchaseEntry(
@@ -161,7 +183,6 @@ export class CreditCardsController {
       userId: tenant.userId,
     });
   }
-
 
   @Post('invoices/:invoiceId/pay')
   @ApiOperation({ summary: 'Pagar fatura do cartão de crédito' })
@@ -183,5 +204,4 @@ export class CreditCardsController {
       description: dto.description,
     });
   }
-
 }

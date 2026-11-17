@@ -8,6 +8,7 @@ import { ListCreditCardsUseCase } from './application/use-cases/list-credit-card
 import { GetCreditCardUseCase } from './application/use-cases/get-credit-card/get-credit-card.use-case';
 import { UpdateCreditCardUseCase } from './application/use-cases/update-credit-card/update-credit-card.use-case';
 import { ArchiveCreditCardUseCase } from './application/use-cases/archive-credit-card/archive-credit-card.use-case';
+import { UpdateCreditCardPurchaseUseCase } from './application/use-cases/update-credit-card-purchase/update-credit-card-purchase.use-case';
 import { CreateCreditCardPurchaseUseCase } from './application/use-cases/create-credit-card-purchase/create-credit-card-purchase.use-case';
 import { CreditCardsController } from './presentation/credit-cards.controller';
 
@@ -18,11 +19,7 @@ import { GetCreditCardInvoiceUseCase } from './application/use-cases/get-credit-
 import { GetCreditCardDashboardUseCase } from './application/use-cases/get-credit-card-dashboard/get-credit-card-dashboard.use-case';
 
 @Module({
-  imports: [
-    TenantModule,
-    BillingModule,
-    AccountsPayableReceivableModule,
-  ],
+  imports: [TenantModule, BillingModule, AccountsPayableReceivableModule],
   controllers: [CreditCardsController],
   providers: [
     {
@@ -35,6 +32,7 @@ import { GetCreditCardDashboardUseCase } from './application/use-cases/get-credi
     UpdateCreditCardUseCase,
     ArchiveCreditCardUseCase,
     CreateCreditCardPurchaseUseCase,
+    UpdateCreditCardPurchaseUseCase,
     PayCreditCardInvoiceUseCase,
     ListCreditCardInvoicesUseCase,
     GetCreditCardInvoiceUseCase,
