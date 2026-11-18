@@ -9,6 +9,7 @@ import {
   Plus,
   Unlock,
 } from "@/components/icons";
+import { CurrencyInput } from "@/components/ui/forms";
 import { useAccounts } from "@/modules/accounts/hooks";
 import type { Account } from "@/modules/accounts/types";
 
@@ -159,6 +160,14 @@ export function ListFinancialGoals() {
     useState<FinancialGoalListItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [targetAmount, setTargetAmount] = useState<number | null>(null);
+  const [targetDateInput, setTargetDateInput] = useState("");
+
+  const formattedDateInput = targetDateInput.length > 4
+    ? `${targetDateInput.slice(0, 2)}/${targetDateInput.slice(2, 4)}/${targetDateInput.slice(4)}`
+    : targetDateInput.length > 2
+      ? `${targetDateInput.slice(0, 2)}/${targetDateInput.slice(2)}`
+      : targetDateInput;
 
   const activeGoals = goals.filter((item) => item.effectiveStatus === "ACTIVE");
   const totalSaved = goals.reduce(
@@ -176,14 +185,30 @@ export function ListFinancialGoals() {
 
     const name = String(form.get("name") ?? "").trim();
     const description = String(form.get("description") ?? "").trim();
-    const targetAmount = Number(
-      String(form.get("targetAmount") ?? "").replace(",", "."),
-    );
-    const targetDate = String(form.get("targetDate") ?? "");
+    const parsedTargetAmount = targetAmount ?? 0;
+    const dateDigits = targetDateInput.replace(/\D/g, "").slice(0, 8);
+    const day = Number(dateDigits.slice(0, 2));
+    const month = Number(dateDigits.slice(2, 4));
+    const year = Number(dateDigits.slice(4, 8));
+    const parsedDate = new Date(Date.UTC(year, month - 1, day));
+    const isValidTargetDate =
+      !targetDateInput ||
+      (dateDigits.length === 8 &&
+        parsedDate.getUTCFullYear() === year &&
+        parsedDate.getUTCMonth() === month - 1 &&
+        parsedDate.getUTCDate() === day);
+    const targetDate = dateDigits.length === 8
+      ? `${dateDigits.slice(4, 8)}-${dateDigits.slice(2, 4)}-${dateDigits.slice(0, 2)}`
+      : "";
     const linkedAccountId = String(form.get("linkedAccountId") ?? "");
 
-    if (!name || !Number.isFinite(targetAmount) || targetAmount <= 0) {
-      setFormError("Informe um nome e um valor-alvo válido.");
+    if (
+      !name ||
+      !Number.isFinite(parsedTargetAmount) ||
+      parsedTargetAmount <= 0 ||
+      !isValidTargetDate
+    ) {
+      setFormError("Informe um nome, um valor-alvo válido e uma data existente no formato DD/MM/AAAA.");
       return;
     }
 
@@ -193,12 +218,14 @@ export function ListFinancialGoals() {
     try {
       await financialGoalsService.create({
         name,
-        targetAmount,
+        targetAmount: parsedTargetAmount,
         ...(description ? { description } : {}),
         ...(targetDate ? { targetDate } : {}),
         ...(linkedAccountId ? { linkedAccountId } : {}),
       });
       setCreateOpen(false);
+      setTargetDateInput("");
+      setTargetAmount(null);
       await loadGoals();
     } catch {
       setFormError(
@@ -404,13 +431,13 @@ export function ListFinancialGoals() {
             </label>
             <label>
               Valor-alvo
-              <input
+              <CurrencyInput
                 name="targetAmount"
+                value={targetAmount}
+                onChange={setTargetAmount}
+                currency="BRL"
                 required
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </label>
             <label>
@@ -424,7 +451,18 @@ export function ListFinancialGoals() {
             </label>
             <label>
               Data-alvo
-              <input name="targetDate" type="date" />
+              <input
+                name="targetDate"
+                type="text"
+                inputMode="numeric"
+                placeholder="DD/MM/AAAA"
+                maxLength={10}
+                value={formattedDateInput}
+                onChange={(event) => {
+                  const digits = event.target.value.replace(/\D/g, "").slice(0, 8);
+                  setTargetDateInput(digits);
+                }}
+              />
             </label>
             <label>
               Conta vinculada (opcional)

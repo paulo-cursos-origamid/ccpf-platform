@@ -6,6 +6,7 @@ export type CurrencyInputProps = Omit<
 > & {
   value?: number | null;
   defaultValue?: number | null;
+  currency?: string;
 
   onChange?: (value: number | null) => void;
 };

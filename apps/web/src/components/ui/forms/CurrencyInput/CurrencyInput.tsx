@@ -6,17 +6,27 @@ import { Input } from "../Input";
 
 import type { CurrencyInputProps } from "./CurrencyInput.types";
 
-const formatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function formatCurrency(value: number | null | undefined): string {
+function formatCurrency(
+  value: number | null | undefined,
+  currency: string,
+): string {
   if (value === null || value === undefined) {
     return "";
   }
 
-  return formatter.format(value);
+  const normalizedCurrency = /^[A-Z]{3}$/.test(currency) ? currency : "BRL";
+
+  try {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: normalizedCurrency,
+    }).format(value);
+  } catch {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  }
 }
 
 function parseCurrency(value: string): number | null {
@@ -33,6 +43,7 @@ export function CurrencyInput({
   value,
   defaultValue,
   onChange,
+  currency = "BRL",
   ...props
 }: CurrencyInputProps) {
   const [internalValue, setInternalValue] = useState<number | null>(
@@ -56,7 +67,7 @@ export function CurrencyInput({
       {...props}
       type="text"
       inputMode="decimal"
-      value={formatCurrency(currentValue)}
+      value={formatCurrency(currentValue, currency)}
       onChange={handleChange}
     />
   );
