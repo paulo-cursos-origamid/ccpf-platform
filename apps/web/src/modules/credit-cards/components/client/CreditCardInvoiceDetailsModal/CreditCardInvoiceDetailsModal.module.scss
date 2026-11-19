@@ -154,6 +154,32 @@
   text-align: right;
 }
 
+.purchaseActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.purchaseEditForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--surface-primary);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+
+    span {
+      color: var(--text-secondary);
+      font-size: var(--font-sxs);
+    }
+  }
+}
+
 .installments {
   display: flex;
   flex-direction: column;

@@ -14,6 +14,7 @@ import type {
 import type {
   CreditCardPurchase,
   CreateCreditCardPurchaseInput,
+  UpdateCreditCardPurchaseInput,
 } from "../types/credit-card-purchase";
 import type { CreditCardInvoicePaymentResult } from "../types/credit-card-payment";
 import type { CreditCardDashboard } from "../types/credit-card-dashboard";
@@ -46,6 +47,17 @@ class CreditCardsService {
   createPurchase(id: string, data: CreateCreditCardPurchaseInput) {
     return api.post<CreditCardPurchase>(
       `/credit-cards/${id}/purchases`,
+      data,
+    );
+  }
+
+  updatePurchase(
+    cardId: string,
+    purchaseId: string,
+    data: UpdateCreditCardPurchaseInput,
+  ) {
+    return api.patch<CreditCardPurchase>(
+      `/credit-cards/${cardId}/purchases/${purchaseId}`,
       data,
     );
   }

@@ -6,6 +6,7 @@ import {
   Button,
   CurrencyInput,
   DateInput,
+  Input,
   Field,
   Select,
   Textarea,
@@ -16,11 +17,13 @@ import { AccountStatus } from "@/modules/accounts/types/account-status";
 import { useAccounts } from "@/modules/accounts/hooks";
 import {
   usePayCreditCardInvoice,
+  useUpdateCreditCardPurchase,
 } from "@/modules/credit-cards/hooks";
 import { creditCardsService } from "@/modules/credit-cards/services/credit-cards.service";
 import type {
   CreditCardInvoice,
   PayCreditCardInvoiceInput,
+  UpdateCreditCardPurchaseInput,
 } from "@/modules/credit-cards/types";
 
 import styles from "./CreditCardInvoiceDetailsModal.module.scss";
@@ -109,6 +112,10 @@ export function CreditCardInvoiceDetailsModal({
   const [refreshError, setRefreshError] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [success, setSuccess] = useState("");
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
+  const [editTotalAmount, setEditTotalAmount] = useState<number | null>(null);
+  const [editInstallmentCount, setEditInstallmentCount] = useState("");
+  const [purchaseEditError, setPurchaseEditError] = useState("");
 
   const [accountId, setAccountId] = useState("");
   const [settledAt, setSettledAt] = useState(localToday());
@@ -129,6 +136,11 @@ export function CreditCardInvoiceDetailsModal({
     loading: saving,
   } = usePayCreditCardInvoice();
 
+  const {
+    updatePurchase,
+    loading: updatingPurchase,
+  } = useUpdateCreditCardPurchase();
+
   const activeAccounts = accounts.filter(
     (account) =>
       account.status === AccountStatus.ACTIVE &&
@@ -148,6 +160,10 @@ export function CreditCardInvoiceDetailsModal({
     setRefreshError("");
     setPaymentError("");
     setSuccess("");
+    setEditingPurchaseId(null);
+    setEditTotalAmount(null);
+    setEditInstallmentCount("");
+    setPurchaseEditError("");
     setSettledAt(localToday());
     setPrincipalAmount(
       Math.max(0, Number(invoice.indicators.remainingAmount) || 0),
@@ -310,6 +326,72 @@ export function CreditCardInvoiceDetailsModal({
     }
   }
 
+  async function submitPurchaseEdit(
+    event: FormEvent<HTMLFormElement>,
+    purchaseId: string,
+  ) {
+    event.preventDefault();
+
+    if (!currentInvoice || updatingPurchase) return;
+
+    setPurchaseEditError("");
+    setRefreshError("");
+    setSuccess("");
+
+    const amount = editTotalAmount;
+    const installmentCount = Number(editInstallmentCount);
+
+    if (amount === null || !Number.isFinite(amount) || amount <= 0) {
+      setPurchaseEditError("Informe um valor total maior que zero.");
+      return;
+    }
+
+    if (
+      !Number.isInteger(installmentCount) ||
+      installmentCount < 1 ||
+      installmentCount > 120
+    ) {
+      setPurchaseEditError("A quantidade de parcelas deve ser um número inteiro entre 1 e 120.");
+      return;
+    }
+
+    const payload: UpdateCreditCardPurchaseInput = {
+      totalAmount: amount.toFixed(2),
+      installmentCount,
+    };
+
+    try {
+      await updatePurchase(
+        currentInvoice.creditCard.id,
+        purchaseId,
+        payload,
+      );
+    } catch {
+      setPurchaseEditError(
+        "Não foi possível salvar a compra. Confira os dados e tente novamente.",
+      );
+      return;
+    }
+
+    setEditingPurchaseId(null);
+    setEditTotalAmount(null);
+    setEditInstallmentCount("");
+    setSuccess("Compra atualizada com sucesso.");
+
+    try {
+      const updatedInvoice = await creditCardsService.getInvoice(
+        currentInvoice.id,
+      );
+
+      setDetails(updatedInvoice);
+      await onUpdated();
+    } catch {
+      setRefreshError(
+        "A compra foi salva, mas não foi possível atualizar todos os dados exibidos. Reabra a fatura para conferir.",
+      );
+    }
+  }
+
   if (!currentInvoice) {
     return null;
   }
@@ -318,11 +400,11 @@ export function CreditCardInvoiceDetailsModal({
     <Modal
       open={open}
       onClose={() => {
-        if (!saving) onClose();
+        if (!saving && !updatingPurchase) onClose();
       }}
       title="Detalhes da fatura"
       className={styles.modal}
-      closeOnOverlayClick={!saving}
+      closeOnOverlayClick={!saving && !updatingPurchase}
     >
       <div className={styles.content}>
         <header className={styles.invoiceHeader}>
@@ -424,6 +506,96 @@ export function CreditCardInvoiceDetailsModal({
                       </span>
                     </div>
                   </div>
+
+                  {purchase.canEdit && (
+                    <div className={styles.purchaseActions}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={updatingPurchase}
+                        onClick={() => {
+                          if (editingPurchaseId === purchase.id) {
+                            setEditingPurchaseId(null);
+                            setPurchaseEditError("");
+                            return;
+                          }
+
+                          setEditingPurchaseId(purchase.id);
+                          setEditTotalAmount(
+                            Number(purchase.totalAmount),
+                          );
+                          setEditInstallmentCount(
+                            String(purchase.installmentCount),
+                          );
+                          setPurchaseEditError("");
+                        }}
+                      >
+                        {editingPurchaseId === purchase.id
+                          ? "Cancelar edição"
+                          : "Editar compra"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {editingPurchaseId === purchase.id && (
+                    <form
+                      className={styles.purchaseEditForm}
+                      onSubmit={(event) =>
+                        submitPurchaseEdit(event, purchase.id)
+                      }
+                    >
+                      <div className={styles.formGrid}>
+                        <label>
+                          <span>Valor total (R$)</span>
+                          <CurrencyInput
+                            value={editTotalAmount}
+                            onChange={setEditTotalAmount}
+                            disabled={updatingPurchase}
+                            required
+                          />
+                        </label>
+
+                        <label>
+                          <span>Quantidade de parcelas</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={120}
+                            step={1}
+                            value={editInstallmentCount}
+                            onChange={(event) =>
+                              setEditInstallmentCount(event.target.value)
+                            }
+                            disabled={updatingPurchase}
+                            required
+                          />
+                        </label>
+                      </div>
+
+                      {purchaseEditError && (
+                        <p className={styles.error} role="alert">
+                          {purchaseEditError}
+                        </p>
+                      )}
+
+                      <div className={styles.actions}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={updatingPurchase}
+                          onClick={() => {
+                            setEditingPurchaseId(null);
+                            setPurchaseEditError("");
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit" disabled={updatingPurchase}>
+                          {updatingPurchase ? "Salvando..." : "Salvar alterações"}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
 
                   <div className={styles.installments}>
                     <span className={styles.installmentHeading}>

@@ -57,6 +57,27 @@ export function CreditCardPurchaseModal({
   );
 
   const subCategories = selectedCategory?.subCategories ?? [];
+  const parsedInstallmentCount = Number(installmentCount);
+  const installmentPreview =
+    totalAmount !== null &&
+    Number.isFinite(totalAmount) &&
+    totalAmount > 0 &&
+    Number.isInteger(parsedInstallmentCount) &&
+    parsedInstallmentCount >= 1 &&
+    parsedInstallmentCount <= 120
+      ? (() => {
+          const totalCents = Math.round(totalAmount * 100);
+          const baseCents = Math.floor(totalCents / parsedInstallmentCount);
+          const remainder = totalCents % parsedInstallmentCount;
+          const firstInstallmentCents =
+            baseCents + (remainder > 0 ? 1 : 0);
+
+          return new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }).format(firstInstallmentCents / 100);
+        })()
+      : "";
 
   useEffect(() => {
     if (!open) return;
@@ -181,7 +202,7 @@ export function CreditCardPurchaseModal({
         </Field>
 
         <div className={styles.row}>
-          <Field label="Valor total" htmlFor="credit-card-purchase-amount" required className={styles.field}>
+          <Field label="Valor total da compra" htmlFor="credit-card-purchase-amount" required className={styles.field}>
             <CurrencyInput
               id="credit-card-purchase-amount"
               value={totalAmount}
@@ -201,6 +222,19 @@ export function CreditCardPurchaseModal({
             />
           </Field>
         </div>
+
+        <Field
+          label="Valor da parcela (estimado)"
+          htmlFor="credit-card-purchase-installment-preview"
+          className={styles.field}
+        >
+          <Input
+            id="credit-card-purchase-installment-preview"
+            value={installmentPreview}
+            readOnly
+            placeholder="Informe o valor total e as parcelas"
+          />
+        </Field>
 
         <div className={styles.row}>
           <Field label="Quantidade de parcelas" htmlFor="credit-card-purchase-installments" required className={styles.field}>

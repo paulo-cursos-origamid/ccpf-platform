@@ -8,6 +8,11 @@ export interface CreateCreditCardPurchaseInput {
   description?: string;
 }
 
+export interface UpdateCreditCardPurchaseInput {
+  totalAmount: string;
+  installmentCount: number;
+}
+
 export interface CreditCardPurchaseInstallment {
   id: string;
   installmentNumber: number;

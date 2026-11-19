@@ -35,6 +35,7 @@ export interface CreditCardInvoicePurchase {
   purchaseDate: string;
   installmentCount: number;
   invoiceAmount: string;
+  canEdit: boolean;
   installments: CreditCardInvoiceInstallment[];
 }
 
