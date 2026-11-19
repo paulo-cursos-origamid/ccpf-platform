@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { CircleDollarSign, Coins, WalletCards } from "@/components/icons";
-import { Button, Field, Input, Select } from "@/components/ui/forms";
+import { Button, CurrencyInput, Field, Input, Select } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay/Modal";
 
 import { useCreateAccount } from "@/modules/accounts/hooks";
@@ -39,7 +39,7 @@ export function CreateAccountModal({
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>(AccountType.CHECKING);
   const [currency, setCurrency] = useState("BRL");
-  const [initialBalance, setInitialBalance] = useState("0");
+  const [initialBalance, setInitialBalance] = useState<number | null>(0);
   const [error, setError] = useState<string | null>(null);
 
   function handleClose() {
@@ -55,7 +55,7 @@ export function CreateAccountModal({
 
     setError(null);
 
-    const parsedBalance = Number(initialBalance);
+    const parsedBalance = initialBalance ?? 0;
 
     if (!name.trim()) {
       setError("Informe o nome da conta.");
@@ -85,7 +85,7 @@ export function CreateAccountModal({
       setName("");
       setType(AccountType.CHECKING);
       setCurrency("BRL");
-      setInitialBalance("0");
+      setInitialBalance(0);
 
       onClose();
     } catch {
@@ -160,12 +160,12 @@ export function CreateAccountModal({
             required
             className={styles.field}
           >
-            <Input
+            <CurrencyInput
               id="account-initial-balance"
-              type="number"
               value={initialBalance}
-              onChange={(event) => setInitialBalance(event.target.value)}
-              step="0.01"
+              onChange={setInitialBalance}
+              currency={currency.trim().toUpperCase()}
+              placeholder="R$ 0,00"
               disabled={loading}
               leftIcon={<CircleDollarSign size={18} strokeWidth={1.8} />}
             />
