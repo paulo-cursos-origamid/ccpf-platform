@@ -3,6 +3,7 @@ import type {
   CreateRecurringBillInput,
   RecurringBill,
   PayRecurringBillInput,
+  UpdateRecurringBillInput,
 } from "../types/recurring-bill";
 
 class RecurringBillsService {
@@ -18,8 +19,8 @@ class RecurringBillsService {
     return api.post<unknown>(`/recurring-bills/${id}/generate`, {});
   }
 
-  updateDueDay(id: string, dueDay: number) {
-    return api.patch<unknown>(`/recurring-bills/${id}`, { dueDay });
+  update(id: string, data: UpdateRecurringBillInput) {
+    return api.patch<unknown>(`/recurring-bills/${id}`, data);
   }
 
   pay(

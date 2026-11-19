@@ -6,6 +6,7 @@ import { useAccounts } from "@/modules/accounts/hooks";
 import { useCreditCards } from "@/modules/credit-cards/hooks";
 import { Modal } from "@/components/ui/overlay/Modal";
 import { useTenantStore } from "@/modules/tenant/stores";
+import { useCurrentUser } from "@/modules/identity/hooks/shared";
 import { recurringBillsService } from "../services/recurring-bills.service";
 import type {
   RecurringBill,
@@ -326,12 +327,14 @@ function EditRecurringBillModal({
   onSaved: () => void;
 }) {
   const [dueDay, setDueDay] = useState("1");
+  const [expectedAmount, setExpectedAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
   useEffect(() => {
     if (!bill) return;
     setDueDay(String(bill.dueDay));
+    setExpectedAmount(bill.expectedAmount ?? "");
     setEditError("");
   }, [bill]);
 
@@ -346,11 +349,23 @@ function EditRecurringBillModal({
       return;
     }
 
+    const normalizedAmount = expectedAmount.trim().replace(",", ".");
+    if (
+      normalizedAmount &&
+      !/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/.test(normalizedAmount)
+    ) {
+      setEditError("Informe um valor positivo com até duas casas decimais.");
+      return;
+    }
+
     setSaving(true);
     setEditError("");
 
     try {
-      await recurringBillsService.updateDueDay(bill.id, day);
+      await recurringBillsService.update(bill.id, {
+        dueDay: day,
+        ...(normalizedAmount ? { expectedAmount: normalizedAmount } : {}),
+      });
       onSaved();
       onClose();
     } catch (error) {
@@ -378,6 +393,7 @@ function EditRecurringBillModal({
             <strong>{bill.title}</strong>
             <span>Conta: {bill.account?.name ?? "Não vinculada"}</span>
             <span>Dia atual: {bill.dueDay}</span>
+            <span>Valor previsto: {bill.expectedAmount ? money.format(Number(bill.expectedAmount)) : "Não informado"}</span>
           </div>
 
           <Field label="Novo dia de vencimento" htmlFor="recurring-due-day" required>
@@ -390,6 +406,19 @@ function EditRecurringBillModal({
               onChange={(event) => setDueDay(event.target.value)}
               disabled={saving}
               required
+            />
+          </Field>
+
+          <Field label="Novo valor previsto (R$)" htmlFor="recurring-expected-amount">
+            <Input
+              id="recurring-expected-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={expectedAmount}
+              onChange={(event) => setExpectedAmount(event.target.value)}
+              disabled={saving}
+              placeholder="Deixe vazio para manter o valor atual"
             />
           </Field>
 
@@ -420,6 +449,7 @@ function EditRecurringBillModal({
 
 export function RecurringBillsRows({ search, onPayment }: Props) {
   const tenantId = useTenantStore((state) => state.activeTenantId);
+  const currentUserId = useCurrentUser()?.id;
   const [bills, setBills] = useState<RecurringBill[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -573,7 +603,7 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                       <strong>Vencimentos — {bill.title}</strong>
 
                       <div>
-                        <button
+                        {bill.userId === currentUserId && <button
                           type="button"
                           className={styles.expandAction}
                           disabled={
@@ -595,8 +625,8 @@ export function RecurringBillsRows({ search, onPayment }: Props) {
                           }
                           onClick={() => setEditSelection(bill)}
                         >
-                          Editar vencimento
-                        </button>
+                          Editar valor ou vencimento
+                        </button>}
 
                       <button
                         type="button"

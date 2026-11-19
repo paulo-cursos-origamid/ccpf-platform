@@ -27,6 +27,7 @@ export interface PayRecurringBillInput {
 
 export interface RecurringBill {
   id: string;
+  userId: string;
   title: string;
   description: string | null;
   expectedAmount: string | null;
@@ -47,4 +48,10 @@ export interface CreateRecurringBillInput {
   dueDay: number;
   startDate: string;
   description?: string;
+}
+
+/** Campos editáveis pelo criador de uma conta recorrente. */
+export interface UpdateRecurringBillInput {
+  dueDay: number;
+  expectedAmount?: string;
 }
