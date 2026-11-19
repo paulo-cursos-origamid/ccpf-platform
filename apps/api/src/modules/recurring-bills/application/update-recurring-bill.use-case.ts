@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 
 interface UpdateRecurringBillInput {
@@ -11,6 +12,7 @@ interface UpdateRecurringBillInput {
   userId: string;
   recurringBillId: string;
   dueDay: number;
+  expectedAmount?: string;
 }
 
 function dateAtUtcDay(year: number, month: number, day: number): Date {
@@ -24,10 +26,24 @@ export class UpdateRecurringBillUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(input: UpdateRecurringBillInput) {
-    if (!Number.isInteger(input.dueDay) ||
-        input.dueDay < 1 ||
-        input.dueDay > 31) {
+    if (
+      !Number.isInteger(input.dueDay) ||
+      input.dueDay < 1 ||
+      input.dueDay > 31
+    ) {
       throw new BadRequestException('Dia de vencimento inválido.');
+    }
+
+    let expectedAmount: Prisma.Decimal | undefined;
+    if (input.expectedAmount !== undefined) {
+      if (!/^(?=.*[1-9])\d+(?:\.\d{1,2})?$/.test(input.expectedAmount)) {
+        throw new BadRequestException('Valor previsto inválido.');
+      }
+
+      expectedAmount = new Prisma.Decimal(input.expectedAmount);
+      if (!expectedAmount.isFinite() || expectedAmount.lte(0)) {
+        throw new BadRequestException('Valor previsto inválido.');
+      }
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -68,6 +84,12 @@ export class UpdateRecurringBillUseCase {
         );
       }
 
+      if (bill.userId !== input.userId) {
+        throw new ForbiddenException(
+          'Somente quem cadastrou a conta recorrente pode editá-la.',
+        );
+      }
+
       const todayInBrazil = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
         year: 'numeric',
@@ -95,6 +117,7 @@ export class UpdateRecurringBillUseCase {
         },
         data: {
           dueDay: input.dueDay,
+          ...(expectedAmount ? { expectedAmount } : {}),
         },
       });
 
@@ -107,8 +130,8 @@ export class UpdateRecurringBillUseCase {
             input.dueDay,
           );
 
-          const updatedOccurrence =
-            await tx.recurringBillOccurrence.updateMany({
+          const updatedOccurrence = await tx.recurringBillOccurrence.updateMany(
+            {
               where: {
                 id: occurrence.id,
                 tenantId: input.tenantId,
@@ -116,8 +139,12 @@ export class UpdateRecurringBillUseCase {
                 status: 'PENDING',
                 transactionId: null,
               },
-              data: { dueDate },
-            });
+              data: {
+                dueDate,
+                ...(expectedAmount ? { expectedAmount } : {}),
+              },
+            },
+          );
 
           if (updatedOccurrence.count !== 1) {
             return;
@@ -132,7 +159,10 @@ export class UpdateRecurringBillUseCase {
               status: 'PENDING',
               settlements: { none: {} },
             },
-            data: { dueDate },
+            data: {
+              dueDate,
+              ...(expectedAmount ? { amount: expectedAmount } : {}),
+            },
           });
         }),
       );

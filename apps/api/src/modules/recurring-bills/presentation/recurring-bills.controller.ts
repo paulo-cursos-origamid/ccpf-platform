@@ -15,10 +15,7 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../../identity/infrastructure/auth';
-import {
-  CurrentTenant,
-  TenantContextGuard,
-} from '../../tenant/presentation';
+import { CurrentTenant, TenantContextGuard } from '../../tenant/presentation';
 import type { TenantContext } from '../../tenant/presentation';
 import { SubscriptionAccessGuard } from '../../billing/presentation/guards/subscription-access.guard';
 
@@ -76,9 +73,9 @@ export class RecurringBillsController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Corrigir dia de vencimento da conta recorrente',
+    summary: 'Editar conta recorrente',
     description:
-      'Atualiza o cadastro e vencimentos pendentes futuros. Contas com vencimento pendente atrasado não podem ser editadas.',
+      'Somente quem cadastrou pode alterar o dia ou valor previsto. Vencimentos pendentes futuros são sincronizados; contas com vencimento pendente atrasado não podem ser editadas.',
   })
   update(
     @CurrentTenant() tenant: TenantContext,
@@ -90,6 +87,7 @@ export class RecurringBillsController {
       userId: tenant.userId,
       recurringBillId: id,
       dueDay: dto.dueDay,
+      expectedAmount: dto.expectedAmount,
     });
   }
 
@@ -99,17 +97,9 @@ export class RecurringBillsController {
     description:
       'Gera vencimentos sem duplicar cobranças e sem movimentar saldo.',
   })
-  generate(
-    @CurrentTenant() tenant: TenantContext,
-    @Param('id') id: string,
-  ) {
-    return this.generateOccurrences.execute(
-      tenant.tenantId,
-      tenant.userId,
-      id,
-    );
+  generate(@CurrentTenant() tenant: TenantContext, @Param('id') id: string) {
+    return this.generateOccurrences.execute(tenant.tenantId, tenant.userId, id);
   }
-
 
   @Post(':id/occurrences/:occurrenceId/pay')
   @ApiOperation({
@@ -131,5 +121,4 @@ export class RecurringBillsController {
       occurrenceId,
     });
   }
-
 }
