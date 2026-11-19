@@ -5,11 +5,16 @@ import { CircleDollarSign, CreditCard, Coins } from "@/components/icons";
 import { useAccounts } from "@/modules/accounts/hooks";
 import { useCategories } from "@/modules/categories/hooks";
 import { useTransactions } from "../../hooks/client/useTransactions";
-import type { Transaction, TransactionType, Transfer } from "../../types/transaction";
+import type {
+  Transaction,
+  TransactionType,
+  Transfer,
+} from "../../types/transaction";
 import { transactionsService } from "../../services/transactions.service";
 import { CreateTransactionModal } from "./CreateTransactionModal";
 import { CreateTransferModal } from "./CreateTransferModal";
 import { InstallmentPlansSection } from "./InstallmentPlansSection";
+import { ListCreditCardInvoices } from "@/modules/credit-cards/components/client";
 import { MonthlyPaymentsSection } from "./MonthlyPaymentsSection";
 import { RecurringBillsSection } from "@/modules/recurring-bills/components/RecurringBillsSection";
 import styles from "./TransactionsPage.module.scss";
@@ -29,9 +34,8 @@ export function TransactionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialType, setInitialType] = useState<TransactionType>("EXPENSE");
   const [transferOpen, setTransferOpen] = useState(false);
-  const [installmentRequest, setInstallmentRequest] = useState(0);
   const [commitmentTab, setCommitmentTab] = useState<
-    "INSTALLMENTS" | "RECURRING"
+    "INSTALLMENTS" | "RECURRING" | "INVOICES"
   >("INSTALLMENTS");
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [actionError, setActionError] = useState("");
@@ -57,7 +61,11 @@ export function TransactionsPage() {
   }, []);
 
   async function handleReverseTransaction(item: Transaction) {
-    if (!window.confirm(`Deseja estornar "${item.title}"? O saldo da conta será atualizado.`)) {
+    if (
+      !window.confirm(
+        `Deseja estornar "${item.title}"? O saldo da conta será atualizado.`,
+      )
+    ) {
       return;
     }
     setActionError("");
@@ -66,14 +74,20 @@ export function TransactionsPage() {
       await transactionsService.reverseTransaction(item.id);
       await loadTransactions();
     } catch {
-      setActionError("Não foi possível estornar a transação. Verifique seu acesso e tente novamente.");
+      setActionError(
+        "Não foi possível estornar a transação. Verifique seu acesso e tente novamente.",
+      );
     } finally {
       setActionBusyId("");
     }
   }
 
   async function handleReverseTransfer(item: Transfer) {
-    if (!window.confirm(`Deseja estornar a transferência entre ${item.fromAccount.name} e ${item.toAccount.name}?`)) {
+    if (
+      !window.confirm(
+        `Deseja estornar a transferência entre ${item.fromAccount.name} e ${item.toAccount.name}?`,
+      )
+    ) {
       return;
     }
     setActionError("");
@@ -82,7 +96,9 @@ export function TransactionsPage() {
       await transactionsService.reverseTransfer(item.id);
       await Promise.all([loadTransfers(), loadTransactions()]);
     } catch {
-      setActionError("Não foi possível estornar a transferência. Verifique seu acesso e tente novamente.");
+      setActionError(
+        "Não foi possível estornar a transferência. Verifique seu acesso e tente novamente.",
+      );
     } finally {
       setActionBusyId("");
     }
@@ -126,32 +142,47 @@ export function TransactionsPage() {
         <header className={styles.header}>
           <div>
             <h1 className={styles.title}>Transações</h1>
-            <p className={styles.description}>Gerencie movimentações, pagamentos e compromissos do Espaço ativo.</p>
+            <p className={styles.description}>
+              Gerencie movimentações, pagamentos e compromissos do Espaço ativo.
+            </p>
           </div>
         </header>
 
         <div className={styles.summary}>
           <article className={styles.summaryCard}>
             <div className={styles.summaryCardHeader}>
-              <span className={`${styles.summaryIcon} ${styles.incomeIcon}`} aria-hidden="true">
+              <span
+                className={`${styles.summaryIcon} ${styles.incomeIcon}`}
+                aria-hidden="true"
+              >
                 <CircleDollarSign size={20} />
               </span>
               <span>Total de receitas</span>
             </div>
-            <strong className={styles.income}>{MONEY.format(totals.income)}</strong>
+            <strong className={styles.income}>
+              {MONEY.format(totals.income)}
+            </strong>
           </article>
           <article className={styles.summaryCard}>
             <div className={styles.summaryCardHeader}>
-              <span className={`${styles.summaryIcon} ${styles.expenseIcon}`} aria-hidden="true">
+              <span
+                className={`${styles.summaryIcon} ${styles.expenseIcon}`}
+                aria-hidden="true"
+              >
                 <CreditCard size={20} />
               </span>
               <span>Total de despesas</span>
             </div>
-            <strong className={styles.expense}>{MONEY.format(totals.expense)}</strong>
+            <strong className={styles.expense}>
+              {MONEY.format(totals.expense)}
+            </strong>
           </article>
           <article className={styles.summaryCard}>
             <div className={styles.summaryCardHeader}>
-              <span className={`${styles.summaryIcon} ${styles.resultIcon}`} aria-hidden="true">
+              <span
+                className={`${styles.summaryIcon} ${styles.resultIcon}`}
+                aria-hidden="true"
+              >
                 <Coins size={20} />
               </span>
               <span>Resultado das movimentações</span>
@@ -160,13 +191,20 @@ export function TransactionsPage() {
           </article>
         </div>
 
-
         <MonthlyPaymentsSection />
 
-        <section className={styles.choices} id="transaction-choices" aria-labelledby="choices-title">
+        <section
+          className={styles.choices}
+          id="transaction-choices"
+          aria-labelledby="choices-title"
+        >
           <div>
-            <h2 className={styles.choicesTitle} id="choices-title">Operações rápidas</h2>
-            <p className={styles.description}>Selecione uma operação para registrar ou planejar movimentações.</p>
+            <h2 className={styles.choicesTitle} id="choices-title">
+              Operações rápidas
+            </h2>
+            <p className={styles.description}>
+              Selecione uma operação para registrar ou planejar movimentações.
+            </p>
           </div>
           <div className={styles.choiceGrid}>
             <button
@@ -199,20 +237,8 @@ export function TransactionsPage() {
               <strong>Transferência</strong>
               <span>Mover valores entre contas</span>
             </button>
-            <button
-              className={styles.choiceCard}
-              type="button"
-              onClick={() => {
-                setCommitmentTab("INSTALLMENTS");
-                setInstallmentRequest((value) => value + 1);
-              }}
-            >
-              <strong>Compra parcelada</strong>
-              <span>Planejar parcelas futuras</span>
-            </button>
           </div>
         </section>
-
 
         <section
           className={styles.contentSection}
@@ -228,89 +254,111 @@ export function TransactionsPage() {
             </span>
           </header>
 
-        <div className={styles.filters}>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Pesquisar descrição, conta ou categoria..."
-            aria-label="Pesquisar transações"
-          />
-          <select
-            value={type}
-            onChange={(event) => setType(event.target.value as "ALL" | TransactionType)}
-            aria-label="Filtrar por tipo"
-          >
-            <option value="ALL">Todas</option>
-            <option value="INCOME">Receitas</option>
-            <option value="EXPENSE">Despesas</option>
-          </select>
-        </div>
-
-        {loading ? (
-          <p className={styles.message}>Carregando transações...</p>
-        ) : error ? (
-          <p className={styles.error}>Não foi possível carregar as transações.</p>
-        ) : filtered.length === 0 ? (
-          <div className={styles.empty}>
-            <h2>Nenhuma transação encontrada</h2>
-            <p>Cadastre uma transação ou ajuste os filtros.</p>
+          <div className={styles.filters}>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Pesquisar descrição, conta ou categoria..."
+              aria-label="Pesquisar transações"
+            />
+            <select
+              value={type}
+              onChange={(event) =>
+                setType(event.target.value as "ALL" | TransactionType)
+              }
+              aria-label="Filtrar por tipo"
+            >
+              <option value="ALL">Todas</option>
+              <option value="INCOME">Receitas</option>
+              <option value="EXPENSE">Despesas</option>
+            </select>
           </div>
-        ) : (
-          <div className={styles.tableWrapper}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Data</th>
-                  <th>Conta</th>
-                  <th>Categoria</th>
-                  <th>Tipo</th>
-                  <th className={styles.amount}>Valor</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => {
-                  const account = accounts.find((entry) => entry.id === item.accountId);
-                  const category = [...incomeCategories, ...expenseCategories].find(
-                    (entry) => entry.id === item.categoryId,
-                  );
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        <strong>{item.title}</strong>
-                        {item.description && <small>{item.description}</small>}
-                      </td>
-                      <td>{formatDate(item.date)}</td>
-                      <td>{account?.name ?? "—"}</td>
-                      <td>{category?.name ?? "—"}</td>
-                      <td>
-                        <span className={item.type === "INCOME" ? styles.income : styles.expense}>
-                          {item.type === "INCOME" ? "Receita" : "Despesa"}
-                        </span>
-                      </td>
-                      <td className={styles.amount}>{MONEY.format(Number(item.amount))}</td>
-                      <td>
-                        <button
-                          className={styles.reverseButton}
-                          type="button"
-                          disabled={actionBusyId === item.id}
-                          onClick={() => void handleReverseTransaction(item)}
-                        >
-                          {actionBusyId === item.id ? "Estornando..." : "Estornar"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
 
-        {actionError && <p className={styles.error} role="alert">{actionError}</p>}
+          {loading ? (
+            <p className={styles.message}>Carregando transações...</p>
+          ) : error ? (
+            <p className={styles.error}>
+              Não foi possível carregar as transações.
+            </p>
+          ) : filtered.length === 0 ? (
+            <div className={styles.empty}>
+              <h2>Nenhuma transação encontrada</h2>
+              <p>Cadastre uma transação ou ajuste os filtros.</p>
+            </div>
+          ) : (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Data</th>
+                    <th>Conta</th>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th className={styles.amount}>Valor</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((item) => {
+                    const account = accounts.find(
+                      (entry) => entry.id === item.accountId,
+                    );
+                    const category = [
+                      ...incomeCategories,
+                      ...expenseCategories,
+                    ].find((entry) => entry.id === item.categoryId);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{item.title}</strong>
+                          {item.description && (
+                            <small>{item.description}</small>
+                          )}
+                        </td>
+                        <td>{formatDate(item.date)}</td>
+                        <td>{account?.name ?? "—"}</td>
+                        <td>{category?.name ?? "—"}</td>
+                        <td>
+                          <span
+                            className={
+                              item.type === "INCOME"
+                                ? styles.income
+                                : styles.expense
+                            }
+                          >
+                            {item.type === "INCOME" ? "Receita" : "Despesa"}
+                          </span>
+                        </td>
+                        <td className={styles.amount}>
+                          {MONEY.format(Number(item.amount))}
+                        </td>
+                        <td>
+                          <button
+                            className={styles.reverseButton}
+                            type="button"
+                            disabled={actionBusyId === item.id}
+                            onClick={() => void handleReverseTransaction(item)}
+                          >
+                            {actionBusyId === item.id
+                              ? "Estornando..."
+                              : "Estornar"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
+          {actionError && (
+            <p className={styles.error} role="alert">
+              {actionError}
+            </p>
+          )}
         </section>
 
         <section
@@ -319,12 +367,9 @@ export function TransactionsPage() {
         >
           <header className={styles.sectionHeading}>
             <div>
-              <h2 id="commitments-title">
-                Pagamentos e compromissos
-              </h2>
+              <h2 id="commitments-title">Pagamentos e compromissos</h2>
               <p>
-                Gerencie compras parceladas e contas recorrentes
-                em um só lugar.
+                Gerencie compras parceladas e contas recorrentes em um só lugar.
               </p>
             </div>
           </header>
@@ -365,6 +410,22 @@ export function TransactionsPage() {
             >
               Contas recorrentes
             </button>
+
+            <button
+              type="button"
+              role="tab"
+              id="invoices-tab"
+              aria-selected={commitmentTab === "INVOICES"}
+              aria-controls="invoices-panel"
+              className={
+                commitmentTab === "INVOICES"
+                  ? styles.commitmentTabActive
+                  : styles.commitmentTab
+              }
+              onClick={() => setCommitmentTab("INVOICES")}
+            >
+              Faturas de cartões
+            </button>
           </div>
 
           <div
@@ -373,9 +434,7 @@ export function TransactionsPage() {
             aria-labelledby="installments-tab"
             hidden={commitmentTab !== "INSTALLMENTS"}
           >
-            <InstallmentPlansSection
-              createRequest={installmentRequest}
-            />
+            <InstallmentPlansSection />
           </div>
 
           <div
@@ -391,17 +450,25 @@ export function TransactionsPage() {
               }}
             />
           </div>
+
+          <div
+            id="invoices-panel"
+            role="tabpanel"
+            aria-labelledby="invoices-tab"
+            hidden={commitmentTab !== "INVOICES"}
+          >
+            <ListCreditCardInvoices />
+          </div>
         </section>
 
-        <section className={styles.transferHistory} aria-labelledby="transfer-history-title">
+        <section
+          className={styles.transferHistory}
+          aria-labelledby="transfer-history-title"
+        >
           <div className={styles.transferHeading}>
             <div>
-              <h2 id="transfer-history-title">
-                Transferências entre contas
-              </h2>
-              <p>
-                Consulte as movimentações realizadas entre suas contas.
-              </p>
+              <h2 id="transfer-history-title">Transferências entre contas</h2>
+              <p>Consulte as movimentações realizadas entre suas contas.</p>
             </div>
             <button
               type="button"
@@ -414,7 +481,9 @@ export function TransactionsPage() {
           {transfers.length === 0 ? (
             <div className={styles.empty}>
               <h2>Nenhuma transferência registrada</h2>
-              <p>As transferências realizadas entre suas contas aparecerão aqui.</p>
+              <p>
+                As transferências realizadas entre suas contas aparecerão aqui.
+              </p>
             </div>
           ) : (
             <div className={styles.tableWrapper}>
@@ -437,8 +506,7 @@ export function TransactionsPage() {
 
                       <td>
                         <strong>
-                          {item.description ||
-                            "Transferência entre contas"}
+                          {item.description || "Transferência entre contas"}
                         </strong>
                       </td>
 
@@ -455,9 +523,7 @@ export function TransactionsPage() {
                           className={styles.reverseButton}
                           type="button"
                           disabled={actionBusyId === item.id}
-                          onClick={() =>
-                            void handleReverseTransfer(item)
-                          }
+                          onClick={() => void handleReverseTransfer(item)}
                         >
                           {actionBusyId === item.id
                             ? "Estornando..."
@@ -471,7 +537,6 @@ export function TransactionsPage() {
             </div>
           )}
         </section>
-
       </section>
 
       <CreateTransactionModal

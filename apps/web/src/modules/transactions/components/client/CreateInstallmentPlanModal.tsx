@@ -38,6 +38,29 @@ export function CreateInstallmentPlanModal({ open, onClose, onCreated }: Props) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const installmentPreview = (() => {
+    const parsedTotal = Number(totalAmount.replace(",", "."));
+    const count = Number(installmentCount);
+
+    if (
+      !Number.isFinite(parsedTotal) ||
+      parsedTotal <= 0 ||
+      !Number.isInteger(count) ||
+      count < 2 ||
+      count > 120
+    ) {
+      return "";
+    }
+
+    const totalCents = Math.round(parsedTotal * 100);
+    const baseCents = Math.floor(totalCents / count);
+
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(baseCents / 100);
+  })();
+
   useEffect(() => {
     if (!categoryId) {
       setSubCategories([]);
@@ -118,7 +141,7 @@ export function CreateInstallmentPlanModal({ open, onClose, onCreated }: Props) 
           />
         </Field>
 
-        <Field label="Valor total (R$)" htmlFor="plan-total" required>
+        <Field label="Valor total da compra (R$)" htmlFor="plan-total" required>
           <Input
             id="plan-total"
             inputMode="decimal"
@@ -218,6 +241,18 @@ export function CreateInstallmentPlanModal({ open, onClose, onCreated }: Props) 
               </option>
             ))}
           </Select>
+        </Field>
+
+        <Field
+          label="Valor da parcela (estimado)"
+          htmlFor="plan-installment-preview"
+        >
+          <Input
+            id="plan-installment-preview"
+            value={installmentPreview}
+            readOnly
+            placeholder="Informe o valor total e as parcelas"
+          />
         </Field>
 
         <Field label="Observações" htmlFor="plan-description">

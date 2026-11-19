@@ -11,7 +11,6 @@ import type {
   InstallmentPlan,
   InstallmentStatus,
 } from "../../types/installment-plan";
-import { CreateInstallmentPlanModal } from "./CreateInstallmentPlanModal";
 import styles from "./InstallmentPlans.module.scss";
 
 const MONEY = new Intl.NumberFormat("pt-BR", {
@@ -32,10 +31,6 @@ function formatDate(value: string) {
   );
 }
 
-interface Props {
-  createRequest?: number;
-}
-
 interface PaymentSelection {
   plan: InstallmentPlan;
   installment: Installment;
@@ -52,8 +47,8 @@ function PayInstallmentModal({
   onClose: () => void;
   onPaid: () => void;
 }) {
-  const [paidDate, setPaidDate] = useState(
-    () => new Date().toLocaleDateString("en-CA"),
+  const [paidDate, setPaidDate] = useState(() =>
+    new Date().toLocaleDateString("en-CA"),
   );
   const [saving, setSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -102,15 +97,17 @@ function PayInstallmentModal({
               {selection.plan.installmentCount}
             </span>
             <span>Conta: {accountName}</span>
-            <span>
-              Vencimento: {formatDate(selection.installment.dueDate)}
-            </span>
+            <span>Vencimento: {formatDate(selection.installment.dueDate)}</span>
             <strong>
               {MONEY.format(Number(selection.installment.amount))}
             </strong>
           </div>
 
-          <Field label="Data do pagamento" htmlFor="installment-paid-date" required>
+          <Field
+            label="Data do pagamento"
+            htmlFor="installment-paid-date"
+            required
+          >
             <Input
               id="installment-paid-date"
               type="date"
@@ -146,13 +143,13 @@ function PayInstallmentModal({
   );
 }
 
-export function InstallmentPlansSection({ createRequest = 0 }: Props) {
+export function InstallmentPlansSection() {
   const [plans, setPlans] = useState<InstallmentPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [paymentSelection, setPaymentSelection] = useState<PaymentSelection | null>(null);
+  const [paymentSelection, setPaymentSelection] =
+    useState<PaymentSelection | null>(null);
   const { accounts } = useAccounts();
   const { categories } = useCategories("EXPENSE");
 
@@ -173,8 +170,12 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
   }, [loadPlans]);
 
   useEffect(() => {
-    if (createRequest > 0) setModalOpen(true);
-  }, [createRequest]);
+    const refresh = () => void loadPlans();
+    window.addEventListener("ccpf:installment-plans-changed", refresh);
+    return () => {
+      window.removeEventListener("ccpf:installment-plans-changed", refresh);
+    };
+  }, [loadPlans]);
 
   const plannedTotal = useMemo(
     () =>
@@ -213,7 +214,11 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
       ) : error ? (
         <div className={styles.message}>
           <p>Não foi possível carregar os planejamentos.</p>
-          <Button type="button" variant="outline" onClick={() => void loadPlans()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void loadPlans()}
+          >
             Tentar novamente
           </Button>
         </div>
@@ -265,9 +270,7 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                       </td>
                       <td className={styles.moneyCell}>
                         {plan.installments.length > 0
-                          ? MONEY.format(
-                              Number(plan.installments[0].amount),
-                            )
+                          ? MONEY.format(Number(plan.installments[0].amount))
                           : "—"}
                       </td>
                       <td>
@@ -275,16 +278,12 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                           type="button"
                           className={styles.expandButton}
                           aria-expanded={isExpanded}
-                          aria-label={
-                            `${isExpanded ? "Ocultar" : "Ver"} parcelas de ${plan.title}`
-                          }
+                          aria-label={`${isExpanded ? "Ocultar" : "Ver"} parcelas de ${plan.title}`}
                           onClick={() =>
                             setExpanded(isExpanded ? null : plan.id)
                           }
                         >
-                          {isExpanded
-                            ? "Ocultar parcelas −"
-                            : "Ver parcelas +"}
+                          {isExpanded ? "Ocultar parcelas −" : "Ver parcelas +"}
                         </button>
                       </td>
                     </tr>
@@ -312,12 +311,11 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                                     const today = new Date();
                                     const todayKey = [
                                       today.getFullYear(),
-                                      String(
-                                        today.getMonth() + 1,
-                                      ).padStart(2, "0"),
-                                      String(
-                                        today.getDate(),
-                                      ).padStart(2, "0"),
+                                      String(today.getMonth() + 1).padStart(
+                                        2,
+                                        "0",
+                                      ),
+                                      String(today.getDate()).padStart(2, "0"),
                                     ].join("-");
 
                                     const isOverdue =
@@ -335,22 +333,16 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                                           {plan.installmentCount}
                                         </td>
 
-                                        <td>
-                                          {formatDate(item.dueDate)}
-                                        </td>
+                                        <td>{formatDate(item.dueDate)}</td>
 
                                         <td>
-                                          {MONEY.format(
-                                            Number(item.amount),
-                                          )}
+                                          {MONEY.format(Number(item.amount))}
                                         </td>
 
                                         <td>
                                           <span
                                             className={`${styles.status} ${
-                                              styles[
-                                                status.toLowerCase()
-                                              ]
+                                              styles[status.toLowerCase()]
                                             }`}
                                           >
                                             {STATUS_LABEL[status]}
@@ -373,8 +365,7 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                                             </Button>
                                           )}
 
-                                          {item.status === "PAID" &&
-                                            "Pago"}
+                                          {item.status === "PAID" && "Pago"}
                                         </td>
                                       </tr>
                                     );
@@ -399,8 +390,7 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
                 <td>
                   <strong>
                     {plans.reduce(
-                      (total, plan) =>
-                        total + plan.installmentCount,
+                      (total, plan) => total + plan.installmentCount,
                       0,
                     )}
                   </strong>
@@ -415,17 +405,10 @@ export function InstallmentPlansSection({ createRequest = 0 }: Props) {
         </div>
       )}
 
-
       <p className={styles.note}>
-        Os valores serão descontados do saldo da conta somente quando
-        as parcelas forem pagas.
+        Os valores serão descontados do saldo da conta somente quando as
+        parcelas forem pagas.
       </p>
-
-      <CreateInstallmentPlanModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={() => void loadPlans()}
-      />
 
       <PayInstallmentModal
         selection={paymentSelection}
