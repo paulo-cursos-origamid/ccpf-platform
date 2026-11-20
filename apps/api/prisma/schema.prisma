@@ -956,6 +956,7 @@ model Transaction {
   title         String
   amount        Decimal         @db.Decimal(12, 2)
   type          TransactionType
+  paymentMethod FinancialPaymentMethod?
   date          DateTime
   description   String?
   deletedAt     DateTime?
@@ -1128,6 +1129,7 @@ enum FinancialPaymentMethod {
   CASH
   PIX
   BANK_SLIP
+  DEBIT_CARD
   CREDIT_CARD
 }
 

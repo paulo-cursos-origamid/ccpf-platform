@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  FinancialPaymentMethod,
   LedgerEntryType,
   LedgerReferenceType,
   TransactionType,
@@ -126,6 +127,13 @@ describe('CreateTransactionUseCase', () => {
     await useCase.execute({
       ...input,
       type: TransactionType.EXPENSE,
+      paymentMethod: FinancialPaymentMethod.PIX,
+    });
+
+    expect(tx.transaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentMethod: FinancialPaymentMethod.PIX,
+      }),
     });
 
     expect(tx.ledgerEntry.create).toHaveBeenCalledWith({
@@ -145,6 +153,26 @@ describe('CreateTransactionUseCase', () => {
         balance: { decrement: expect.anything() },
       },
     });
+  });
+
+  it('persiste null quando a forma de pagamento não é informada', async () => {
+    await useCase.execute(input);
+
+    expect(tx.transaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ paymentMethod: null }),
+    });
+  });
+
+  it('rejeita cartão de crédito antes de iniciar a transação', async () => {
+    await expect(
+      useCase.execute({
+        ...input,
+        paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.transaction.create).not.toHaveBeenCalled();
   });
 
   it('rejeita valores inválidos sem iniciar a transação', async () => {

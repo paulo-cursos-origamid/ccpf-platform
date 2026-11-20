@@ -6,7 +6,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
-import { TransactionType } from '@prisma/client';
+import { FinancialPaymentMethod, TransactionType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTransactionDto {
@@ -25,6 +25,11 @@ export class CreateTransactionDto {
   @ApiProperty({ enum: TransactionType })
   @IsEnum(TransactionType)
   type!: TransactionType;
+
+  @ApiPropertyOptional({ enum: FinancialPaymentMethod })
+  @IsOptional()
+  @IsEnum(FinancialPaymentMethod)
+  paymentMethod?: FinancialPaymentMethod;
 
   @ApiProperty()
   @IsString()

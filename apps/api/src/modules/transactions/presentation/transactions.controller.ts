@@ -29,8 +29,10 @@ import { ListFinancialHistoryUseCase } from '../application/list-financial-histo
 import { GetTransactionUseCase } from '../application/get-transaction.use-case';
 import { ReverseTransactionUseCase } from '../application/reverse-transaction.use-case';
 import { ReverseTransferUseCase } from '../application/reverse-transfer.use-case';
+import { GetPaymentMethodsSummaryUseCase } from '../application/get-payment-methods-summary.use-case';
 import { CreateTransactionDto } from './create-transaction.dto';
 import { CreateTransferDto } from './create-transfer.dto';
+import { PaymentMethodsSummaryQueryDto } from './payment-methods-summary-query.dto';
 
 @ApiTags('Transactions')
 @ApiBearerAuth('access-token')
@@ -51,6 +53,7 @@ export class TransactionsController {
     private readonly getTransaction: GetTransactionUseCase,
     private readonly reverseTransaction: ReverseTransactionUseCase,
     private readonly reverseTransfer: ReverseTransferUseCase,
+    private readonly getPaymentMethodsSummaryUseCase: GetPaymentMethodsSummaryUseCase,
   ) {}
 
   @Post()
@@ -170,6 +173,22 @@ export class TransactionsController {
       id,
       tenantId: tenant.tenantId,
       userId: tenant.userId,
+    });
+  }
+
+  @Get('payment-methods-summary')
+  @ApiOperation({
+    summary: 'Consultar despesas agrupadas por forma de pagamento',
+  })
+  @ApiResponse({ status: 200, description: 'Resumo calculado com sucesso.' })
+  getPaymentMethodsSummary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: PaymentMethodsSummaryQueryDto,
+  ) {
+    return this.getPaymentMethodsSummaryUseCase.execute({
+      tenantId: tenant.tenantId,
+      userId: tenant.userId,
+      month: query.month,
     });
   }
 

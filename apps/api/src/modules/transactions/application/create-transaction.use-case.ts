@@ -8,6 +8,7 @@ import {
 import {
   LedgerEntryType,
   LedgerReferenceType,
+  FinancialPaymentMethod,
   Prisma,
   TransactionType,
 } from '@prisma/client';
@@ -22,6 +23,7 @@ export interface CreateTransactionInput {
   title: string;
   amount: string;
   type: TransactionType;
+  paymentMethod?: FinancialPaymentMethod;
   date: string;
   description?: string;
 }
@@ -35,6 +37,12 @@ export class CreateTransactionUseCase {
 
     if (!amount.isFinite() || amount.lte(0)) {
       throw new BadRequestException('O valor deve ser maior que zero.');
+    }
+
+    if (input.paymentMethod === FinancialPaymentMethod.CREDIT_CARD) {
+      throw new BadRequestException(
+        'Compras com cartão de crédito devem ser registradas no módulo de cartões.',
+      );
     }
 
     return runSerializableTransaction(
@@ -108,6 +116,7 @@ export class CreateTransactionUseCase {
             title: input.title.trim(),
             amount,
             type: input.type,
+            paymentMethod: input.paymentMethod ?? null,
             date: new Date(input.date),
             description: input.description?.trim() || null,
           },

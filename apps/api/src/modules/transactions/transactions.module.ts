@@ -20,6 +20,7 @@ import { CreateInstallmentPlanUseCase } from './application/installments/create-
 import { ListInstallmentPlansUseCase } from './application/installments/list-installment-plans.use-case';
 import { PayInstallmentUseCase } from './application/installments/pay-installment.use-case';
 import { GetFinancialProjectionUseCase } from './application/get-financial-projection.use-case';
+import { GetPaymentMethodsSummaryUseCase } from './application/get-payment-methods-summary.use-case';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { GetFinancialProjectionUseCase } from './application/get-financial-proje
     ListInstallmentPlansUseCase,
     PayInstallmentUseCase,
     GetFinancialProjectionUseCase,
+    GetPaymentMethodsSummaryUseCase,
   ],
 })
 export class TransactionsModule {}
