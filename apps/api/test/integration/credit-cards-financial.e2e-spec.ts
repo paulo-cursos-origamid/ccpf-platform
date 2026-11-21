@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { FinancialPaymentMethod } from "../../src/modules/accounts-payable-receivable/domain/enums/financial-payment-method.enum";
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../src/infrastructure/database/prisma.service';
@@ -336,6 +337,7 @@ describe('Credit Cards Financial Integration', () => {
 
     await expect(
       payInvoice.execute({
+        paymentMethod: FinancialPaymentMethod.PIX,
         invoiceId: firstInvoiceId,
         tenantId: fixture.tenantId,
         userId: fixture.userId,
@@ -378,6 +380,7 @@ describe('Credit Cards Financial Integration', () => {
     // --------------------------------------------------
 
     await payInvoice.execute({
+      paymentMethod: FinancialPaymentMethod.PIX,
       invoiceId: firstInvoiceId,
       tenantId: fixture.tenantId,
       userId: fixture.userId,
@@ -425,6 +428,7 @@ describe('Credit Cards Financial Integration', () => {
     // --------------------------------------------------
 
     await payInvoice.execute({
+      paymentMethod: FinancialPaymentMethod.PIX,
       invoiceId: firstInvoiceId,
       tenantId: fixture.tenantId,
       userId: fixture.userId,
@@ -470,6 +474,7 @@ describe('Credit Cards Financial Integration', () => {
     // --------------------------------------------------
 
     await payInvoice.execute({
+      paymentMethod: FinancialPaymentMethod.PIX,
       invoiceId: secondInvoiceId,
       tenantId: fixture.tenantId,
       userId: fixture.userId,

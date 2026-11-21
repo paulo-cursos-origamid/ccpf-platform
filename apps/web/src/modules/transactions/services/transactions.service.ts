@@ -1,5 +1,6 @@
 import { api } from "@/lib/api/client";
 import type { FinancialHistoryItem } from "../types/financial-history";
+import type { PaymentMethodsSummary } from "../types/payment-method-summary";
 import type {
   CreateTransactionInput,
   Transaction,
@@ -23,6 +24,10 @@ class TransactionsService {
 
   create(data: CreateTransactionInput) {
     return api.post<Transaction>("/transactions", data);
+  }
+
+  getPaymentMethodsSummary() {
+    return api.get<PaymentMethodsSummary>("/transactions/payment-methods-summary");
   }
 
   listTransfers() {

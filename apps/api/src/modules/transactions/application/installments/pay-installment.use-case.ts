@@ -22,7 +22,7 @@ export interface PayInstallmentInput {
   installmentId: string;
   paidAt: string;
   accountId?: string;
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod: FinancialPaymentMethod;
   principalAmount?: string;
   interestAmount?: string;
   feeAmount?: string;
@@ -39,6 +39,10 @@ export class PayInstallmentUseCase {
   ) {}
 
   async execute(input: PayInstallmentInput) {
+    if (!input.paymentMethod) {
+      throw new BadRequestException("Selecione uma forma de pagamento.");
+    }
+
     const paidAt = new Date(input.paidAt);
 
     if (Number.isNaN(paidAt.getTime())) {

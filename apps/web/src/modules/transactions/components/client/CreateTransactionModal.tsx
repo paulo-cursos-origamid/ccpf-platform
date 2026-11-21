@@ -13,7 +13,11 @@ import { recurringBillsService } from "@/modules/recurring-bills/services/recurr
 import { installmentPlansService } from "../../services/installment-plans.service";
 import { transactionsService } from "../../services/transactions.service";
 import type { CreateInstallmentPlanInput } from "../../types/installment-plan";
-import type { Transaction, TransactionType } from "../../types/transaction";
+import type {
+  FinancialPaymentMethod,
+  Transaction,
+  TransactionType,
+} from "../../types/transaction";
 import styles from "./CreateTransactionModal.module.scss";
 
 type ExpenseRegistration = "COMMON" | "RECURRING" | "INSTALLMENT";
@@ -42,6 +46,12 @@ export function CreateTransactionModal({
   const [description, setDescription] = useState("");
   const [expenseRegistration, setExpenseRegistration] =
     useState<ExpenseRegistration>("COMMON");
+  const [paymentMethod, setPaymentMethod] =
+    useState<FinancialPaymentMethod | "">("");
+
+  useEffect(() => {
+    setPaymentMethod("");
+  }, [type, expenseRegistration, open]);
   const [installmentMethod, setInstallmentMethod] =
     useState<InstallmentMethod>("BANK_ACCOUNT");
   const [firstDueDate, setFirstDueDate] = useState(
@@ -64,6 +74,10 @@ export function CreateTransactionModal({
     type === "INCOME" ||
     expenseRegistration !== "INSTALLMENT" ||
     installmentMethod === "BANK_ACCOUNT";
+
+  const showPaymentMethod =
+    type === "INCOME" ||
+    (type === "EXPENSE" && expenseRegistration === "COMMON");
 
   const installmentPreview = (() => {
     const parsedTotal = amount ?? 0;
@@ -136,8 +150,19 @@ export function CreateTransactionModal({
       return;
     }
 
-    if ((usesBankAccount && !accountId) || !categoryId || !date) {
-      setError("Preencha a conta, a categoria e a data.");
+    if (
+      (usesBankAccount && !accountId) ||
+      !categoryId ||
+      !date ||
+      (showPaymentMethod && !paymentMethod)
+    ) {
+      setError(
+        showPaymentMethod && !paymentMethod
+          ? type === "INCOME"
+            ? "Selecione a forma de recebimento."
+            : "Selecione a forma de pagamento."
+          : "Preencha a conta, a categoria e a data.",
+      );
       return;
     }
 
@@ -245,6 +270,7 @@ export function CreateTransactionModal({
         title: title.trim(),
         amount: parsedAmount.toFixed(2),
         type,
+        paymentMethod: paymentMethod as FinancialPaymentMethod,
         accountId,
         categoryId,
         ...(subCategoryId ? { subCategoryId } : {}),
@@ -414,6 +440,30 @@ export function CreateTransactionModal({
                     {account.name}
                   </option>
                 ))}
+            </Select>
+          </Field>
+        )}
+
+        {showPaymentMethod && (
+          <Field
+            label={type === "INCOME" ? "Forma de recebimento" : "Forma de pagamento"}
+            htmlFor="transaction-payment-method"
+            required
+          >
+            <Select
+              id="transaction-payment-method"
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as FinancialPaymentMethod | "")
+              }
+              disabled={loading}
+              required
+            >
+              <option value="">Selecione uma opção</option>
+              <option value="CASH">Dinheiro</option>
+              <option value="PIX">Pix</option>
+              <option value="BANK_SLIP">Boleto</option>
+              <option value="DEBIT_CARD">Cartão de débito</option>
             </Select>
           </Field>
         )}

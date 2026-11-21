@@ -174,13 +174,12 @@ export class SettleFinancialObligationDto {
   @IsString()
   accountId?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     enum: FinancialPaymentMethod,
     description: "Forma utilizada nesta liquidação. Cartão de crédito deve usar o fluxo específico de conversão da recorrência.",
   })
-  @IsOptional()
   @IsEnum(FinancialPaymentMethod)
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod!: FinancialPaymentMethod;
 
   @ApiPropertyOptional({
     description:

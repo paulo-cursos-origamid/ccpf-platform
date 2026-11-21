@@ -11,7 +11,7 @@ export interface SettleFinancialObligationInput {
   tenantId: string;
   userId: string;
   accountId?: string;
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod: FinancialPaymentMethod;
   settledAt: Date;
   principalAmount?: string;
   interestAmount?: string;
@@ -29,6 +29,10 @@ export class SettleFinancialObligationUseCase {
   ) {}
 
   async execute(input: SettleFinancialObligationInput) {
+    if (!input.paymentMethod) {
+      throw new BadRequestException('Selecione uma forma de pagamento.');
+    }
+
     const obligation = await this.obligations.findObligation(
       input.id,
       input.tenantId,
@@ -156,7 +160,7 @@ export class SettleFinancialObligationUseCase {
         interestAmount: input.interestAmount ?? '0.00',
         feeAmount: input.feeAmount ?? '0.00',
         discountAmount,
-        paymentMethod: input.paymentMethod ?? null,
+        paymentMethod: input.paymentMethod,
         settledAt,
         transactionId: input.transactionId,
       });

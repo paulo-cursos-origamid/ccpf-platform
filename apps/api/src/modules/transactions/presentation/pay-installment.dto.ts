@@ -14,10 +14,9 @@ export class PayInstallmentDto {
   @IsOptional()
   accountId?: string;
 
-  @ApiPropertyOptional({ enum: FinancialPaymentMethod, description: "Forma de pagamento. Cartão de crédito não é aceito neste fluxo." })
-  @IsOptional()
+  @ApiProperty({ enum: FinancialPaymentMethod, description: "Forma de pagamento. Cartão de crédito não é aceito neste fluxo." })
   @IsEnum(FinancialPaymentMethod)
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod!: FinancialPaymentMethod;
 
   @ApiPropertyOptional({ example: "40.00", description: "Principal amortizado nesta liquidação. Quando omitido, utiliza o saldo principal restante." })
   @IsOptional()

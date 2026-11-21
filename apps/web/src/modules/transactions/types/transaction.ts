@@ -1,5 +1,11 @@
 export type TransactionType = "INCOME" | "EXPENSE";
 
+export type FinancialPaymentMethod =
+  | "CASH"
+  | "PIX"
+  | "BANK_SLIP"
+  | "DEBIT_CARD";
+
 export interface Transaction {
   id: string;
   title: string;
@@ -27,6 +33,7 @@ export interface CreateTransactionInput {
   title: string;
   amount: string;
   type: TransactionType;
+  paymentMethod: FinancialPaymentMethod;
   accountId: string;
   categoryId: string;
   subCategoryId?: string;

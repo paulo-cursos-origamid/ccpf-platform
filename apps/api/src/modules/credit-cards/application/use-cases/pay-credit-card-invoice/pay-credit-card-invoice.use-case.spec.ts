@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 
 import { FinancialObligationEntity } from '../../../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
 import { FinancialObligationSourceType } from '../../../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
+import { FinancialPaymentMethod } from '../../../../accounts-payable-receivable/domain/enums/financial-payment-method.enum';
 import { FinancialObligationRepository } from '../../../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
 import { SettleFinancialObligationUseCase } from '../../../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
 
@@ -17,6 +18,7 @@ describe('PayCreditCardInvoiceUseCase', () => {
     tenantId: 'tenant-123',
     userId: 'user-123',
     accountId: 'account-123',
+    paymentMethod: FinancialPaymentMethod.PIX,
     settledAt: new Date('2026-11-08T15:00:00.000Z'),
     principalAmount: '500.00',
     interestAmount: '5.00',
@@ -63,6 +65,7 @@ describe('PayCreditCardInvoiceUseCase', () => {
       userId: input.userId,
       accountId: input.accountId,
       settledAt: input.settledAt,
+      paymentMethod: input.paymentMethod,
       principalAmount: input.principalAmount,
       interestAmount: input.interestAmount,
       feeAmount: input.feeAmount,

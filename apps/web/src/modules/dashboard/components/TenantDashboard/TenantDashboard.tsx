@@ -30,6 +30,7 @@ import { RecentTransactions } from "../RecentTransactions/RecentTransactions";
 import { ExpensesByCategory } from "../ExpensesByCategory/ExpensesByCategory";
 import { UpcomingPayments } from "../UpcomingPayments/UpcomingPayments";
 import { FinancialGoalsOverview } from "../FinancialGoalsOverview/FinancialGoalsOverview";
+import { PaymentMethodsSummary } from "../PaymentMethodsSummary/PaymentMethodsSummary";
 
 import styles from "./TenantDashboard.module.scss";
 
@@ -350,6 +351,7 @@ export function TenantDashboard() {
           categoryColors={categoryColors}
         />
         <FinancialGoalsOverview />
+        <PaymentMethodsSummary />
       </section>
 
       <section

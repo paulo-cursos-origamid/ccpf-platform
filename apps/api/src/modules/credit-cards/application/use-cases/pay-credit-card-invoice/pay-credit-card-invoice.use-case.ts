@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-
-import { FinancialObligationSourceType } from '../../../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum';
-import { FinancialObligationRepository } from '../../../../accounts-payable-receivable/domain/repositories/financial-obligation.repository';
-import { SettleFinancialObligationUseCase } from '../../../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { FinancialObligationSourceType } from "../../../../accounts-payable-receivable/domain/enums/financial-obligation-source-type.enum";
+import { FinancialPaymentMethod } from "../../../../accounts-payable-receivable/domain/enums/financial-payment-method.enum";
+import { FinancialObligationRepository } from "../../../../accounts-payable-receivable/domain/repositories/financial-obligation.repository";
+import { SettleFinancialObligationUseCase } from "../../../../accounts-payable-receivable/application/use-cases/settle-financial-obligation/settle-financial-obligation.use-case";
 
 export interface PayCreditCardInvoiceInput {
+  paymentMethod: FinancialPaymentMethod;
   invoiceId: string;
   tenantId: string;
   userId: string;
@@ -44,6 +45,7 @@ export class PayCreditCardInvoiceUseCase {
       userId: input.userId,
       accountId: input.accountId,
       settledAt: input.settledAt,
+      paymentMethod: input.paymentMethod,
       principalAmount: input.principalAmount,
       interestAmount: input.interestAmount,
       feeAmount: input.feeAmount,

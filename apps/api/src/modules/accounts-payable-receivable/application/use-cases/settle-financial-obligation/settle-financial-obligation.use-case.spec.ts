@@ -63,11 +63,25 @@ describe('SettleFinancialObligationUseCase', () => {
     );
   });
 
+  it('rejects settlement without a payment method', async () => {
+    await expect(
+      useCase.execute({
+        id: obligation.id,
+        tenantId: obligation.tenantId,
+        userId: obligation.userId,
+        settledAt,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(obligations.findObligation).not.toHaveBeenCalled();
+  });
+
   it('settles a regular obligation using its reference account', async () => {
     const result = await useCase.execute({
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
     });
 
@@ -89,6 +103,7 @@ describe('SettleFinancialObligationUseCase', () => {
     expect(options.settlement.accountId).toBe('account-1');
     expect(options.settlement.principalAmount).toBe('100.00');
     expect(options.settlement.transactionId).toBeNull();
+    expect(options.settlement.paymentMethod).toBe(FinancialPaymentMethod.PIX);
     expect(result).toBe(obligation);
   });
 
@@ -104,8 +119,8 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
-      accountId: 'account-2',
       paymentMethod: FinancialPaymentMethod.PIX,
+      accountId: 'account-2',
       settledAt,
     });
 
@@ -159,6 +174,7 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       accountId: 'account-2',
       settledAt,
     });
@@ -198,6 +214,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         accountId: 'account-2',
         settledAt,
       }),
@@ -221,6 +238,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         settledAt,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -243,6 +261,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         settledAt,
         accountId: 'account-2',
         transactionId: 'transaction-1',
@@ -259,6 +278,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         accountId: 'account-2',
         settledAt,
       }),
@@ -273,6 +293,7 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
       principalAmount: '30.00',
     });
@@ -291,6 +312,7 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
       discountAmount: '10.00',
     });
@@ -308,6 +330,7 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
       principalAmount: '100.00',
       discountAmount: '100.00',
@@ -326,6 +349,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         settledAt,
         principalAmount: '120.00',
       }),
@@ -345,6 +369,7 @@ describe('SettleFinancialObligationUseCase', () => {
         id: obligation.id,
         tenantId: obligation.tenantId,
         userId: obligation.userId,
+        paymentMethod: FinancialPaymentMethod.PIX,
         settledAt,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -357,6 +382,7 @@ describe('SettleFinancialObligationUseCase', () => {
       id: obligation.id,
       tenantId: obligation.tenantId,
       userId: obligation.userId,
+      paymentMethod: FinancialPaymentMethod.PIX,
       settledAt,
       description: 'Pagamento realizado pelo teste',
     });

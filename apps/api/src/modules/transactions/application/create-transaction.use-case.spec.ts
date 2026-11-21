@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  FinancialPaymentMethod,
   LedgerEntryType,
   LedgerReferenceType,
   TransactionType,
@@ -27,6 +28,7 @@ describe('CreateTransactionUseCase', () => {
   };
 
   const input: CreateTransactionInput = {
+  paymentMethod: FinancialPaymentMethod.PIX,
     tenantId: 'tenant-1',
     userId: 'user-1',
     accountId: 'account-1',
@@ -126,6 +128,13 @@ describe('CreateTransactionUseCase', () => {
     await useCase.execute({
       ...input,
       type: TransactionType.EXPENSE,
+      paymentMethod: FinancialPaymentMethod.PIX,
+    });
+
+    expect(tx.transaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentMethod: FinancialPaymentMethod.PIX,
+      }),
     });
 
     expect(tx.ledgerEntry.create).toHaveBeenCalledWith({
@@ -145,6 +154,28 @@ describe('CreateTransactionUseCase', () => {
         balance: { decrement: expect.anything() },
       },
     });
+  });
+
+  it('rejeita transação sem forma de pagamento', async () => {
+    const { paymentMethod: _paymentMethod, ...inputWithoutMethod } = input;
+
+    await expect(
+      useCase.execute(inputWithoutMethod as CreateTransactionInput),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejeita cartão de crédito antes de iniciar a transação', async () => {
+    await expect(
+      useCase.execute({
+        ...input,
+        paymentMethod: FinancialPaymentMethod.CREDIT_CARD,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(tx.transaction.create).not.toHaveBeenCalled();
   });
 
   it('rejeita valores inválidos sem iniciar a transação', async () => {

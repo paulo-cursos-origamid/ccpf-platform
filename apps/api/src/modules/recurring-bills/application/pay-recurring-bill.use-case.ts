@@ -3,8 +3,9 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { FinancialPaymentMethod, Prisma } from '@prisma/client';
+} from "@nestjs/common";
+import { FinancialPaymentMethod, Prisma } from "@prisma/client";
+import { FinancialPaymentMethod as ObligationPaymentMethod } from "../../accounts-payable-receivable/domain/enums/financial-payment-method.enum";
 
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { FinancialObligationEntity } from '../../accounts-payable-receivable/domain/entities/financial-obligation.entity';
@@ -287,6 +288,7 @@ export class PayRecurringBillUseCase {
         tenantId: input.tenantId,
         userId: input.userId,
         settledAt: paidAt,
+        paymentMethod: input.paymentMethod as unknown as ObligationPaymentMethod,
         accountId: input.accountId,
         principalAmount: principalAmount.toFixed(2),
         interestAmount: interestAmount.toFixed(2),

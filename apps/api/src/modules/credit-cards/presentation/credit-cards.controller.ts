@@ -198,6 +198,7 @@ export class CreditCardsController {
       userId: tenant.userId,
       accountId: dto.accountId,
       settledAt: new Date(dto.settledAt),
+      paymentMethod: dto.paymentMethod,
       principalAmount: dto.principalAmount,
       interestAmount: dto.interestAmount,
       feeAmount: dto.feeAmount,
