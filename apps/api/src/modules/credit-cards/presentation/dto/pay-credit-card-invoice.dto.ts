@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { FinancialPaymentMethod } from '../../../accounts-payable-receivable/domain/enums/financial-payment-method.enum';
 import {
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -17,6 +19,9 @@ export class PayCreditCardInvoiceDto {
   @ApiProperty({ description: 'Data e hora do pagamento.' })
   @IsDateString()
   settledAt: string;
+  @ApiProperty({ enum: FinancialPaymentMethod })
+  @IsEnum(FinancialPaymentMethod)
+  paymentMethod!: FinancialPaymentMethod;
 
   @ApiPropertyOptional({
     description: 'Principal amortizado. Quando omitido, utiliza o saldo restante integral.',

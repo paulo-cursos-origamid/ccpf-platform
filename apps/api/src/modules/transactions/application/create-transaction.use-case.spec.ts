@@ -28,6 +28,7 @@ describe('CreateTransactionUseCase', () => {
   };
 
   const input: CreateTransactionInput = {
+  paymentMethod: FinancialPaymentMethod.PIX,
     tenantId: 'tenant-1',
     userId: 'user-1',
     accountId: 'account-1',
@@ -155,12 +156,14 @@ describe('CreateTransactionUseCase', () => {
     });
   });
 
-  it('persiste null quando a forma de pagamento não é informada', async () => {
-    await useCase.execute(input);
+  it('rejeita transação sem forma de pagamento', async () => {
+    const { paymentMethod: _paymentMethod, ...inputWithoutMethod } = input;
 
-    expect(tx.transaction.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ paymentMethod: null }),
-    });
+    await expect(
+      useCase.execute(inputWithoutMethod as CreateTransactionInput),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('rejeita cartão de crédito antes de iniciar a transação', async () => {

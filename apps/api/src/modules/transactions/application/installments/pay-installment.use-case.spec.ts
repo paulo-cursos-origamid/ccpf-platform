@@ -20,6 +20,7 @@ import { PayInstallmentUseCase } from './pay-installment.use-case';
 describe('PayInstallmentUseCase', () => {
   const paidAt = new Date('2026-10-25T12:00:00.000Z');
   const input = {
+    paymentMethod: FinancialPaymentMethod.PIX,
     tenantId: 'tenant-1',
     userId: 'user-1',
     installmentPlanId: 'plan-1',
@@ -85,12 +86,15 @@ describe('PayInstallmentUseCase', () => {
       discountAmount: '0.00',
       transactionId: 'transaction-1',
       settledAt: paidAt,
+      paymentMethod: FinancialPaymentMethod.PIX,
+
     });
 
     return new FinancialObligationEntity({
       ...base.toJSON(),
       status: FinancialObligationStatus.SETTLED,
       settledAt: paidAt,
+
       settlements: [settlement],
     });
   };
@@ -159,6 +163,16 @@ describe('PayInstallmentUseCase', () => {
     );
   });
 
+  it('rejeita pagamento sem forma de pagamento', async () => {
+    const { paymentMethod: _paymentMethod, ...inputWithoutMethod } = input;
+
+    await expect(
+      useCase.execute(inputWithoutMethod as any),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prisma.installment.findFirst).not.toHaveBeenCalled();
+  });
+
   it('liquida a obrigação central e sincroniza a parcela', async () => {
     const result = await useCase.execute(input);
 
@@ -167,6 +181,7 @@ describe('PayInstallmentUseCase', () => {
       tenantId: input.tenantId,
       userId: input.userId,
       settledAt: paidAt,
+      paymentMethod: FinancialPaymentMethod.PIX,
       principalAmount: '100.00',
       interestAmount: '0.00',
       feeAmount: '0.00',

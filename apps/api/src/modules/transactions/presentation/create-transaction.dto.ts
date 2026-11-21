@@ -26,10 +26,9 @@ export class CreateTransactionDto {
   @IsEnum(TransactionType)
   type!: TransactionType;
 
-  @ApiPropertyOptional({ enum: FinancialPaymentMethod })
-  @IsOptional()
+  @ApiProperty({ enum: FinancialPaymentMethod })
   @IsEnum(FinancialPaymentMethod)
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod!: FinancialPaymentMethod;
 
   @ApiProperty()
   @IsString()

@@ -212,6 +212,7 @@ describe('PayRecurringBillUseCase', () => {
       tenantId: input.tenantId,
       userId: input.userId,
       settledAt: paidAt,
+      paymentMethod: input.paymentMethod,
       accountId: 'account-1',
       principalAmount: '150.00',
       interestAmount: '0.00',

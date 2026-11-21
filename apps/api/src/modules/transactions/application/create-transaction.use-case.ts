@@ -23,7 +23,7 @@ export interface CreateTransactionInput {
   title: string;
   amount: string;
   type: TransactionType;
-  paymentMethod?: FinancialPaymentMethod;
+  paymentMethod: FinancialPaymentMethod;
   date: string;
   description?: string;
 }
@@ -33,6 +33,10 @@ export class CreateTransactionUseCase {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(input: CreateTransactionInput) {
+    if (!input.paymentMethod) {
+      throw new BadRequestException('Selecione uma forma de pagamento.');
+    }
+
     const amount = new Prisma.Decimal(input.amount);
 
     if (!amount.isFinite() || amount.lte(0)) {
@@ -116,7 +120,7 @@ export class CreateTransactionUseCase {
             title: input.title.trim(),
             amount,
             type: input.type,
-            paymentMethod: input.paymentMethod ?? null,
+            paymentMethod: input.paymentMethod,
             date: new Date(input.date),
             description: input.description?.trim() || null,
           },
