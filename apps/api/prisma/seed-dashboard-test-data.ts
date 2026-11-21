@@ -1,4 +1,4 @@
-import { TransactionType } from '@prisma/client';
+import { FinancialPaymentMethod, TransactionType } from '@prisma/client';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { CreateTransactionUseCase } from '../src/modules/transactions/application/create-transaction.use-case';
 
@@ -178,6 +178,7 @@ async function seedDashboardTestData() {
       }
 
       await createTransaction.execute({
+      paymentMethod: FinancialPaymentMethod.PIX,
         tenantId: tenant.id,
         userId: member.userId,
         accountId: account.id,
