@@ -322,6 +322,26 @@ export class FinancialObligationPaginationDto {
   totalPages!: number;
 }
 
+export class FinancialObligationInstallmentPaymentStatusDto {
+  @ApiProperty({ example: 3 })
+  earlyCount!: number;
+
+  @ApiProperty({ example: "450.00" })
+  earlyAmount!: string;
+
+  @ApiProperty({ example: 2 })
+  overdueCount!: number;
+
+  @ApiProperty({ example: "180.00" })
+  overdueAmount!: string;
+
+  @ApiProperty({ example: 5 })
+  currentCount!: number;
+
+  @ApiProperty({ example: "750.00" })
+  currentAmount!: string;
+}
+
 export class FinancialObligationSummaryDto {
   @ApiProperty({ example: 45 })
   totalCount!: number;
@@ -346,6 +366,12 @@ export class FinancialObligationSummaryDto {
 
   @ApiProperty({ example: '450.00' })
   overdueRemainingAmount!: string;
+
+  @ApiProperty({
+    type: FinancialObligationInstallmentPaymentStatusDto,
+    required: false,
+  })
+  installmentPaymentStatus?: FinancialObligationInstallmentPaymentStatusDto;
 }
 
 export class PaginatedFinancialObligationsResponseDto {

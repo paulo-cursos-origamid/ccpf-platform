@@ -736,6 +736,90 @@ describe('PrismaFinancialObligationRepository', () => {
     );
   });
 
+
+  it("classifies installment payment status using due and settlement dates", async () => {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+    const summaryRecords = [
+      rawObligation({
+        id: "installment-early",
+        amount: new Prisma.Decimal("50.00"),
+        status: "SETTLED",
+        dueDate: tomorrow,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("50.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-late-settled",
+        amount: new Prisma.Decimal("60.00"),
+        status: "SETTLED",
+        dueDate: yesterday,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("60.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-late-open",
+        amount: new Prisma.Decimal("80.00"),
+        status: "PENDING",
+        dueDate: yesterday,
+      }),
+      rawObligation({
+        id: "installment-current-partial",
+        amount: new Prisma.Decimal("100.00"),
+        status: "PARTIALLY_SETTLED",
+        dueDate: tomorrow,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("25.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-settled-on-due-date",
+        amount: new Prisma.Decimal("30.00"),
+        status: "SETTLED",
+        dueDate: today,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("30.00") },
+        ],
+      }),
+    ];
+
+    prisma.financialObligation.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(summaryRecords);
+
+    const result = await repository.findManyPaginated(
+      "tenant-1",
+      "user-1",
+      {
+        type: FinancialObligationType.PAYABLE,
+        sourceType: FinancialObligationSourceType.INSTALLMENT,
+        page: 1,
+        limit: 20,
+      },
+    );
+
+    expect(result.summary.installmentPaymentStatus).toEqual({
+      earlyCount: 1,
+      earlyAmount: "50.00",
+      overdueCount: 2,
+      overdueAmount: "140.00",
+      currentCount: 1,
+      currentAmount: "75.00",
+    });
+  });
+
   it("normalizes pagination page and limit boundaries", async () => {
     prisma.financialObligation.findMany
       .mockResolvedValueOnce([])
