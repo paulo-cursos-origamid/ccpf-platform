@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Field, Input } from "@/components/ui/forms";
+import { Button, Field, Input, Select } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay/Modal";
 import { useAccounts } from "@/modules/accounts/hooks";
 import { useCategories } from "@/modules/categories/hooks";
@@ -11,6 +11,7 @@ import type {
   InstallmentPlan,
   InstallmentStatus,
 } from "../../types/installment-plan";
+import type { FinancialPaymentMethod } from "../../types/transaction";
 import styles from "./InstallmentPlans.module.scss";
 
 const MONEY = new Intl.NumberFormat("pt-BR", {
@@ -52,12 +53,26 @@ function PayInstallmentModal({
   );
   const [saving, setSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<FinancialPaymentMethod | "">("");
+
+  function close() {
+    if (saving) return;
+    setPaymentMethod("");
+    setPaymentError("");
+    onClose();
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selection || saving) return;
 
     setPaymentError("");
+
+    if (!paymentMethod) {
+      setPaymentError("Selecione uma forma de pagamento.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -67,8 +82,10 @@ function PayInstallmentModal({
         selection.plan.id,
         selection.installment.id,
         paidAt,
+        paymentMethod,
       );
 
+      setPaymentMethod("");
       onPaid();
       onClose();
     } catch {
@@ -83,9 +100,7 @@ function PayInstallmentModal({
   return (
     <Modal
       open={selection !== null}
-      onClose={() => {
-        if (!saving) onClose();
-      }}
+      onClose={close}
       title="Pagar parcela"
     >
       {selection && (
@@ -102,6 +117,28 @@ function PayInstallmentModal({
               {MONEY.format(Number(selection.installment.amount))}
             </strong>
           </div>
+
+          <Field
+            label="Forma de pagamento"
+            htmlFor="installment-payment-method"
+            required
+          >
+            <Select
+              id="installment-payment-method"
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as FinancialPaymentMethod | "")
+              }
+              disabled={saving}
+              required
+            >
+              <option value="">Selecione a forma de pagamento</option>
+              <option value="CASH">Dinheiro</option>
+              <option value="PIX">Pix</option>
+              <option value="BANK_SLIP">Boleto</option>
+              <option value="DEBIT_CARD">Cartão de débito</option>
+            </Select>
+          </Field>
 
           <Field
             label="Data do pagamento"
@@ -129,7 +166,7 @@ function PayInstallmentModal({
               type="button"
               variant="outline"
               disabled={saving}
-              onClick={onClose}
+              onClick={close}
             >
               Cancelar
             </Button>
@@ -166,8 +203,25 @@ export function InstallmentPlansSection() {
   }, []);
 
   useEffect(() => {
-    void loadPlans();
-  }, [loadPlans]);
+    let active = true;
+
+    async function loadInitialPlans() {
+      try {
+        const result = await installmentPlansService.list();
+        if (active) setPlans(result);
+      } catch {
+        if (active) setError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadInitialPlans();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => void loadPlans();

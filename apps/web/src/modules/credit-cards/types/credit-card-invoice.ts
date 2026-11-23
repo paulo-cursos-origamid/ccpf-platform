@@ -1,3 +1,4 @@
+import type { FinancialPaymentMethod } from "@/modules/transactions/types/transaction";
 export interface CreditCardInvoiceSettlement {
   principalAmount: string;
   interestAmount: string;
@@ -82,6 +83,7 @@ export interface ListCreditCardInvoicesQuery {
 export interface PayCreditCardInvoiceInput {
   accountId: string;
   settledAt: string;
+  paymentMethod: FinancialPaymentMethod;
   principalAmount?: string;
   interestAmount?: string;
   feeAmount?: string;
