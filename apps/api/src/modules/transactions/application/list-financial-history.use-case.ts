@@ -46,6 +46,29 @@ export class ListFinancialHistoryUseCase {
     const transactionIds = transactions.map((item) => item.id);
     const transferIds = transfers.map((item) => item.id);
 
+    const invoiceSettlements =
+      await this.prisma.financialObligationSettlement.findMany({
+        where: {
+          tenantId,
+          settledAmount: { gt: 0 },
+          obligation: {
+            type: 'PAYABLE',
+            sourceType: 'CREDIT_CARD_INVOICE',
+          },
+          account: {
+            accountMembers: {
+              some: { userId, status: 'ACTIVE' },
+            },
+          },
+        },
+        include: {
+          account: { select: { name: true } },
+          obligation: { select: { title: true } },
+        },
+      });
+
+    const invoiceSettlementIds = invoiceSettlements.map((item) => item.id);
+
     const [installments, recurringOccurrences] = await Promise.all([
       this.prisma.installment.findMany({
         where: {
@@ -99,6 +122,10 @@ export class ListFinancialHistoryUseCase {
             referenceType: LedgerReferenceType.TRANSFER,
             referenceId: { in: transferIds },
           },
+          {
+            referenceType: LedgerReferenceType.CREDIT_CARD_INVOICE_PAYMENT,
+            referenceId: { in: invoiceSettlementIds },
+          },
         ],
       },
       select: {
@@ -107,6 +134,16 @@ export class ListFinancialHistoryUseCase {
         reversedAt: true,
       },
     });
+
+    const invoiceSettlementLedger = new Map(
+      ledgerEntries
+        .filter(
+          (entry) =>
+            entry.referenceType ===
+            LedgerReferenceType.CREDIT_CARD_INVOICE_PAYMENT,
+        )
+        .map((entry) => [entry.referenceId, entry]),
+    );
 
     const transactionLedger = new Map(
       ledgerEntries
@@ -188,7 +225,33 @@ export class ListFinancialHistoryUseCase {
       }];
     });
 
-    return [...transactionItems, ...transferItems].sort(
+    const invoiceSettlementItems = invoiceSettlements.map((item) => {
+      const original = invoiceSettlementLedger.get(item.id);
+      const reversed = original?.reversedAt != null;
+
+      return {
+        id: item.id,
+        operationType: 'CREDIT_CARD_INVOICE_PAYMENT' as const,
+        origin: 'CREDIT_CARD_INVOICE' as const,
+        originDescription: 'Pagamento de fatura de cartão de crédito',
+        title: item.obligation.title,
+        description: 'Pagamento de fatura de cartão de crédito',
+        date: item.settledAt,
+        amount: item.settledAmount.toString(),
+        direction: 'EXPENSE' as const,
+        accountName: item.account.name,
+        categoryName: null,
+        fromAccountName: null,
+        toAccountName: null,
+        status: reversed ? 'REVERSED' as const : 'COMPLETED' as const,
+      };
+    });
+
+    return [
+      ...transactionItems,
+      ...transferItems,
+      ...invoiceSettlementItems,
+    ].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
   }

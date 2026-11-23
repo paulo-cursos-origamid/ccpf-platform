@@ -9,12 +9,14 @@ describe('ListFinancialHistoryUseCase', () => {
   let installmentFindMany: jest.Mock;
   let recurringOccurrenceFindMany: jest.Mock;
   let ledgerFindMany: jest.Mock;
+  let settlementFindMany: jest.Mock;
   let prisma: {
     transaction: { findMany: jest.Mock };
     transfer: { findMany: jest.Mock };
     installment: { findMany: jest.Mock };
     recurringBillOccurrence: { findMany: jest.Mock };
     ledgerEntry: { findMany: jest.Mock };
+    financialObligationSettlement: { findMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -23,6 +25,7 @@ describe('ListFinancialHistoryUseCase', () => {
     installmentFindMany = jest.fn().mockResolvedValue([]);
     recurringOccurrenceFindMany = jest.fn().mockResolvedValue([]);
     ledgerFindMany = jest.fn().mockResolvedValue([]);
+    settlementFindMany = jest.fn().mockResolvedValue([]);
 
     prisma = {
       transaction: { findMany: transactionFindMany },
@@ -32,6 +35,7 @@ describe('ListFinancialHistoryUseCase', () => {
         findMany: recurringOccurrenceFindMany,
       },
       ledgerEntry: { findMany: ledgerFindMany },
+      financialObligationSettlement: { findMany: settlementFindMany },
     };
 
     useCase = new ListFinancialHistoryUseCase(
@@ -121,6 +125,10 @@ describe('ListFinancialHistoryUseCase', () => {
           {
             referenceType: LedgerReferenceType.TRANSFER,
             referenceId: { in: ['transfer-1'] },
+          },
+          {
+            referenceType: LedgerReferenceType.CREDIT_CARD_INVOICE_PAYMENT,
+            referenceId: { in: [] },
           },
         ],
       },
@@ -253,6 +261,56 @@ describe('ListFinancialHistoryUseCase', () => {
       status: 'REVERSED',
       fromAccountName: 'Origem',
       toAccountName: 'Destino',
+    });
+  });
+
+  it('retorna pagamento de fatura como saída na data efetiva', async () => {
+    const settledAt = new Date('2026-10-22T15:30:00.000Z');
+
+    settlementFindMany.mockResolvedValue([
+      {
+        id: 'settlement-1',
+        settledAt,
+        settledAmount: { toString: () => '350' },
+        account: { name: 'Conta principal' },
+        obligation: { title: 'Fatura Cartão Platinum' },
+      },
+    ]);
+
+    const result = await useCase.execute('tenant-1', 'user-1');
+
+    expect(settlementFindMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-1',
+        settledAmount: { gt: 0 },
+        obligation: {
+          type: 'PAYABLE',
+          sourceType: 'CREDIT_CARD_INVOICE',
+        },
+        account: {
+          accountMembers: {
+            some: { userId: 'user-1', status: 'ACTIVE' },
+          },
+        },
+      },
+      include: {
+        account: { select: { name: true } },
+        obligation: { select: { title: true } },
+      },
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: 'settlement-1',
+      operationType: 'CREDIT_CARD_INVOICE_PAYMENT',
+      origin: 'CREDIT_CARD_INVOICE',
+      title: 'Fatura Cartão Platinum',
+      date: settledAt,
+      amount: '350',
+      direction: 'EXPENSE',
+      accountName: 'Conta principal',
+      categoryName: null,
+      status: 'COMPLETED',
     });
   });
 
