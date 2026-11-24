@@ -28,7 +28,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-3);
 }
 
@@ -69,6 +69,10 @@
   border-top: 3px solid #16a34a;
 }
 
+.onTime {
+  border-top: 3px solid #2563eb;
+}
+
 .overdue {
   border-top: 3px solid #dc2626;
 }
@@ -89,6 +93,6 @@
 
 @media (max-width: 640px) {
   .metrics {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

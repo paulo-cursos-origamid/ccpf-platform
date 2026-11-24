@@ -354,9 +354,9 @@ export function TenantDashboard() {
         />
         <FinancialGoalsOverview />
         <PaymentMethodsSummary />
+          <InstallmentPaymentStatus status={installmentPaymentStatus} />
       </section>
 
-      <InstallmentPaymentStatus status={installmentPaymentStatus} />
 
       <section
         className={styles.dashboardOverviewGrid}

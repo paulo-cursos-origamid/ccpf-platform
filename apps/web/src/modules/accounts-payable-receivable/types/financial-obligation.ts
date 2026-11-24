@@ -58,6 +58,8 @@ export interface FinancialObligationPagination {
 export interface FinancialObligationInstallmentPaymentStatus {
   earlyCount: number;
   earlyAmount: string;
+  onTimeCount: number;
+  onTimeAmount: string;
   overdueCount: number;
   overdueAmount: string;
   currentCount: number;

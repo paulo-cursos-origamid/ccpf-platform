@@ -21,6 +21,13 @@ const INDICATORS = [
     amountKey: "earlyAmount",
   },
   {
+    key: "onTime",
+    label: "No prazo",
+    description: "Quitadas na data do vencimento",
+    countKey: "onTimeCount",
+    amountKey: "onTimeAmount",
+  },
+  {
     key: "overdue",
     label: "Atrasado",
     description: "Vencidas ou quitadas em atraso",
@@ -40,7 +47,7 @@ export function InstallmentPaymentStatus({
   status,
 }: InstallmentPaymentStatusProps) {
   const hasInstallments = status
-    ? status.earlyCount + status.overdueCount + status.currentCount > 0
+    ? status.earlyCount + status.onTimeCount + status.overdueCount + status.currentCount > 0
     : false;
 
   return (
