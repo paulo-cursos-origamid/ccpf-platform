@@ -324,6 +324,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
 
     let earlyCount = 0;
     let earlyAmount = 0n;
+    let onTimeCount = 0;
+    let onTimeAmount = 0n;
     let installmentOverdueCount = 0;
     let installmentOverdueAmount = 0n;
     let currentCount = 0;
@@ -370,6 +372,9 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           } else if (settledDateKey > dueDateKey) {
             installmentOverdueCount++;
             installmentOverdueAmount += principalSettled;
+          } else {
+            onTimeCount++;
+            onTimeAmount += principalSettled;
           }
         } else if (isOpen) {
           if (dueDateKey < todayKey) {
@@ -417,6 +422,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
               installmentPaymentStatus: {
                 earlyCount,
                 earlyAmount: money(earlyAmount),
+                onTimeCount,
+                onTimeAmount: money(onTimeAmount),
                 overdueCount: installmentOverdueCount,
                 overdueAmount: money(installmentOverdueAmount),
                 currentCount,

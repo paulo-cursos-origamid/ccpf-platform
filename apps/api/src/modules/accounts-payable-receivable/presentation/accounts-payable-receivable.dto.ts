@@ -329,6 +329,12 @@ export class FinancialObligationInstallmentPaymentStatusDto {
   @ApiProperty({ example: "450.00" })
   earlyAmount!: string;
 
+  @ApiProperty({ example: 1 })
+  onTimeCount!: number;
+
+  @ApiProperty({ example: "30.00" })
+  onTimeAmount!: string;
+
   @ApiProperty({ example: 2 })
   overdueCount!: number;
 

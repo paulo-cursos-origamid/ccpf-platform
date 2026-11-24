@@ -844,6 +844,8 @@ describe('PrismaFinancialObligationRepository', () => {
     expect(result.summary.installmentPaymentStatus).toEqual({
       earlyCount: 1,
       earlyAmount: "50.00",
+      onTimeCount: 1,
+      onTimeAmount: "30.00",
       overdueCount: 2,
       overdueAmount: "140.00",
       currentCount: 1,
