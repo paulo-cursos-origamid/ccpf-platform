@@ -20,6 +20,7 @@ import {
   useUpdateCreditCardPurchase,
 } from "@/modules/credit-cards/hooks";
 import { creditCardsService } from "@/modules/credit-cards/services/credit-cards.service";
+import type { FinancialPaymentMethod } from "@/modules/transactions/types/transaction";
 import type {
   CreditCardInvoice,
   PayCreditCardInvoiceInput,
@@ -107,7 +108,7 @@ export function CreditCardInvoiceDetailsModal({
   onUpdated,
 }: CreditCardInvoiceDetailsModalProps) {
   const [details, setDetails] = useState<CreditCardInvoice | null>(invoice);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(Boolean(open && invoice));
   const [loadError, setLoadError] = useState("");
   const [refreshError, setRefreshError] = useState("");
   const [paymentError, setPaymentError] = useState("");
@@ -118,8 +119,11 @@ export function CreditCardInvoiceDetailsModal({
   const [purchaseEditError, setPurchaseEditError] = useState("");
 
   const [accountId, setAccountId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<FinancialPaymentMethod | "">("");
   const [settledAt, setSettledAt] = useState(localToday());
-  const [principalAmount, setPrincipalAmount] = useState(0);
+  const [principalAmount, setPrincipalAmount] = useState(
+    () => Math.max(0, Number(invoice?.indicators.remainingAmount) || 0),
+  );
   const [interestAmount, setInterestAmount] = useState(0);
   const [feeAmount, setFeeAmount] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -148,31 +152,17 @@ export function CreditCardInvoiceDetailsModal({
       account.role !== AccountMemberRole.VIEWER,
   );
 
+  const selectedAccountId = activeAccounts.some(
+    (account) => account.id === accountId,
+  )
+    ? accountId
+    : (activeAccounts[0]?.id ?? "");
+
   useEffect(() => {
     if (!open || !invoice) return;
 
     const invoiceId = invoice.id;
     let active = true;
-
-    setDetails(invoice);
-    setLoadingDetails(true);
-    setLoadError("");
-    setRefreshError("");
-    setPaymentError("");
-    setSuccess("");
-    setEditingPurchaseId(null);
-    setEditTotalAmount(null);
-    setEditInstallmentCount("");
-    setPurchaseEditError("");
-    setSettledAt(localToday());
-    setPrincipalAmount(
-      Math.max(0, Number(invoice.indicators.remainingAmount) || 0),
-    );
-    setInterestAmount(0);
-    setFeeAmount(0);
-    setDiscountAmount(0);
-    setDescription("");
-    setAccountId("");
 
     async function loadDetails() {
       try {
@@ -202,17 +192,7 @@ export function CreditCardInvoiceDetailsModal({
     };
   }, [open, invoice]);
 
-  useEffect(() => {
-    if (!open) return;
 
-    const accountIsAvailable = activeAccounts.some(
-      (account) => account.id === accountId,
-    );
-
-    if (!accountIsAvailable) {
-      setAccountId(activeAccounts[0]?.id ?? "");
-    }
-  }, [open, accounts, accountId]);
 
   const currentInvoice = details ?? invoice;
 
@@ -247,7 +227,7 @@ export function CreditCardInvoiceDetailsModal({
     setRefreshError("");
     setSuccess("");
 
-    if (!accountId || !activeAccounts.some((account) => account.id === accountId)) {
+    if (!selectedAccountId) {
       setPaymentError("Selecione uma conta bancária ativa para o pagamento.");
       return;
     }
@@ -278,8 +258,13 @@ export function CreditCardInvoiceDetailsModal({
       return;
     }
 
+    if (!paymentMethod) {
+      return;
+    }
+
     const payload: PayCreditCardInvoiceInput = {
-      accountId,
+      accountId: selectedAccountId,
+      paymentMethod,
       settledAt: new Date(`${settledAt}T12:00:00`).toISOString(),
       principalAmount: (principalCents / 100).toFixed(2),
       interestAmount: (interestCents / 100).toFixed(2),
@@ -681,7 +666,7 @@ export function CreditCardInvoiceDetailsModal({
                 <Field label="Conta de saída" htmlFor="invoice-payment-account" required>
                   <Select
                     id="invoice-payment-account"
-                    value={accountId}
+                    value={selectedAccountId}
                     onChange={(event) => setAccountId(event.target.value)}
                     disabled={saving || accountsLoading}
                     required
@@ -692,6 +677,27 @@ export function CreditCardInvoiceDetailsModal({
                         {account.name}
                       </option>
                     ))}
+                  </Select>
+                </Field>
+
+                <Field
+                  label="Forma de pagamento"
+                  htmlFor="invoice-payment-method"
+                  required
+                >
+                  <Select
+                    id="invoice-payment-method"
+                    value={paymentMethod}
+                    onChange={(event) =>
+                      setPaymentMethod(event.target.value as FinancialPaymentMethod | "")
+                    }
+                    required
+                  >
+                    <option value="">Selecione a forma de pagamento</option>
+                    <option value="CASH">Dinheiro</option>
+                    <option value="PIX">Pix</option>
+                    <option value="BANK_SLIP">Boleto</option>
+                    <option value="DEBIT_CARD">Cartão de débito</option>
                   </Select>
                 </Field>
 

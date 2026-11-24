@@ -149,7 +149,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
   ): Promise<FinancialObligationEntity | null> {
     const accessFilter =
       sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE ||
-      sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE
+      sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE ||
+      sourceType === FinancialObligationSourceType.INSTALLMENT
         ? {
             tenant: {
               members: {
@@ -198,6 +199,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
               in: [
                 PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
                 PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+                PrismaFinancialObligationSourceType.INSTALLMENT,
               ],
             },
             tenant: {
@@ -251,6 +253,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
               in: [
                 PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
                 PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+                PrismaFinancialObligationSourceType.INSTALLMENT,
               ],
             },
           tenant: {
@@ -288,6 +291,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
           amount: true,
           status: true,
           dueDate: true,
+          settledAt: true,
           settlements: {
             select: { principalAmount: true },
           },
@@ -318,6 +322,17 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
     let canceledCount = 0;
     let overdueCount = 0;
 
+    let earlyCount = 0;
+    let earlyAmount = 0n;
+    let onTimeCount = 0;
+    let onTimeAmount = 0n;
+    let installmentOverdueCount = 0;
+    let installmentOverdueAmount = 0n;
+    let currentCount = 0;
+    let currentAmount = 0n;
+
+    const todayKey = now.toISOString().slice(0, 10);
+
     for (const item of summaryRecords) {
       const status = item.status as string;
 
@@ -339,6 +354,38 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
 
       const isOpen =
         status === "PENDING" || status === "PARTIALLY_SETTLED";
+
+      if (
+        filters.sourceType ===
+        PrismaFinancialObligationSourceType.INSTALLMENT
+      ) {
+        const dueDateKey = item.dueDate.toISOString().slice(0, 10);
+
+        if (status === "SETTLED" && item.settledAt) {
+          const settledDateKey = item.settledAt
+            .toISOString()
+            .slice(0, 10);
+
+          if (settledDateKey < dueDateKey) {
+            earlyCount++;
+            earlyAmount += principalSettled;
+          } else if (settledDateKey > dueDateKey) {
+            installmentOverdueCount++;
+            installmentOverdueAmount += principalSettled;
+          } else {
+            onTimeCount++;
+            onTimeAmount += principalSettled;
+          }
+        } else if (isOpen) {
+          if (dueDateKey < todayKey) {
+            installmentOverdueCount++;
+            installmentOverdueAmount += remaining;
+          } else {
+            currentCount++;
+            currentAmount += remaining;
+          }
+        }
+      }
 
       if (isOpen) {
         totalRemaining += remaining;
@@ -369,6 +416,21 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
         totalRemainingAmount: money(totalRemaining),
         overdueCount,
         overdueRemainingAmount: money(overdueRemaining),
+        ...(filters.sourceType ===
+        PrismaFinancialObligationSourceType.INSTALLMENT
+          ? {
+              installmentPaymentStatus: {
+                earlyCount,
+                earlyAmount: money(earlyAmount),
+                onTimeCount,
+                onTimeAmount: money(onTimeAmount),
+                overdueCount: installmentOverdueCount,
+                overdueAmount: money(installmentOverdueAmount),
+                currentCount,
+                currentAmount: money(currentAmount),
+              },
+            }
+          : {}),
       },
     };
   }

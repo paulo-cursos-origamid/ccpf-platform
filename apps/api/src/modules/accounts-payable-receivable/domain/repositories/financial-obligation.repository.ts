@@ -15,6 +15,17 @@ export interface FinancialObligationFilters {
   limit?: number;
 }
 
+export interface FinancialObligationInstallmentPaymentStatus {
+  earlyCount: number;
+  earlyAmount: string;
+  onTimeCount: number;
+  onTimeAmount: string;
+  overdueCount: number;
+  overdueAmount: string;
+  currentCount: number;
+  currentAmount: string;
+}
+
 export interface FinancialObligationSummary {
   totalCount: number;
   pendingCount: number;
@@ -24,6 +35,7 @@ export interface FinancialObligationSummary {
   totalRemainingAmount: string;
   overdueCount: number;
   overdueRemainingAmount: string;
+  installmentPaymentStatus?: FinancialObligationInstallmentPaymentStatus;
 }
 
 export interface PaginatedFinancialObligations {

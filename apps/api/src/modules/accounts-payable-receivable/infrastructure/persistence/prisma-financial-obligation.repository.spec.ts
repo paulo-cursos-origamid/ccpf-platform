@@ -223,7 +223,7 @@ describe('PrismaFinancialObligationRepository', () => {
           OR: expect.arrayContaining([
             expect.objectContaining({
               sourceType: {
-                in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE'],
+                in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE', 'INSTALLMENT'],
               },
               tenant: {
                 members: {
@@ -255,6 +255,37 @@ describe('PrismaFinancialObligationRepository', () => {
         tenantId: 'tenant-1',
         sourceType: 'RECURRING_BILL_OCCURRENCE',
         sourceId: 'occurrence-1',
+        tenant: {
+          members: {
+            some: { userId: 'user-1', status: 'ACTIVE' },
+          },
+        },
+      },
+      include: { settlements: true },
+    });
+  });
+
+  it('finds an installment by source using active Tenant membership', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(
+      rawObligation({
+        sourceType: 'INSTALLMENT',
+        sourceId: 'installment-1',
+      }),
+    );
+
+    const result = await repository.findBySource(
+      'tenant-1',
+      'user-1',
+      FinancialObligationSourceType.INSTALLMENT,
+      'installment-1',
+    );
+
+    expect(result?.sourceId).toBe('installment-1');
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-1',
+        sourceType: 'INSTALLMENT',
+        sourceId: 'installment-1',
         tenant: {
           members: {
             some: { userId: 'user-1', status: 'ACTIVE' },
@@ -731,6 +762,113 @@ describe('PrismaFinancialObligationRepository', () => {
           settlements: {
             select: { principalAmount: true },
           },
+        }),
+      }),
+    );
+  });
+
+
+  it("classifies installment payment status using due and settlement dates", async () => {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+    const summaryRecords = [
+      rawObligation({
+        id: "installment-early",
+        amount: new Prisma.Decimal("50.00"),
+        status: "SETTLED",
+        dueDate: tomorrow,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("50.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-late-settled",
+        amount: new Prisma.Decimal("60.00"),
+        status: "SETTLED",
+        dueDate: yesterday,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("60.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-late-open",
+        amount: new Prisma.Decimal("80.00"),
+        status: "PENDING",
+        dueDate: yesterday,
+      }),
+      rawObligation({
+        id: "installment-current-partial",
+        amount: new Prisma.Decimal("100.00"),
+        status: "PARTIALLY_SETTLED",
+        dueDate: tomorrow,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("25.00") },
+        ],
+      }),
+      rawObligation({
+        id: "installment-settled-on-due-date",
+        amount: new Prisma.Decimal("30.00"),
+        status: "SETTLED",
+        dueDate: today,
+        settledAt: today,
+        settlements: [
+          { principalAmount: new Prisma.Decimal("30.00") },
+        ],
+      }),
+    ];
+
+    prisma.financialObligation.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(summaryRecords);
+
+    const result = await repository.findManyPaginated(
+      "tenant-1",
+      "user-1",
+      {
+        type: FinancialObligationType.PAYABLE,
+        sourceType: FinancialObligationSourceType.INSTALLMENT,
+        page: 1,
+        limit: 20,
+      },
+    );
+
+    expect(result.summary.installmentPaymentStatus).toEqual({
+      earlyCount: 1,
+      earlyAmount: "50.00",
+      onTimeCount: 1,
+      onTimeAmount: "30.00",
+      overdueCount: 2,
+      overdueAmount: "140.00",
+      currentCount: 1,
+      currentAmount: "75.00",
+    });
+
+    expect(prisma.financialObligation.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: "tenant-1",
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              sourceType: {
+                in: ["CREDIT_CARD_INVOICE", "RECURRING_BILL_OCCURRENCE", "INSTALLMENT"],
+              },
+              tenant: {
+                members: {
+                  some: { userId: "user-1", status: "ACTIVE" },
+                },
+              },
+            }),
+          ]),
         }),
       }),
     );

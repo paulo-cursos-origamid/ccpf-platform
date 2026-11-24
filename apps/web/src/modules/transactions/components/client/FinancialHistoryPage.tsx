@@ -23,7 +23,7 @@ export function FinancialHistoryPage() {
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"ALL" | "COMPLETED" | "REVERSED">("ALL");
-  const [operation, setOperation] = useState<"ALL" | "TRANSACTION" | "TRANSFER">("ALL");
+  const [operation, setOperation] = useState<"ALL" | "TRANSACTION" | "TRANSFER" | "CREDIT_CARD_INVOICE_PAYMENT">("ALL");
 
   useEffect(() => {
     let active = true;
@@ -76,7 +76,7 @@ export function FinancialHistoryPage() {
 
         const amount = Number(item.amount);
         if (item.direction === "INCOME") totals.income += amount;
-        if (item.direction === "EXPENSE") totals.expense += amount;
+        if (item.direction === "EXPENSE" && item.operationType !== "CREDIT_CARD_INVOICE_PAYMENT") totals.expense += amount;
         if (item.direction === "TRANSFER") totals.transfers += amount;
 
         return totals;
@@ -93,6 +93,7 @@ export function FinancialHistoryPage() {
 
       return [
         item.title,
+        item.originDescription ?? "",
         item.description ?? "",
         item.accountName ?? "",
         item.categoryName ?? "",
@@ -159,6 +160,7 @@ export function FinancialHistoryPage() {
           <option value="ALL">Todas as operações</option>
           <option value="TRANSACTION">Receitas e despesas</option>
           <option value="TRANSFER">Transferências</option>
+          <option value="CREDIT_CARD_INVOICE_PAYMENT">Pagamentos de fatura</option>
         </select>
         <select
           value={status}
@@ -228,7 +230,9 @@ export function FinancialHistoryPage() {
                   <td>
                     {item.operationType === "TRANSFER"
                       ? "Transferência"
-                      : [item.accountName, item.categoryName].filter(Boolean).join(" · ")}
+                      : item.operationType === "CREDIT_CARD_INVOICE_PAYMENT"
+                        ? item.accountName
+                        : [item.accountName, item.categoryName].filter(Boolean).join(" · ")}
                   </td>
                   <td>
                     <span className={item.status === "REVERSED" ? styles.reversed : styles.completed}>

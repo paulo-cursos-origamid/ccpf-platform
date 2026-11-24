@@ -31,6 +31,7 @@ import { ExpensesByCategory } from "../ExpensesByCategory/ExpensesByCategory";
 import { UpcomingPayments } from "../UpcomingPayments/UpcomingPayments";
 import { FinancialGoalsOverview } from "../FinancialGoalsOverview/FinancialGoalsOverview";
 import { PaymentMethodsSummary } from "../PaymentMethodsSummary/PaymentMethodsSummary";
+import { InstallmentPaymentStatus } from "../InstallmentPaymentStatus/InstallmentPaymentStatus";
 
 import styles from "./TenantDashboard.module.scss";
 
@@ -86,6 +87,7 @@ export function TenantDashboard() {
     categoryExpenses,
     categoryColors,
     upcomingPayments,
+    installmentPaymentStatus,
   } = useFinancialDashboard();
 
   return (
@@ -352,7 +354,9 @@ export function TenantDashboard() {
         />
         <FinancialGoalsOverview />
         <PaymentMethodsSummary />
+          <InstallmentPaymentStatus status={installmentPaymentStatus} />
       </section>
+
 
       <section
         className={styles.dashboardOverviewGrid}

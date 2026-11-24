@@ -341,6 +341,7 @@ export function ListCreditCardInvoices() {
       )}
 
       <CreditCardInvoiceDetailsModal
+        key={selectedInvoice?.id ?? "closed"}
         open={selectedInvoice !== null}
         invoice={selectedInvoice}
         onClose={() => setSelectedInvoice(null)}

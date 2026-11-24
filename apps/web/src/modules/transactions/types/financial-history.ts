@@ -1,12 +1,13 @@
 export type FinancialHistoryStatus = "COMPLETED" | "REVERSED";
-export type FinancialHistoryOperationType = "TRANSACTION" | "TRANSFER";
+export type FinancialHistoryOperationType = "TRANSACTION" | "TRANSFER" | "CREDIT_CARD_INVOICE_PAYMENT";
 export type FinancialHistoryDirection = "INCOME" | "EXPENSE" | "TRANSFER";
 
 export type FinancialHistoryOrigin =
   | "MANUAL"
   | "INSTALLMENT"
   | "RECURRING_BILL"
-  | "TRANSFER";
+  | "TRANSFER"
+  | "CREDIT_CARD_INVOICE";
 
 export interface FinancialHistoryItem {
   id: string;

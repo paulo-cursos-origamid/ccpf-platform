@@ -46,6 +46,7 @@ export function useFinancialDashboard() {
   const {
     categoryNames,
     upcomingPayments,
+    installmentPaymentStatus,
   } = useDashboardAdditionalData(tenantId);
 
   const categoryExpenses = useMemo(
@@ -95,5 +96,6 @@ export function useFinancialDashboard() {
     categoryExpenses,
     categoryColors,
     upcomingPayments,
+    installmentPaymentStatus,
   };
 }

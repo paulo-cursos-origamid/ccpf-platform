@@ -3,6 +3,7 @@ import type {
   CreateInstallmentPlanInput,
   InstallmentPlan,
 } from "../types/installment-plan";
+import type { FinancialPaymentMethod } from "../types/transaction";
 
 class InstallmentPlansService {
   list() {
@@ -13,10 +14,15 @@ class InstallmentPlansService {
     return api.post<InstallmentPlan>("/installment-plans", data);
   }
 
-  pay(planId: string, installmentId: string, paidAt: string) {
+  pay(
+    planId: string,
+    installmentId: string,
+    paidAt: string,
+    paymentMethod: FinancialPaymentMethod,
+  ) {
     return api.post<unknown>(
       `/installment-plans/${planId}/installments/${installmentId}/pay`,
-      { paidAt },
+      { paidAt, paymentMethod },
     );
   }
 }
