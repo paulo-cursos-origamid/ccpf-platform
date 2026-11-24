@@ -223,7 +223,7 @@ describe('PrismaFinancialObligationRepository', () => {
           OR: expect.arrayContaining([
             expect.objectContaining({
               sourceType: {
-                in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE'],
+                in: ['CREDIT_CARD_INVOICE', 'RECURRING_BILL_OCCURRENCE', 'INSTALLMENT'],
               },
               tenant: {
                 members: {
@@ -255,6 +255,37 @@ describe('PrismaFinancialObligationRepository', () => {
         tenantId: 'tenant-1',
         sourceType: 'RECURRING_BILL_OCCURRENCE',
         sourceId: 'occurrence-1',
+        tenant: {
+          members: {
+            some: { userId: 'user-1', status: 'ACTIVE' },
+          },
+        },
+      },
+      include: { settlements: true },
+    });
+  });
+
+  it('finds an installment by source using active Tenant membership', async () => {
+    prisma.financialObligation.findFirst.mockResolvedValue(
+      rawObligation({
+        sourceType: 'INSTALLMENT',
+        sourceId: 'installment-1',
+      }),
+    );
+
+    const result = await repository.findBySource(
+      'tenant-1',
+      'user-1',
+      FinancialObligationSourceType.INSTALLMENT,
+      'installment-1',
+    );
+
+    expect(result?.sourceId).toBe('installment-1');
+    expect(prisma.financialObligation.findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-1',
+        sourceType: 'INSTALLMENT',
+        sourceId: 'installment-1',
         tenant: {
           members: {
             some: { userId: 'user-1', status: 'ACTIVE' },
@@ -818,6 +849,27 @@ describe('PrismaFinancialObligationRepository', () => {
       currentCount: 1,
       currentAmount: "75.00",
     });
+
+    expect(prisma.financialObligation.findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: "tenant-1",
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              sourceType: {
+                in: ["CREDIT_CARD_INVOICE", "RECURRING_BILL_OCCURRENCE", "INSTALLMENT"],
+              },
+              tenant: {
+                members: {
+                  some: { userId: "user-1", status: "ACTIVE" },
+                },
+              },
+            }),
+          ]),
+        }),
+      }),
+    );
   });
 
   it("normalizes pagination page and limit boundaries", async () => {

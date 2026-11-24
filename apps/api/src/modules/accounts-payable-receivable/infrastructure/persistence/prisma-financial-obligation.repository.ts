@@ -149,7 +149,8 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
   ): Promise<FinancialObligationEntity | null> {
     const accessFilter =
       sourceType === FinancialObligationSourceType.CREDIT_CARD_INVOICE ||
-      sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE
+      sourceType === FinancialObligationSourceType.RECURRING_BILL_OCCURRENCE ||
+      sourceType === FinancialObligationSourceType.INSTALLMENT
         ? {
             tenant: {
               members: {
@@ -198,6 +199,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
               in: [
                 PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
                 PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+                PrismaFinancialObligationSourceType.INSTALLMENT,
               ],
             },
             tenant: {
@@ -251,6 +253,7 @@ export class PrismaFinancialObligationRepository implements FinancialObligationR
               in: [
                 PrismaFinancialObligationSourceType.CREDIT_CARD_INVOICE,
                 PrismaFinancialObligationSourceType.RECURRING_BILL_OCCURRENCE,
+                PrismaFinancialObligationSourceType.INSTALLMENT,
               ],
             },
           tenant: {
