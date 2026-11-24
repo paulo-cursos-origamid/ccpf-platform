@@ -1,5 +1,11 @@
 export type FinancialObligationType = "PAYABLE" | "RECEIVABLE";
 
+export type FinancialObligationSourceType =
+  | "MANUAL"
+  | "RECURRING_BILL_OCCURRENCE"
+  | "INSTALLMENT"
+  | "CREDIT_CARD_INVOICE";
+
 export type FinancialObligationStatus =
   | "PENDING"
   | "PARTIALLY_SETTLED"
@@ -49,6 +55,15 @@ export interface FinancialObligationPagination {
   totalPages: number;
 }
 
+export interface FinancialObligationInstallmentPaymentStatus {
+  earlyCount: number;
+  earlyAmount: string;
+  overdueCount: number;
+  overdueAmount: string;
+  currentCount: number;
+  currentAmount: string;
+}
+
 export interface FinancialObligationSummary {
   totalCount: number;
   pendingCount: number;
@@ -58,6 +73,7 @@ export interface FinancialObligationSummary {
   totalRemainingAmount: string;
   overdueCount: number;
   overdueRemainingAmount: string;
+  installmentPaymentStatus?: FinancialObligationInstallmentPaymentStatus;
 }
 
 export interface PaginatedFinancialObligationsResponse {
@@ -69,6 +85,7 @@ export interface PaginatedFinancialObligationsResponse {
 export interface ListFinancialObligationsParams {
   type?: FinancialObligationType;
   status?: FinancialObligationStatus;
+  sourceType?: FinancialObligationSourceType;
   page?: number;
   limit?: number;
   startDate?: string;

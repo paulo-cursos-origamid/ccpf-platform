@@ -43,6 +43,7 @@ class FinancialObligationsService {
 
     if (params.type) query.set("type", params.type);
     if (params.status) query.set("status", params.status);
+    if (params.sourceType) query.set("sourceType", params.sourceType);
     if (params.page !== undefined) query.set("page", String(params.page));
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.startDate) query.set("startDate", params.startDate);

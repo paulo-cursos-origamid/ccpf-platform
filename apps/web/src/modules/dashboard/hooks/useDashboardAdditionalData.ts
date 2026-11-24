@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { categoriesService } from "@/modules/categories/services/categories.service";
 import { financialObligationsService } from "@/modules/accounts-payable-receivable/services/financial-obligations.service";
 import { useTenantStore } from "@/modules/tenant/stores";
+import type { FinancialObligationInstallmentPaymentStatus } from "@/modules/accounts-payable-receivable/types";
 
 /**
  * Carrega categorias e próximas obrigações financeiras do Espaço ativo.
@@ -14,6 +15,8 @@ export function useDashboardAdditionalData(tenantId: string | null) {
   const [categoryNames, setCategoryNames] = useState<Record<string, string>>(
     {},
   );
+  const [installmentPaymentStatus, setInstallmentPaymentStatus] =
+    useState<FinancialObligationInstallmentPaymentStatus | null>(null);
   const [upcomingPayments, setUpcomingPayments] = useState<
     Array<{ id: string; title: string; amount: number; dueDate: string }>
   >([]);
@@ -23,6 +26,7 @@ export function useDashboardAdditionalData(tenantId: string | null) {
 
     setCategoryNames({});
     setUpcomingPayments([]);
+    setInstallmentPaymentStatus(null);
 
     if (!tenantId) {
       return () => {
@@ -31,9 +35,19 @@ export function useDashboardAdditionalData(tenantId: string | null) {
     }
 
     async function loadAdditionalData() {
-      const [categoriesResult, obligationsResult] = await Promise.allSettled([
+      const [
+        categoriesResult,
+        obligationsResult,
+        installmentStatusResult,
+      ] = await Promise.allSettled([
         categoriesService.list(),
         financialObligationsService.listFiltered("PAYABLE"),
+        financialObligationsService.listPaginated({
+          type: "PAYABLE",
+          sourceType: "INSTALLMENT",
+          page: 1,
+          limit: 1,
+        }),
       ]);
 
       if (cancelled || useTenantStore.getState().activeTenantId !== tenantId) {
@@ -49,6 +63,12 @@ export function useDashboardAdditionalData(tenantId: string | null) {
 
         setCategoryNames(names);
       }
+
+      setInstallmentPaymentStatus(
+        installmentStatusResult.status === "fulfilled"
+          ? installmentStatusResult.value.summary.installmentPaymentStatus ?? null
+          : null,
+      );
 
       if (obligationsResult.status !== "fulfilled") {
         setUpcomingPayments([]);
@@ -111,5 +131,6 @@ export function useDashboardAdditionalData(tenantId: string | null) {
   return {
     categoryNames,
     upcomingPayments,
+    installmentPaymentStatus,
   };
 }
