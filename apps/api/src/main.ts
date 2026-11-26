@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 
@@ -17,6 +17,10 @@ import { AppModule } from './app.module';
  * - Iniciar o servidor HTTP.
  */
 async function bootstrap() {
+  if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET must be configured in production.");
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Permite que a aplicação leia cookies enviados pelo cliente.
@@ -31,12 +35,20 @@ async function bootstrap() {
   );
 
   // Define o prefixo global de todas as rotas da API.
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'api/health', method: RequestMethod.GET }],
+  });
 
   // Configura o acesso da aplicação web à API.
-  // Configura o acesso da aplicação web à API.
+  const corsOrigins = (
+    process.env.CORS_ORIGIN ?? 'http://localhost:3000,http://localhost:3001'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],

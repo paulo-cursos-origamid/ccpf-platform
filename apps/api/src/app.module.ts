@@ -17,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { FinancialGoalsModule } from './modules/financial-goals/financial-goals.module';
 import { AccountsPayableReceivableModule } from './modules/accounts-payable-receivable/accounts-payable-receivable.module';
 import { CreditCardsModule } from './modules/credit-cards/credit-cards.module';
+import { HealthController } from './presentation/health.controller';
 
 @Module({
   imports: [
@@ -39,7 +40,7 @@ import { CreditCardsModule } from './modules/credit-cards/credit-cards.module';
     AccountsPayableReceivableModule,
     CreditCardsModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {}

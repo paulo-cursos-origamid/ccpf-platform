@@ -49,6 +49,12 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 
+const authCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+};
+
 interface RefreshRequest extends Request {
   cookies: {
     refresh_token?: string;
@@ -353,16 +359,12 @@ export class IdentityController {
     });
 
     response.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      ...authCookieOptions,
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
     response.cookie('refresh_token', result.refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      ...authCookieOptions,
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
 
@@ -570,16 +572,12 @@ export class IdentityController {
     });
 
     res.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      ...authCookieOptions,
       maxAge: 1000 * 60 * 15,
     });
 
     res.cookie('refresh_token', result.refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      ...authCookieOptions,
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
@@ -620,8 +618,8 @@ export class IdentityController {
       userId: user.sub,
     });
 
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('access_token', authCookieOptions);
+    res.clearCookie('refresh_token', authCookieOptions);
 
     return {
       success: true,

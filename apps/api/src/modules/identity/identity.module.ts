@@ -46,7 +46,7 @@ import { PlatformPermissionGuard } from './presentation/guards/platform-permissi
       defaultStrategy: 'jwt',
     }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET ?? 'ccpf-secret',
+      secret: process.env.JWT_SECRET!,
       signOptions: {
         expiresIn: '7d',
       },

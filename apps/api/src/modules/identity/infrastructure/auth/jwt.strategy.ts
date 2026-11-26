@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       ignoreExpiration: false,
 
-      secretOrKey: process.env.JWT_SECRET ?? 'ccpf-secret',
+      secretOrKey: process.env.JWT_SECRET!,
     });
   }
 
