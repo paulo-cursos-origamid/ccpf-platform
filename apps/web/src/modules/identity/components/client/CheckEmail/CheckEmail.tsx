@@ -14,12 +14,45 @@ interface CheckEmailProps {
 
 type VerificationStatus = "verifying" | "success" | "error";
 
+function getEmailProviderUrl(email: string): string {
+  const domain = email.split("@")[1]?.toLowerCase();
+
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    return "https://mail.google.com/";
+  }
+
+  if (
+    ["outlook.com", "hotmail.com", "live.com", "msn.com"].includes(domain)
+  ) {
+    return "https://outlook.live.com/mail/0/";
+  }
+
+  if (["yahoo.com", "yahoo.com.br"].includes(domain)) {
+    return "https://mail.yahoo.com/";
+  }
+
+  if (domain === "icloud.com" || domain === "me.com") {
+    return "https://www.icloud.com/mail/";
+  }
+
+  return `mailto:${email}`;
+}
+
+
 export function CheckEmail({ token }: CheckEmailProps) {
   const { verifyEmail } = useVerifyEmail();
 
   const [status, setStatus] = useState<VerificationStatus>(
     token ? "verifying" : "error",
   );
+  const [registeredEmail, setRegisteredEmail] = useState("");
+
+  useEffect(() => {
+    setRegisteredEmail(
+      sessionStorage.getItem("ccpf:verification-email") ?? "",
+    );
+  }, []);
+
   const verificationStarted = useRef(false);
 
   useEffect(() => {
@@ -67,6 +100,38 @@ export function CheckEmail({ token }: CheckEmailProps) {
         <div className={styles.actions}>
           <Link href="/login" className={styles.backToLogin}>
             Ir para o login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return (
+      <div className={styles.container}>
+        <AuthHeader
+          title="Verifique seu e-mail"
+          subtitle={
+            registeredEmail
+              ? `Enviamos um link de confirmação para ${registeredEmail}.`
+              : "Acesse seu e-mail e clique no link de confirmação para ativar sua conta."
+          }
+        />
+
+        <div className={styles.actions}>
+          {registeredEmail && (
+            <a
+              href={getEmailProviderUrl(registeredEmail)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.openEmail}
+            >
+              Abrir meu e-mail
+            </a>
+          )}
+
+          <Link href="/login" className={styles.backToLogin}>
+            Voltar para o login
           </Link>
         </div>
       </div>

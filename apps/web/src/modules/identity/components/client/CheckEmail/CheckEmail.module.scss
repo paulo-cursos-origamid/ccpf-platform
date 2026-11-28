@@ -44,3 +44,37 @@
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
+
+
+.openEmail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: var(--control-height-md);
+  padding: 0 var(--spacing-6);
+
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+
+  color: var(--text-on-accent);
+  background: var(--accent-primary);
+
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.openEmail:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+}
+
+.openEmail:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

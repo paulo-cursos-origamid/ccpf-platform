@@ -319,7 +319,13 @@ export function RegisterForm() {
             </p>
           )}
 
-          <Link href="/check-email" className={styles.verifyButton}>
+          <Link
+            href="/check-email"
+            className={styles.verifyButton}
+            onClick={() => {
+              sessionStorage.setItem("ccpf:verification-email", email.trim());
+            }}
+          >
             Ir para verificar meu e-mail
           </Link>
         </div>
